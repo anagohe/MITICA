@@ -1,0 +1,96 @@
+/* src/index.css */
+
+/* 1. RESET sencillo (opcional pero recomendable) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* 2. Cargar FUENTES desde public/fonts */
+
+@font-face {
+  font-family: 'NexaRustSansBlack';
+  src: url('/fonts/NexaRustSans-Black.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NexaRustSansBlack02';
+  src: url('/fonts/NexaRustSans-Black02.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'RethinkSansRegular';
+  src: url('/fonts/RethinkSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'RethinkSansExtraBold';
+  src: url('/fonts/RethinkSans-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 3. Variables globales (por si las quieres usar después) */
+
+:root {
+  --font-title-main: 'NexaRustSansBlack', system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-title-textured: 'NexaRustSansBlack02', system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'RethinkSansRegular', system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body-bold: 'RethinkSansExtraBold', system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* 4. Clases que ya usas en Typography.tsx  */
+
+/* Títulos (NexaRustSans-Black) */
+.font-nexa {
+  font-family: var(--font-title-main);
+}
+
+/* Variante texturizada (NexaRustSans-Black02) – útil para TitleVariant.TEXTURED */
+.font-nexa-textured {
+  font-family: var(--font-title-textured);
+}
+
+/* Textos generales */
+.font-rethink {
+  font-family: var(--font-body);
+}
+
+/* Textos en negrita fuerte / subtítulo tipo 2 (Rethink ExtraBold) */
+.font-rethink-bold {
+  font-family: var(--font-body-bold);
+}
+
+/* 5. (Opcional) estilos generales */
+body {
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
