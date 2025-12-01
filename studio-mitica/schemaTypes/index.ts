@@ -6,6 +6,7 @@ import * as about from './about'
 import * as products from './products'
 import * as community from './community'
 import * as general from './general'
+import * as locationsPage from './locationsPage'
 
 // Tomamos todos los exports de cada archivo y los metemos en un solo array.
 // Cualquier cosa que exportes en esos archivos (pages, objetos, etc.) se
@@ -17,4 +18,5 @@ export const schemaTypes = [
   ...Object.values(products),
   ...Object.values(community),
   ...Object.values(general),
+  ...Object.values(locationsPage),
 ]

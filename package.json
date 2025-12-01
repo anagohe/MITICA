@@ -10,6 +10,7 @@
     "studio": "sanity dev --cwd ./studio-mitica"
   },
   "dependencies": {
+    "@react-google-maps/api": "^2.20.7",
     "@sanity/client": "^7.13.0",
     "@sanity/image-url": "^1.2.0",
     "framer-motion": "^12.23.24",

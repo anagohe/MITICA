@@ -41,7 +41,7 @@ export const deliveryPage = defineType({
   ],
 })
 
-// --- LOCATIONS ---
+// --- LOCATIONS (documento individual de sucursal) ---
 export const location = defineType({
   name: 'location',
   title: 'Sucursal',
@@ -75,7 +75,7 @@ export const location = defineType({
       title: 'Longitud (Google Maps)',
     }),
 
-    // Posición del pin sobre la imagen de mapa (0–100 %)
+    // Posición del pin sobre imagen de mapa (si la llegas a usar)
     defineField({
       name: 'mapX',
       type: 'number',
@@ -93,40 +93,7 @@ export const location = defineType({
   ],
 })
 
-export const locationsPage = defineType({
-  name: 'locationsPage',
-  title: 'Página Ubicaciones',
-  type: 'document',
-  fields: [
-    defineField({ name: 'hero', type: 'hero', title: 'Hero' }),
-
-    defineField({
-      name: 'mapImage',
-      title: 'Imagen de mapa (fondo)',
-      type: 'image',
-      options: { hotspot: true },
-      description: 'Imagen que se usará como fondo del mapa donde van los pins.',
-    }),
-
-    defineField({
-      name: 'locations',
-      title: 'Sucursales a mostrar en esta página',
-      type: 'array',
-      of: [{ type: 'reference', to: [{ type: 'location' }] }],
-      description:
-        'Selecciona las sucursales que aparecerán en la página. Si lo dejas vacío, se mostrarán todas.',
-    }),
-
-    defineField({
-      name: 'showFooterBanner',
-      type: 'boolean',
-      title: 'Mostrar Banner Amarillo en Footer',
-      initialValue: true,
-    }),
-  ],
-})
-
-// --- FRANCHICE ---
+// --- FRANCHISE PAGE ---
 export const franchisePage = defineType({
   name: 'franchisePage',
   title: 'Página Franquicias',
@@ -160,7 +127,7 @@ export const franchisePage = defineType({
   ],
 })
 
-// --- FAQ ---
+// --- FAQ (preguntas individuales) ---
 export const faq = defineType({
   name: 'faq',
   title: 'Pregunta Frecuente',
@@ -171,6 +138,7 @@ export const faq = defineType({
   ],
 })
 
+// --- FAQ PAGE ---
 export const faqPage = defineType({
   name: 'faqPage',
   title: 'Página FAQ',
