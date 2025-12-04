@@ -1,5 +1,11 @@
 // pages/Locations.tsx
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+} from 'react';
 import { Title, TitleVariant, BodyText } from '../components/Typography';
 import { Link } from 'react-router-dom';
 import { client } from '../sanity/client';
@@ -10,6 +16,7 @@ import {
   useLoadScript,
   MarkerClusterer,
 } from '@react-google-maps/api';
+import type { Libraries } from '@react-google-maps/api';
 
 // ================= Sanity image builder =================
 const builder = imageUrlBuilder(client);
@@ -20,6 +27,8 @@ function urlFor(source: any) {
 // ================= Google Maps Config =================
 // ⚠️ Mover a .env en producción
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBDpj8pOR-LV5BxCDJMdEnAcI7bBOzF3H0';
+
+const libraries: Libraries = ['places'];
 
 const MAP_CONTAINER_STYLE = {
   width: '100%',
@@ -55,7 +64,7 @@ const PIN_ICON_SVG = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
   </svg>
 `)}`;
 
-// Estilos del cluster
+// Estilos del cluster (el número se ajusta sobre el pin)
 const clusterStyles = [
   {
     textColor: 'black',
@@ -64,7 +73,7 @@ const clusterStyles = [
     height: 50,
     width: 50,
     // [x, y] desde la esquina superior izquierda
-    anchorText: [-3, -1] as const, // centrado dentro del pin amarillo
+    anchorText: [-3, -1] as const,
   },
 ] as const;
 
@@ -118,6 +127,14 @@ type CtaCard = {
   linkText: string;
   linkUrl: string;
   iconUrl?: string;
+};
+
+type GooglePlaceDetails = {
+  name?: string;
+  rating?: number;
+  userRatingsTotal?: number;
+  phoneNumber?: string;
+  weekdayText?: string[];
 };
 
 // ================= GROQ =================
@@ -175,10 +192,16 @@ const LocationsPage: React.FC = () => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  const [placeDetails, setPlaceDetails] = useState<
+    Record<string, GooglePlaceDetails>
+  >({});
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded: isMapLoaded } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries,
   });
 
   // ============= Fetch =============
@@ -275,22 +298,93 @@ const LocationsPage: React.FC = () => {
     mapRef.current = map;
   }, []);
 
-  const handleMarkerClick = (location: RestaurantLocation) => {
-    setActiveLocationId(location.id);
-    setViewMode('detail');
-    setIsSidebarOpen(true);
-    if (mapRef.current) {
-      mapRef.current.panTo({
-        lat: location.latitude,
-        lng: location.longitude,
-      });
-      mapRef.current.setZoom(16);
-    }
-  };
+ const handleMarkerClick = (location: RestaurantLocation) => {
+  setActiveLocationId(location.id);
+  setViewMode('detail');
+  setIsSidebarOpen(true);
+
+  if (mapRef.current) {
+    mapRef.current.panTo({
+      lat: location.latitude,
+      lng: location.longitude,
+    });
+    mapRef.current.setZoom(16);
+  }
+
+  // 🔹 También pedir detalles de Google al tocar el pin o la card
+  fetchPlaceDetails(location);
+};
+
 
   const handleListSelect = (location: RestaurantLocation) => {
     handleMarkerClick(location);
   };
+
+  // =========== Google Places: detalles ===========
+  const fetchPlaceDetails = useCallback((loc: RestaurantLocation) => {
+    if (!mapRef.current) return;
+
+    const service = new google.maps.places.PlacesService(
+      mapRef.current
+    );
+    setIsDetailsLoading(true);
+
+    const query = `${loc.name} ${loc.city} ${loc.address}`;
+
+    const findRequest: google.maps.places.FindPlaceFromQueryRequest = {
+      query,
+      fields: ['place_id'],
+    };
+
+    service.findPlaceFromQuery(findRequest, (results, status) => {
+      if (
+        status !== google.maps.places.PlacesServiceStatus.OK ||
+        !results ||
+        !results[0].place_id
+      ) {
+        setIsDetailsLoading(false);
+        return;
+      }
+
+      const placeId = results[0].place_id;
+
+      const detailsRequest: google.maps.places.PlaceDetailsRequest = {
+        placeId,
+        fields: [
+          'name',
+          'rating',
+          'user_ratings_total',
+          'formatted_phone_number',
+          'opening_hours',
+        ],
+      };
+
+      service.getDetails(detailsRequest, (place, status2) => {
+        setIsDetailsLoading(false);
+        if (
+          status2 !== google.maps.places.PlacesServiceStatus.OK ||
+          !place
+        )
+          return;
+
+        setPlaceDetails((prev) => ({
+          ...prev,
+          [loc.id]: {
+            name: place.name ?? loc.name,
+            rating: place.rating ?? undefined,
+            userRatingsTotal: place.user_ratings_total ?? undefined,
+            phoneNumber: place.formatted_phone_number ?? loc.phone,
+            weekdayText: place.opening_hours?.weekday_text ?? undefined,
+          },
+        }));
+      });
+    });
+  }, []);
+
+ const handleMoreInfo = (location: RestaurantLocation) => {
+  handleMarkerClick(location);
+};
+
 
   const handleBackToList = () => {
     setViewMode('list');
@@ -300,6 +394,11 @@ const LocationsPage: React.FC = () => {
       mapRef.current.panTo(DEFAULT_CENTER);
     }
   };
+
+  const details =
+    activeLocation && placeDetails[activeLocation.id]
+      ? placeDetails[activeLocation.id]
+      : undefined;
 
   return (
     <div className="w-full bg-[#F5F7FB]">
@@ -379,16 +478,16 @@ const LocationsPage: React.FC = () => {
             {/* --- SIDEBAR FLOTANTE --- */}
             {isMapLoaded && (
               <div className="absolute top-4 left-4 bottom-4 z-10 w-full max-w-xs sm:max-w-sm flex flex-col pointer-events-none transition-all duration-300">
-               {isSidebarOpen ? (
-  <div
-    className={
-      `bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl w-full flex flex-col pointer-events-auto overflow-hidden border border-slate-100 ` +
-      (viewMode === 'list' && !showFilters
-        ? 'h-auto max-h-[260px]'   // 🔹 card compacta al inicio
-        : 'h-full')                 // 🔹 ocupa todo cuando hay lista o detalle
-    }
-  >
-  {/* VISTA 1: LISTA */}
+                {isSidebarOpen ? (
+                  <div
+                    className={
+                      'bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl w-full flex flex-col pointer-events-auto overflow-hidden border border-slate-100 ' +
+                      (viewMode === 'list' && !showFilters
+                        ? 'h-auto max-h-[260px]'
+                        : 'h-full')
+                    }
+                  >
+                    {/* VISTA 1: LISTA */}
                     {viewMode === 'list' && (
                       <div className="flex flex-col h-full p-6">
                         <div className="mb-5">
@@ -417,7 +516,7 @@ const LocationsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* BUSCADOR + BOTÓN FILTROS (siempre visibles) */}
+                        {/* BUSCADOR + BOTÓN FILTROS */}
                         <div className="space-y-3 mb-4">
                           <div className="relative">
                             <input
@@ -495,21 +594,22 @@ const LocationsPage: React.FC = () => {
                           </button>
                         </div>
 
-                        {/* SOLO SE VE CUANDO showFilters === true */}
+                        {/* FILTROS + LISTA (solo si showFilters) */}
                         {showFilters && (
                           <>
                             {cities.length > 0 && (
                               <div className="mb-3 flex flex-wrap gap-2 p-2 bg-slate-50 rounded-lg">
                                 <button
                                   onClick={() => setSelectedCity(null)}
-                                  className={`text-[10px] px-2 py-1 rounded border ${
+                                  className={`text-[10px] px-2 py-1 rounded border font-rethink-bold ${
                                     !selectedCity
-                                      ? 'bg-blue-900 text-white border-blue-900'
-                                      : 'bg-white border-slate-200'
+                                      ? 'bg-[#F6BA27] text-white border-[#F6BA27]'
+                                      : 'bg-white text-slate-700 border-slate-200'
                                   }`}
                                 >
                                   Todas
                                 </button>
+
                                 {cities.map((c) => (
                                   <button
                                     key={c}
@@ -520,8 +620,8 @@ const LocationsPage: React.FC = () => {
                                     }
                                     className={`text-[10px] px-2 py-1 rounded border ${
                                       selectedCity === c
-                                        ? 'bg-blue-900 text-white border-blue-900'
-                                        : 'bg-white border-slate-200'
+                                        ? 'bg-[#F6BA27] text-white border-[#F6BA27]'
+                                        : 'bg-white text-slate-700 border-slate-200'
                                     }`}
                                   >
                                     {c}
@@ -560,17 +660,11 @@ const LocationsPage: React.FC = () => {
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex gap-2 mb-2">
-                                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded">
-                                      Autos Nuevos
-                                    </span>
-                                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded">
-                                      Servicio
-                                    </span>
-                                  </div>
+
                                   <p className="text-xs text-slate-500 font-rethink mb-2">
                                     {loc.address}
                                   </p>
+
                                   <div className="flex items-center gap-1 text-blue-900 text-[11px] font-rethink-bold underline decoration-1 underline-offset-2 group-hover:text-blue-700">
                                     <svg
                                       width="12"
@@ -584,23 +678,17 @@ const LocationsPage: React.FC = () => {
                                     </svg>
                                     Calcular distancia
                                   </div>
-                                  <div className="mt-3 flex items-center gap-2 text-[11px]">
-                                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                                    <span className="text-slate-600">
-                                      Cerrado hasta Miércoles 8:00
-                                    </span>
-                                  </div>
-                                  <div className="mt-2 flex items-center gap-1">
-                                    <div className="flex text-yellow-400 text-xs">
-                                      ★★★★★
-                                    </div>
-                                    <span className="text-[10px] text-slate-400">
-                                      4.8 (331 Opiniones)
-                                    </span>
-                                  </div>
-                                  <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-blue-900 font-rethink-bold underline">
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleMoreInfo(loc);
+                                    }}
+                                    className="mt-3 pt-3 w-full text-left border-t border-slate-100 text-xs text-blue-900 font-rethink-bold underline"
+                                  >
                                     Más Información
-                                  </div>
+                                  </button>
                                 </button>
                               ))}
                             </div>
@@ -652,22 +740,37 @@ const LocationsPage: React.FC = () => {
                                   Sucursal
                                 </p>
                                 <h3 className="font-rethink-bold text-base text-slate-900 uppercase">
-                                  {activeLocation.name}
+                                  {details?.name ?? activeLocation.name}
                                 </h3>
                               </div>
-                              <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-rethink-bold bg-[#F6BA27]/10 text-[#F6BA27] border border-[#F6BA27]/60">
-                                Cerrado · Hasta Miércoles 8:00
-                              </span>
+                          
                             </div>
 
-                            <div className="flex gap-2 mb-3">
-                              <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded">
-                                Autos Nuevos
-                              </span>
-                              <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded">
-                                Servicio
-                              </span>
-                            </div>
+                            {/* RATING GOOGLE */}
+                            {details && (
+                              <div className="flex items-center gap-1 mb-3 mt-1">
+                                <div className="flex text-yellow-400 text-xs">
+                                  {'★★★★★'.split('').map((star, idx) => (
+                                    <span key={idx}>
+                                      {details.rating &&
+                                      idx < Math.round(details.rating)
+                                        ? '★'
+                                        : '☆'}
+                                    </span>
+                                  ))}
+                                </div>
+                                {details.rating && (
+                                  <span className="text-[11px] text-slate-700 font-rethink-bold">
+                                    {details.rating.toFixed(1)}
+                                  </span>
+                                )}
+                                {details.userRatingsTotal && (
+                                  <span className="text-[10px] text-slate-400">
+                                    ({details.userRatingsTotal} opiniones)
+                                  </span>
+                                )}
+                              </div>
+                            )}
 
                             <p className="text-sm font-rethink text-slate-900 font-bold mb-1">
                               {activeLocation.city}
@@ -676,70 +779,48 @@ const LocationsPage: React.FC = () => {
                               {activeLocation.address}
                             </p>
 
-                            <a
-                              href={`http://googleusercontent.com/maps.google.com/?q=${activeLocation.latitude},${activeLocation.longitude}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center gap-1 text-blue-900 text-[11px] font-rethink-bold underline decoration-1 underline-offset-2 mb-4"
-                            >
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              >
-                                <path d="M3 11l19-9-9 19-2-8-8-2z" />
-                              </svg>
-                              Calcular distancia
-                            </a>
+                            
 
-                            <div className="flex items-center gap-2 text-[11px] mb-2">
-                              <span className="w-2 h-2 rounded-full bg-red-500" />
-                              <span className="text-slate-600">
-                                Cerrado hasta Miércoles 8:00
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1 mb-4">
-                              <div className="flex text-yellow-400 text-xs">
-                                ★★★★★
-                              </div>
-                              <span className="text-[10px] text-slate-400">
-                                4.8
-                              </span>
-                            </div>
-
-                            {/* HORARIO + CONTACTO DENTRO DE LA TARJETA */}
+                            {/* INFO GOOGLE: HORARIO + TEL */}
                             <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 gap-4">
                               <div>
                                 <p className="text-[11px] font-rethink-bold text-slate-900 mb-1">
-                                  Horario de atención
+                                  Horario
                                 </p>
-                                <p className="text-[11px] text-slate-600">
-                                  Lun - Vie: 09:00 - 19:00
-                                </p>
-                                <p className="text-[11px] text-slate-600">
-                                  Sáb: 09:00 - 14:00
-                                </p>
+                                {isDetailsLoading && !details && (
+                                  <p className="text-[11px] text-slate-400">
+                                    Cargando información de Google...
+                                  </p>
+                                )}
+                                {details?.weekdayText ? (
+                                  <ul className="text-[11px] text-slate-600 space-y-0.5">
+                                    {details.weekdayText.map((line) => (
+                                      <li key={line}>{line}</li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  !isDetailsLoading && (
+                                    <p className="text-[11px] text-slate-600">
+                                      Horario no disponible.
+                                    </p>
+                                  )
+                                )}
                               </div>
 
-                              {activeLocation.phone && (
+                              {activeLocation.phone || details?.phoneNumber ? (
                                 <div>
                                   <p className="text-[11px] font-rethink-bold text-slate-900 mb-1">
-                                    Contacto
+                                    Teléfono
                                   </p>
                                   <p className="text-[11px] text-slate-600">
-                                    {activeLocation.phone}
+                                    {details?.phoneNumber ??
+                                      activeLocation.phone}
                                   </p>
                                 </div>
-                              )}
+                              ) : null}
                             </div>
 
-                            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-rethink-bold">
-                              Más Información
-                            </div>
+                            
                           </div>
                         </div>
                       </div>
