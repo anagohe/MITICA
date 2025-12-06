@@ -16,7 +16,8 @@ const locationsPage = defineType({
       name: 'subtitle',
       title: 'Subtítulo (texto pequeño arriba)',
       type: 'string',
-      initialValue: 'Mitica México',
+      // ahora vacío por defecto; si escribes algo aquí, se mostrará
+      initialValue: '',
     }),
     defineField({
       name: 'searchPlaceholder',
@@ -135,7 +136,8 @@ const locationsPage = defineType({
               name: 'linkText',
               title: 'Texto del enlace',
               type: 'string',
-              description: 'Ej. “Solicitar información >”, “Ver menú >”, etc.',
+              description:
+                'Ej. “Solicitar información >”, “Ver menú >”, etc.',
             }),
             defineField({
               name: 'linkUrl',

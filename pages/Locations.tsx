@@ -135,6 +135,7 @@ type GooglePlaceDetails = {
   userRatingsTotal?: number;
   phoneNumber?: string;
   weekdayText?: string[];
+  photoUrl?: string; // 👈 foto del negocio
 };
 
 // ================= GROQ =================
@@ -174,7 +175,8 @@ const LocationsPage: React.FC = () => {
   const [ctaCards, setCtaCards] = useState<CtaCard[]>([]);
 
   const [pageTitle, setPageTitle] = useState('Encuentra tu Restaurante');
-  const [pageSubtitle, setPageSubtitle] = useState('Mitica México');
+  // subtítulo opcional (por defecto vacío para que NO salga “MÍTICA MÉXICO”)
+  const [pageSubtitle, setPageSubtitle] = useState<string>('');
   const [searchPlaceholder, setSearchPlaceholder] = useState(
     'Escribe al menos 3 caracteres'
   );
@@ -203,6 +205,7 @@ const LocationsPage: React.FC = () => {
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries,
   });
+
 
   // ============= Fetch =============
   useEffect(() => {
@@ -298,27 +301,40 @@ const LocationsPage: React.FC = () => {
     mapRef.current = map;
   }, []);
 
- const handleMarkerClick = (location: RestaurantLocation) => {
-  setActiveLocationId(location.id);
-  setViewMode('detail');
-  setIsSidebarOpen(true);
+  const handleMarkerClick = (location: RestaurantLocation) => {
+    setActiveLocationId(location.id);
+    setViewMode('detail');
+    setIsSidebarOpen(true);
 
+    if (mapRef.current) {
+      mapRef.current.panTo({
+        lat: location.latitude,
+        lng: location.longitude,
+      });
+      mapRef.current.setZoom(16);
+    }
+
+    // También pedir detalles de Google al tocar el pin o la card
+    fetchPlaceDetails(location);
+  };
+
+  const handleListSelect = (location: RestaurantLocation) => {
+    handleMarkerClick(location);
+  };
+  const handleDirectionsClick = (location: RestaurantLocation) => {
+  // 1. Zoom y centrar el mapa en esa sucursal
   if (mapRef.current) {
     mapRef.current.panTo({
       lat: location.latitude,
       lng: location.longitude,
     });
-    mapRef.current.setZoom(16);
+    mapRef.current.setZoom(17);
   }
 
-  // 🔹 También pedir detalles de Google al tocar el pin o la card
-  fetchPlaceDetails(location);
+  // 2. Abrir Google Maps con la ruta hacia esa ubicación
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
+  window.open(url, '_blank');
 };
-
-
-  const handleListSelect = (location: RestaurantLocation) => {
-    handleMarkerClick(location);
-  };
 
   // =========== Google Places: detalles ===========
   const fetchPlaceDetails = useCallback((loc: RestaurantLocation) => {
@@ -356,6 +372,7 @@ const LocationsPage: React.FC = () => {
           'user_ratings_total',
           'formatted_phone_number',
           'opening_hours',
+          'photos', // 👈 pedimos fotos
         ],
       };
 
@@ -367,6 +384,11 @@ const LocationsPage: React.FC = () => {
         )
           return;
 
+        const photoUrl =
+          place.photos && place.photos.length > 0
+            ? place.photos[0].getUrl({ maxWidth: 800, maxHeight: 400 })
+            : undefined;
+
         setPlaceDetails((prev) => ({
           ...prev,
           [loc.id]: {
@@ -375,16 +397,16 @@ const LocationsPage: React.FC = () => {
             userRatingsTotal: place.user_ratings_total ?? undefined,
             phoneNumber: place.formatted_phone_number ?? loc.phone,
             weekdayText: place.opening_hours?.weekday_text ?? undefined,
+            photoUrl,
           },
         }));
       });
     });
   }, []);
 
- const handleMoreInfo = (location: RestaurantLocation) => {
-  handleMarkerClick(location);
-};
-
+  const handleMoreInfo = (location: RestaurantLocation) => {
+    handleMarkerClick(location);
+  };
 
   const handleBackToList = () => {
     setViewMode('list');
@@ -402,21 +424,24 @@ const LocationsPage: React.FC = () => {
 
   return (
     <div className="w-full bg-[#F5F7FB]">
-      <section className="pt-16 pb-10 md:pt-24 md:pb-16 bg-[#F5F7FB]">
+      {/* HEADER */}
+      <section className="pt-24 pb-6 md:pt-24 md:pb-10 bg-[#F5F7FB]">
         <div className="container mx-auto px-6 text-center">
-          <p className="font-nexa tracking-[0.35em] text-xs md:text-sm uppercase text-slate-500 mb-3">
-            {pageSubtitle}
-          </p>
+          {pageSubtitle && (
+            <p className="font-nexa tracking-[0.35em] text-xs md:text-sm uppercase text-slate-500 mb-3">
+              {pageSubtitle}
+            </p>
+          )}
           <Title
             variant={TitleVariant.REGULAR}
             text={pageTitle}
-            className="text-4xl md:text-5xl lg:text-6xl text-slate-900"
+            className="text-4xl md:text-5xl lg:text-6xl text-slate-900 mt-6 mb-3"
             align="center"
           />
         </div>
       </section>
 
-      <section className="pb-16 md:pb-20">
+      <section className="pb-16 md:pb-20 -mt-1 md:mt-0">
         <div className="w-full px-0">
           <div className="relative w-full overflow-hidden shadow-2xl bg-sky-100 min-h-[500px] md:min-h-[600px] h-[80vh]">
             {/* --- GOOGLE MAP --- */}
@@ -545,50 +570,15 @@ const LocationsPage: React.FC = () => {
                               stroke="currentColor"
                               strokeWidth="2"
                             >
-                              <line
-                                x1="4"
-                                y1="21"
-                                x2="4"
-                                y2="14"
-                              />
+                              <line x1="4" y1="21" x2="4" y2="14" />
                               <line x1="4" y1="10" x2="4" y2="3" />
-                              <line
-                                x1="12"
-                                y1="21"
-                                x2="12"
-                                y2="12"
-                              />
+                              <line x1="12" y1="21" x2="12" y2="12" />
                               <line x1="12" y1="8" x2="12" y2="3" />
-                              <line
-                                x1="20"
-                                y1="21"
-                                x2="20"
-                                y2="16"
-                              />
-                              <line
-                                x1="20"
-                                y1="12"
-                                x2="20"
-                                y2="3"
-                              />
-                              <line
-                                x1="1"
-                                y1="14"
-                                x2="7"
-                                y2="14"
-                              />
-                              <line
-                                x1="9"
-                                y1="8"
-                                x2="15"
-                                y2="8"
-                              />
-                              <line
-                                x1="17"
-                                y1="16"
-                                x2="23"
-                                y2="16"
-                              />
+                              <line x1="20" y1="21" x2="20" y2="16" />
+                              <line x1="20" y1="12" x2="20" y2="3" />
+                              <line x1="1" y1="14" x2="7" y2="14" />
+                              <line x1="9" y1="8" x2="15" y2="8" />
+                              <line x1="17" y1="16" x2="23" y2="16" />
                             </svg>
                             {filterButtonLabel}
                           </button>
@@ -665,7 +655,14 @@ const LocationsPage: React.FC = () => {
                                     {loc.address}
                                   </p>
 
-                                  <div className="flex items-center gap-1 text-blue-900 text-[11px] font-rethink-bold underline decoration-1 underline-offset-2 group-hover:text-blue-700">
+                                  {/* TEXTO CAMBIADO: "Cómo llegar" */}
+                                 <div
+                                    className="flex items-center gap-1 text-blue-900 text-[11px] font-rethink-bold underline decoration-1 underline-offset-2 group-hover:text-blue-700 cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();          // para que no dispare el click de la card
+                                      handleDirectionsClick(loc);   // 👈 aquí lo usamos
+                                    }}
+                                  >
                                     <svg
                                       width="12"
                                       height="12"
@@ -676,8 +673,9 @@ const LocationsPage: React.FC = () => {
                                     >
                                       <path d="M3 11l19-9-9 19-2-8-8-2z" />
                                     </svg>
-                                    Calcular distancia
+                                    Cómo llegar
                                   </div>
+
 
                                   <button
                                     type="button"
@@ -743,8 +741,19 @@ const LocationsPage: React.FC = () => {
                                   {details?.name ?? activeLocation.name}
                                 </h3>
                               </div>
-                          
                             </div>
+
+                            {/* FOTO DEL NEGOCIO DESDE GOOGLE */}
+                            {/* {details?.photoUrl && (
+                              <div className="w-full rounded-2xl overflow-hidden mb-3">
+                                <img
+                                  src={details.photoUrl}
+                                  alt={details.name ?? activeLocation.name}
+                                  className="w-full h-32 md:h-40 object-cover"
+                                  loading="lazy"
+                                />
+                              </div>
+                            )} */}
 
                             {/* RATING GOOGLE */}
                             {details && (
@@ -779,9 +788,7 @@ const LocationsPage: React.FC = () => {
                               {activeLocation.address}
                             </p>
 
-                            
-
-                            {/* INFO GOOGLE: HORARIO + TEL */}
+                            {/* HORARIO */}
                             <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 gap-4">
                               <div>
                                 <p className="text-[11px] font-rethink-bold text-slate-900 mb-1">
@@ -806,21 +813,78 @@ const LocationsPage: React.FC = () => {
                                   )
                                 )}
                               </div>
-
-                              {activeLocation.phone || details?.phoneNumber ? (
-                                <div>
-                                  <p className="text-[11px] font-rethink-bold text-slate-900 mb-1">
-                                    Teléfono
-                                  </p>
-                                  <p className="text-[11px] text-slate-600">
-                                    {details?.phoneNumber ??
-                                      activeLocation.phone}
-                                  </p>
-                                </div>
-                              ) : null}
                             </div>
 
-                            
+                            {/* DELIVERY & PICKUP */}
+                            <div className="mt-5 pt-4 border-t border-slate-100">
+                              <p className="text-[11px] font-rethink-bold text-slate-900 mb-3">
+                                Delivery &amp; Pickup
+                              </p>
+
+                              <div className="space-y-3">
+                                {/* Teléfono (primer apartado) */}
+                                <div className="flex items-center gap-3">
+                                  <div className="w-11 h-11 rounded-xl bg-[#F6BA27] flex items-center justify-center shadow-sm">
+                                    <svg
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <p className="text-[11px] font-rethink-bold text-slate-900">
+                                      Teléfono
+                                    </p>
+                                    {details?.phoneNumber ||
+                                    activeLocation.phone ? (
+                                      <p className="text-[12px] font-rethink text-slate-800 leading-tight">
+                                        {details?.phoneNumber ??
+                                          activeLocation.phone}
+                                      </p>
+                                    ) : (
+                                      <p className="text-[11px] text-slate-500">
+                                        Número no disponible
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* MÍTICA APP */}
+                                <div className="flex items-center gap-3">
+                                  <div className="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm overflow-hidden">
+                                    <img
+                                      src="/images/brand/Mitica-Logo-fondoNegro.png"
+                                      alt="Mítica App"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <p className="text-[12px] font-rethink-bold text-slate-900">
+                                    MÍTICA APP
+                                  </p>
+                                </div>
+
+                                {/* Rappi */}
+                                <div className="flex items-center gap-3">
+                                  <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm overflow-hidden">
+                                    <img
+                                      src="/images/brand/logo-Rappi.jpg"
+                                      alt="Rappi"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <p className="text-[12px] font-rethink-bold text-slate-900">
+                                    Rappi
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
