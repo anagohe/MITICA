@@ -109,7 +109,9 @@ const Blog = () => {
           slug: p.slug || p._id,
           title: p.title || '',
           category: p.category || '',
-          img: p.mainImage ? urlFor(p.mainImage) : 'https://picsum.photos/400/300?blog_fallback',
+          img: p.mainImage
+            ? urlFor(p.mainImage)
+            : 'https://picsum.photos/400/300?blog_fallback',
           date: formatDate(p.publishedAt),
           excerpt: p.excerpt || '',
         }));
@@ -133,8 +135,7 @@ const Blog = () => {
     ? urlFor(heroImage)
     : 'https://picsum.photos/1920/1080?blog_hero';
 
-  const heroTitle =
-    heroData?.title || 'COMUNIDAD MÍTICA';
+  const heroTitle = heroData?.title || 'COMUNIDAD MÍTICA';
 
   return (
     <div className="w-full">
@@ -156,6 +157,21 @@ const Blog = () => {
       </div>
 
       <div className="container mx-auto px-6 pb-20">
+        {/* ✅ TÍTULO BLOG ARRIBA DEL BUSCADOR */}
+        <div className="max-w-4xl mx-auto -mt-6 mb-10 text-center">
+
+
+          <Title
+            variant={TitleVariant.BORDERED}
+            text="BLOG"
+            color="text-[#1D1D1B]"
+            borderColor="#F6BA27"
+            borderWidth={10}
+            className="text-4xl md:text-6xl"
+            align="center"
+          />
+        </div>
+
         {/* Search & Filter Bar */}
         <div className="max-w-4xl mx-auto mb-16">
           <div className="flex flex-col md:flex-row gap-4 items-center bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">

@@ -11,6 +11,13 @@ function urlFor(source: any) {
   return builder.image(source).url();
 }
 
+// ===== Fallbacks LOCALES (NO PICSUM) =====
+const FALLBACK_HERO = '/images/about/hero-fallback.jpg';
+const FALLBACK_WHO_SIDE = '/images/about/who-fallback.jpg';
+const FALLBACK_CENTER = '/images/about/vision-mission-fallback.png';
+const FALLBACK_MANIFESTO_TEXTURE = '/images/textures/stardust.png';
+const FALLBACK_BRAND_LOGO = '/images/brand/logo-mitica.png';
+
 // ===== Helpers =====
 function findFirstImage(obj: any): any | null {
   if (!obj || typeof obj !== 'object') return null;
@@ -139,9 +146,7 @@ const About: React.FC = () => {
 
   // ===== Derivados de Sanity =====
   const heroImage = data?.hero ? findFirstImage(data.hero) : null;
-  const heroImageUrl = heroImage
-    ? urlFor(heroImage)
-    : 'https://picsum.photos/1920/1080?team_hero';
+  const heroImageUrl = heroImage ? urlFor(heroImage) : FALLBACK_HERO;
 
   const overlay = data?.heroOverlay || {};
   const heroLine1 = overlay.line1 || '';
@@ -149,35 +154,39 @@ const About: React.FC = () => {
   const heroLine3 = overlay.line3 || '';
 
   const who = data?.whoWeAre;
-  const whoSideImageUrl = who?.sideImage
-    ? urlFor(who.sideImage)
-    : 'https://picsum.photos/800/800?girl_eating';
+  const whoSideImageUrl = who?.sideImage ? urlFor(who.sideImage) : FALLBACK_WHO_SIDE;
   const whoContentParagraphs = blocksToParagraphs(who?.content);
 
   const vm = data?.visionMission;
   const visionText =
-    vm?.visionText ||
-    'Queremos ser la marca líder de hamburguesas...';
+    vm?.visionText || 'Queremos ser la marca líder de hamburguesas...';
   const missionText =
     vm?.missionText ||
     'Generar en cada uno de nuestros clientes la mejor experiencia...';
-  const centerImageUrl = vm?.centerImage
-    ? urlFor(vm.centerImage)
-    : 'https://picsum.photos/500/500?burger_vision';
+  const centerImageUrl = vm?.centerImage ? urlFor(vm.centerImage) : FALLBACK_CENTER;
 
   const values =
     data?.values && data.values.length > 0
       ? data.values
-      : ['TOLERANCIA', 'LEALTAD', 'COMPROMISO', 'HONESTIDAD', 'RESPONSABILIDAD', 'RESPETO'];
+      : [
+          'TOLERANCIA',
+          'LEALTAD',
+          'COMPROMISO',
+          'HONESTIDAD',
+          'RESPONSABILIDAD',
+          'RESPETO',
+        ];
 
   const manifesto = data?.manifesto;
   const manifestoParagraphs = blocksToParagraphs(manifesto?.content);
 
   const manifestoHasImageBg =
     manifesto?.backgroundType === 'image' && manifesto.backgroundImage;
-  const manifestoBgImageUrl = manifestoHasImageBg
-    ? urlFor(manifesto.backgroundImage)
-    : null;
+
+  const manifestoBgImageUrl =
+    manifestoHasImageBg && manifesto?.backgroundImage
+      ? urlFor(manifesto.backgroundImage)
+      : null;
 
   return (
     <div className="w-full">
@@ -220,10 +229,15 @@ const About: React.FC = () => {
       <section className="bg-white py-20">
         <div className="container mx-auto px-6 text-center">
           <Title
-            variant={TitleVariant.REGULAR}
+            variant={TitleVariant.BORDERED}
             text="¿QUIÉNES SOMOS?"
-            className="text-4xl md:text-6xl mb-6 text-mitica-yellow drop-shadow-sm shadow-black"
+            color="text-[#1D1D1B]"
+            borderColor="#F6BA27"
+            borderWidth={10}
+            className="text-4xl md:text-6xl mb-6"
+            align="center"
           />
+
           <BodyText
             text={
               who?.mainText ||
@@ -236,7 +250,6 @@ const About: React.FC = () => {
         {/* Imagen Izquierda / Texto Derecha */}
         <div className="container mx-auto px-6 mt-12 flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1 flex justify-center">
-            {/* Misma medida, sin estilo de tarjeta */}
             <div className="w-full max-w-md lg:max-w-lg xl:max-w-xl aspect-[4/5] md:aspect-[4/3]">
               <img
                 src={whoSideImageUrl}
@@ -314,22 +327,26 @@ const About: React.FC = () => {
         </div>
       </section>
 
-      {/* VALORES – mismo fondo gris, título como "¿QUIÉNES SOMOS?" */}
+      {/* VALORES */}
       <section className="bg-[#f5f5f5] pb-20 pt-2 md:pt-6">
         <div className="text-center container mx-auto px-6">
           <Title
-            variant={TitleVariant.REGULAR}
+            variant={TitleVariant.BORDERED}
             text="VALORES"
-            className="text-4xl md:text-6xl mb-10 text-mitica-yellow drop-shadow-sm shadow-black"
+            color="text-white"
+            borderColor="#F6BA27"
+            borderWidth={10}
+            className="text-4xl md:text-6xl mb-10"
+            align="center"
           />
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-10 md:gap-x-16 max-w-5xl mx-auto">
             {values.map((val, idx) => {
-              const isYellow = idx % 2 === 0; // intercalado
+              const isYellow = idx % 2 === 0;
               return (
                 <h4
                   key={val}
-                  className={`font-rethink font-extrabold text-lg md:text-xl tracking-tight ${
+                  className={`font-nexa uppercase text-lg md:text-xl tracking-tight ${
                     isYellow ? 'text-mitica-yellow' : 'text-black'
                   } hover:text-mitica-yellow transition-colors cursor-default`}
                 >
@@ -341,12 +358,13 @@ const About: React.FC = () => {
         </div>
       </section>
 
-      {/* MANIFIESTO */}
+      {/* MANIFIESTO – estilo plano como referencia */}
       <section
         id="manifesto"
-        className="py-32 bg-mitica-black text-white relative overflow-hidden"
+        className="py-28 md:py-32 bg-mitica-black text-white relative overflow-hidden"
       >
-        {manifestoHasImageBg && manifestoBgImageUrl ? (
+        {/* Fondo: imagen de Sanity si existe, si no textura LOCAL */}
+        {manifestoBgImageUrl ? (
           <div className="absolute inset-0 opacity-25">
             <img
               src={manifestoBgImageUrl}
@@ -357,64 +375,66 @@ const About: React.FC = () => {
         ) : (
           <div className="absolute inset-0 opacity-10">
             <img
-              src="https://www.transparenttextures.com/patterns/stardust.png"
+              src={FALLBACK_MANIFESTO_TEXTURE}
               className="w-full h-full object-cover"
               alt="Textura manifiesto"
             />
           </div>
         )}
 
-        <div className="container mx-auto px-6 relative z-10 text-center max-w-2xl border border-mitica-yellow/30 p-12 rounded-3xl bg-white/5 backdrop-blur-sm">
-          <Title
-            variant={TitleVariant.TEXTURED_BORDERED}
-            text="MANIFIESTO"
-            borderColor="#FFC700"
-            className="text-5xl md:text-6xl leading-none text-mitica-yellow"
-          />
-          <Title
-            variant={TitleVariant.REGULAR}
-            text="MÍTICA"
-            color="text-mitica-yellow"
-            className="text-5xl md:text-6xl mb-12 leading-none"
-          />
-
-          {/* ===== AQUÍ ES DONDE SE SEPARAN LOS PÁRRAFOS ===== */}
-          <div className="space-y-6 font-rethink text-lg leading-relaxed text-gray-300 text-justify">
-            {manifestoParagraphs.length > 0 ? (
-              manifestoParagraphs.map((p, idx) => (
-                <p key={idx}>{p}</p>
-              ))
-            ) : (
-              <>
-                <p>
-                  Ser <strong className="text-mitica-yellow">MÍTICA</strong> es saber que pase lo que
-                  pase siempre será un buen día. Soy cool sin darme cuenta y todo lo que hago lo
-                  convierto en un momento{' '}
-                  <span className="text-mitica-yellow font-bold">LEGENDARIO</span>.
-                </p>
-                <p>
-                  Se podría decir que soy extraordinario... pero no es así, soy igual que tú:
-                  único, original y sobre todo, auténtico, no importa lo que haga, sino cómo lo
-                  hago, lo que cuenta no es el acto,{' '}
-                  <span className="text-mitica-yellow font-bold">#EsLaActitud.</span>
-                </p>
-                <p>
-                  Juntos, logramos algo increíble, somos{' '}
-                  <strong className="text-mitica-yellow">MÍTICA</strong> y creamos{' '}
-                  <strong className="text-mitica-yellow">
-                    #MomentosConSaborLegendario.
-                  </strong>
-                </p>
-              </>
-            )}
-          </div>
-
-          <div className="mt-16">
-            <img
-              src="/images/brand/logo-mitica.png"
-              alt="Logo Mítica"
-              className="h-20 mx-auto opacity-90"
+        {/* Contenido plano (sin tarjeta/borde) */}
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="mx-auto max-w-2xl text-center">
+            {/* Título más pequeño */}
+            <Title
+              variant={TitleVariant.REGULAR}
+              text="MANIFIESTO"
+              color="text-mitica-yellow"
+              className="text-3xl md:text-4xl leading-none"
             />
+            <Title
+              variant={TitleVariant.REGULAR}
+              text="MÍTICA"
+              color="text-mitica-yellow"
+              className="text-3xl md:text-4xl mb-10 leading-none"
+            />
+
+            <div className="space-y-6 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
+              {manifestoParagraphs.length > 0 ? (
+                manifestoParagraphs.map((p, idx) => <p key={idx}>{p}</p>)
+              ) : (
+                <>
+                  <p>
+                    Ser <strong className="text-mitica-yellow">MÍTICA</strong> es saber que pase lo que
+                    pase siempre será un buen día. Soy cool sin darme cuenta y todo lo que hago lo
+                    convierto en un momento{' '}
+                    <span className="text-mitica-yellow font-bold">LEGENDARIO</span>.
+                  </p>
+                  <p>
+                    Se podría decir que soy extraordinario... pero no es así, soy igual que tú:
+                    único, original y sobre todo, auténtico, no importa lo que haga, sino cómo lo
+                    hago, lo que cuenta no es el acto,{' '}
+                    <span className="text-mitica-yellow font-bold">#EsLaActitud.</span>
+                  </p>
+                  <p>
+                    Juntos, logramos algo increíble, somos{' '}
+                    <strong className="text-mitica-yellow">MÍTICA</strong> y creamos{' '}
+                    <strong className="text-mitica-yellow">
+                      #MomentosConSaborLegendario.
+                    </strong>
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Logo LOCAL permitido */}
+            <div className="mt-14">
+              <img
+                src={FALLBACK_BRAND_LOGO}
+                alt="Logo Mítica"
+                className="h-16 md:h-18 mx-auto opacity-90"
+              />
+            </div>
           </div>
         </div>
       </section>

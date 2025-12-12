@@ -63,7 +63,7 @@ type HomePageSanity = {
 type IntroSection = {
   title: string;
   text: string;
-  imageUrl: string;
+  imageUrl: string; // puede venir vacío si no hay imagen en Sanity
 };
 
 type LegendSection = {
@@ -72,7 +72,7 @@ type LegendSection = {
   text: string;
   buttonText: string;
   buttonLink: string;
-  imageUrl: string;
+  imageUrl: string; // puede venir vacío si no hay imagen en Sanity
   imagePosition: 'left' | 'right';
 };
 
@@ -80,7 +80,7 @@ type PromoCard = {
   id: string;
   title: string;
   desc: string;
-  imageUrl: string;
+  imageUrl: string; // puede venir vacío si no hay imagen en Sanity
   isGif?: boolean;
 };
 
@@ -172,6 +172,9 @@ const Home = () => {
             const imageUrl = imageValue ? urlFor(imageValue) : '';
             const hasImage = !!imageUrl;
 
+            // Conservamos tu lógica visual:
+            // si hay imagen => image
+            // si no => video (se queda el bloque placeholder)
             return {
               id: index + 1,
               type: hasImage ? 'image' : 'video',
@@ -185,18 +188,18 @@ const Home = () => {
             };
           }) ?? [];
 
-        // INTRO
+        // INTRO (sin fallback externo)
         const mappedIntro: IntroSection | null = data?.introSection
           ? {
               title: data.introSection.title ?? '',
               text: data.introSection.text ?? '',
               imageUrl: data.introSection.image
                 ? urlFor(data.introSection.image)
-                : 'https://picsum.photos/600/500?burgerbig',
+                : '',
             }
           : null;
 
-        // LEYENDA / SEGUNDA SECCIÓN
+        // LEYENDA / SEGUNDA SECCIÓN (sin fallback externo)
         const mappedLegend: LegendSection[] =
           data?.legendSections?.map((s) => ({
             id: s._key,
@@ -204,21 +207,17 @@ const Home = () => {
             text: s.text ?? '',
             buttonText: s.buttonText ?? '',
             buttonLink: s.buttonLink ?? '#',
-            imageUrl: s.image
-              ? urlFor(s.image)
-              : 'https://picsum.photos/800/600?eating1',
+            imageUrl: s.image ? urlFor(s.image) : '',
             imagePosition: s.imagePosition ?? 'right',
           })) ?? [];
 
-        // PROMOS
+        // PROMOS (sin fallback externo)
         const mappedPromos: PromoCard[] =
           data?.promotions?.map((p) => ({
             id: p._key,
             title: p.title ?? 'Promoción',
             desc: p.description ?? '',
-            imageUrl: p.image
-              ? urlFor(p.image)
-              : 'https://picsum.photos/600/600?p=1',
+            imageUrl: p.image ? urlFor(p.image) : '',
             isGif: p.isGif,
           })) ?? [];
 
@@ -383,22 +382,24 @@ const Home = () => {
         <section className="py-16 container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center gap-16">
             <div className="flex-1">
-              <motion.img
-                initial={{ x: -50, opacity: 0 }}
-                whileInView={{ x: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                src={introSection.imageUrl}
-                alt={introSection.title}
-                className="w-full max-w-2xl md:max-w-3xl mx-auto drop-shadow-2xl md:scale-110 lg:scale-125 hover:scale-110 transition-transform duration-500 object-contain"
-              />
+              {introSection.imageUrl ? (
+                <motion.img
+                  initial={{ x: -50, opacity: 0 }}
+                  whileInView={{ x: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  src={introSection.imageUrl}
+                  alt={introSection.title}
+                  className="w-full max-w-2xl md:max-w-3xl mx-auto drop-shadow-2xl md:scale-110 lg:scale-125 hover:scale-110 transition-transform duration-500 object-contain"
+                />
+              ) : (
+                <div className="w-full max-w-2xl md:max-w-3xl mx-auto aspect-[4/3] bg-gray-100 rounded-xl" />
+              )}
             </div>
 
             <div className="flex-1 text-center md:text-left">
               <Title
                 variant={TitleVariant.REGULAR}
-                text={
-                  introSection.title || 'MOMENTOS CON SABOR LEGENDARIO'
-                }
+                text={introSection.title || 'MOMENTOS CON SABOR LEGENDARIO'}
                 className="text-4xl md:text-6xl mb-6 leading-none"
                 align="left"
               />
@@ -440,11 +441,15 @@ const Home = () => {
                             : '-translate-x-4 -translate-y-4'
                         }`}
                       />
-                      <img
-                        src={section.imageUrl}
-                        alt={section.title}
-                        className="w-full h-full object-cover shadow-xl"
-                      />
+                      {section.imageUrl ? (
+                        <img
+                          src={section.imageUrl}
+                          alt={section.title}
+                          className="w-full h-full object-cover shadow-xl"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 shadow-xl" />
+                      )}
                     </div>
                   </div>
 
@@ -485,8 +490,11 @@ const Home = () => {
             <Title
               variant={TitleVariant.BORDERED}
               text="PROMOCIONES"
-              borderColor="#FFC700"
-              className="text-5xl md:text-7xl mb-14"
+              color="text-[#1D1D1B]"
+              borderColor="#F6BA27"
+              borderWidth={10}
+              className="text-4xl md:text-6xl mb-14"
+              align="center"
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
@@ -494,11 +502,15 @@ const Home = () => {
                 <div key={promo.id} className="group block">
                   <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
                     <div className="h-64 overflow-hidden">
-                      <img
-                        src={promo.imageUrl}
-                        alt={promo.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
+                      {promo.imageUrl ? (
+                        <img
+                          src={promo.imageUrl}
+                          alt={promo.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100" />
+                      )}
                     </div>
 
                     <div className="p-8 text-left">

@@ -433,11 +433,15 @@ const LocationsPage: React.FC = () => {
             </p>
           )}
           <Title
-            variant={TitleVariant.REGULAR}
+            variant={TitleVariant.BORDERED}
             text={pageTitle}
-            className="text-4xl md:text-5xl lg:text-6xl text-slate-900 mt-6 mb-3"
+            color="text-slate-900"
+            borderColor="#F6BA27"
+            borderWidth={10}
+            className="text-3xl md:text-4xl lg:text-5xl mt-10 mb-4"
             align="center"
           />
+
         </div>
       </section>
 

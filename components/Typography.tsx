@@ -9,6 +9,7 @@ export const Title: React.FC<TitleProps> = ({
   text,
   color = 'text-mitica-black',
   borderColor = '#000',
+  borderWidth = 2,
   className = '',
   align = 'center',
 }) => {
@@ -20,8 +21,6 @@ export const Title: React.FC<TitleProps> = ({
       : 'text-center';
 
   // === Fuente base según variante ===
-  // T1 y T3 -> NexaRustSans-Black (regular)
-  // T2 y T4 -> NexaRustSans-Black02 (textured)
   const isTextured =
     variant === TitleVariant.TEXTURED ||
     variant === TitleVariant.TEXTURED_BORDERED;
@@ -30,25 +29,37 @@ export const Title: React.FC<TitleProps> = ({
 
   const baseClasses = `${fontClass} uppercase tracking-tighter leading-[0.9] ${alignment} ${className}`;
 
-  // Stroke para los títulos con borde (T3 y T4)
-  const hasStroke =
-    variant === TitleVariant.BORDERED ||
-    variant === TitleVariant.TEXTURED_BORDERED;
-
-  const strokeStyle: React.CSSProperties | undefined = hasStroke
-    ? {
-        WebkitTextStroke: `2px ${borderColor}`,
-        color: 'transparent',
-      }
-    : undefined;
-
-  // Textured effect opcional (overlay) para T2 y T4
+  // === TEXTURED effect para T2 y T4 ===
   const useTextureEffect =
     variant === TitleVariant.TEXTURED ||
     variant === TitleVariant.TEXTURED_BORDERED;
 
-  if (useTextureEffect && !hasStroke) {
-    // T2: textura sin borde
+  // ✅ NUEVO COMPORTAMIENTO:
+  // BORDERED ahora es "Outside" (doble capa)
+  if (variant === TitleVariant.BORDERED) {
+    return (
+      <h2 className={baseClasses}>
+        <span className="relative inline-block">
+          {/* Capa de stroke */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 text-transparent"
+            style={{ WebkitTextStroke: `${borderWidth}px ${borderColor}` }}
+          >
+            {text}
+          </span>
+
+          {/* Capa de fill */}
+          <span className={`relative ${color}`}>
+            {text}
+          </span>
+        </span>
+      </h2>
+    );
+  }
+
+  // === TEXTURED sin borde (T2) ===
+  if (useTextureEffect && variant === TitleVariant.TEXTURED) {
     return (
       <h2 className={`${baseClasses} ${color} relative`}>
         <span
@@ -66,11 +77,16 @@ export const Title: React.FC<TitleProps> = ({
     );
   }
 
-  if (useTextureEffect && hasStroke) {
-    // T4: textura + borde
+  // === TEXTURED + borde hollow (T4) ===
+  if (variant === TitleVariant.TEXTURED_BORDERED) {
+    const strokeStyle: React.CSSProperties = {
+      WebkitTextStroke: `${borderWidth}px ${borderColor}`,
+      color: 'transparent',
+    };
+
     return (
       <h2
-        className={`${baseClasses}`}
+        className={baseClasses}
         style={{
           ...strokeStyle,
           WebkitMaskImage:
@@ -84,16 +100,7 @@ export const Title: React.FC<TitleProps> = ({
     );
   }
 
-  if (hasStroke) {
-    // T3: borde, sin textura
-    return (
-      <h2 className={baseClasses} style={strokeStyle}>
-        {text}
-      </h2>
-    );
-  }
-
-  // T1: regular, sin textura ni borde
+  // === REGULAR (T1) ===
   return (
     <h2 className={`${baseClasses} ${color}`}>
       {text}
@@ -117,7 +124,7 @@ export const Subtitle: React.FC<SubtitleProps> = ({
   text,
   className = '',
   color = 'text-mitica-black',
-  variant = 'sub1', // por defecto subtítulo con Nexa
+  variant = 'sub1',
 }) => {
   const fontClass =
     variant === 'sub2'
@@ -125,9 +132,7 @@ export const Subtitle: React.FC<SubtitleProps> = ({
       : 'font-nexa';
 
   return (
-    <h3
-      className={`${fontClass} uppercase tracking-wide ${color} ${className}`}
-    >
+    <h3 className={`${fontClass} uppercase tracking-wide ${color} ${className}`}>
       {text}
     </h3>
   );

@@ -1,9 +1,10 @@
+// src/types.ts
 
 export enum TitleVariant {
   REGULAR = 'regular', // NexaRustSans-Black
   TEXTURED = 'textured', // NexaRustSans-Black02
-  BORDERED = 'bordered', // Regular + Stroke
-  TEXTURED_BORDERED = 'textured_bordered' // Textured + Stroke
+  BORDERED = 'bordered', // Regular + Stroke (ahora OUTSIDE)
+  TEXTURED_BORDERED = 'textured_bordered' // Textured + Stroke (hollow)
 }
 
 export interface TitleProps {
@@ -11,6 +12,7 @@ export interface TitleProps {
   text: string;
   color?: string; // text color class
   borderColor?: string; // hex or color name for stroke
+  borderWidth?: number; // <-- OPCIONAL recomendado
   className?: string;
   align?: 'left' | 'center' | 'right';
 }
