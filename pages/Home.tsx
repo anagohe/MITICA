@@ -19,9 +19,11 @@ type HeroSlideSanity = {
   _key: string;
   ctaText?: string;
   ctaLink?: string;
+  heroLink?: string;
   align?: 'left' | 'center' | 'right';
   hero?: {
-    mediaType?: 'image' | 'video';
+    desktopImage?: any;
+    mobileImage?: any;
     title?: string;
     subtitle?: string;
     [key: string]: any;
@@ -29,8 +31,9 @@ type HeroSlideSanity = {
 };
 
 type IntroSectionSanity = {
-  title?: string;
-  text?: string;
+  titleType?: 'text' | 'image';
+  titleText?: string;
+  titleImage?: any;
   image?: any;
 };
 
@@ -61,9 +64,10 @@ type HomePageSanity = {
 
 // ========= Tipos locales =========
 type IntroSection = {
-  title: string;
-  text: string;
-  imageUrl: string; // puede venir vacío si no hay imagen en Sanity
+  titleType: 'text' | 'image';
+  titleText: string;
+  titleImageUrl: string;
+  imageUrl: string;
 };
 
 type LegendSection = {
@@ -72,7 +76,7 @@ type LegendSection = {
   text: string;
   buttonText: string;
   buttonLink: string;
-  imageUrl: string; // puede venir vacío si no hay imagen en Sanity
+  imageUrl: string;
   imagePosition: 'left' | 'right';
 };
 
@@ -80,25 +84,9 @@ type PromoCard = {
   id: string;
   title: string;
   desc: string;
-  imageUrl: string; // puede venir vacío si no hay imagen en Sanity
+  imageUrl: string;
   isGif?: boolean;
 };
-
-// ========= Helper: buscar la PRIMER imagen en un objeto =========
-function findFirstImage(obj: any): any | null {
-  if (!obj || typeof obj !== 'object') return null;
-
-  if (obj._type === 'image' && obj.asset?._ref) return obj;
-  if (obj.asset?._ref && !obj._type) return obj;
-
-  for (const value of Object.values(obj)) {
-    if (value && typeof value === 'object') {
-      const found = findFirstImage(value);
-      if (found) return found;
-    }
-  }
-  return null;
-}
 
 // ========= GROQ =========
 const HOME_QUERY = `
@@ -110,13 +98,20 @@ coalesce(
     _key,
     ctaText,
     ctaLink,
+    heroLink,
     align,
-    hero
+    hero{
+      desktopImage,
+      mobileImage,
+      title,
+      subtitle
+    }
   },
   introSection{
-    title,
-    text,
-    image
+    image,
+    titleType,
+    titleText,
+    titleImage
   },
   legendSections[]{
     _key,
@@ -137,14 +132,13 @@ coalesce(
 }
 `;
 
-const Home = () => {
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+const Home: React.FC = () => {
+  const [heroSlides, setHeroSlides] = useState<(HeroSlide & { heroLink?: string })[]>([]);
   const [introSection, setIntroSection] = useState<IntroSection | null>(null);
   const [legendSections, setLegendSections] = useState<LegendSection[]>([]);
   const [promos, setPromos] = useState<PromoCard[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Handlers para flechas
   const nextSlide = () => {
     if (!heroSlides.length) return;
     setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
@@ -152,9 +146,7 @@ const Home = () => {
 
   const prevSlide = () => {
     if (!heroSlides.length) return;
-    setCurrentSlide((prev) =>
-      prev === 0 ? heroSlides.length - 1 : prev - 1
-    );
+    setCurrentSlide((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1));
   };
 
   // ===== Fetch desde Sanity =====
@@ -164,42 +156,36 @@ const Home = () => {
         const data = await client.fetch<HomePageSanity>(HOME_QUERY);
         console.log('SANITY homePage:', data);
 
-        // HERO
-        const mappedHeroSlides: HeroSlide[] =
+        const mappedHeroSlides: (HeroSlide & { heroLink?: string })[] =
           data?.heroSlides?.map((slide, index) => {
             const heroData = slide.hero || {};
-            const imageValue = findFirstImage(heroData);
-            const imageUrl = imageValue ? urlFor(imageValue) : '';
-            const hasImage = !!imageUrl;
 
-            // Conservamos tu lógica visual:
-            // si hay imagen => image
-            // si no => video (se queda el bloque placeholder)
+            const desktopUrl = heroData.desktopImage ? urlFor(heroData.desktopImage) : '';
+            const mobileUrl = heroData.mobileImage ? urlFor(heroData.mobileImage) : desktopUrl;
+
             return {
               id: index + 1,
-              type: hasImage ? 'image' : 'video',
-              srcDesktop: imageUrl,
-              srcMobile: imageUrl,
+              type: 'image',
+              srcDesktop: desktopUrl,
+              srcMobile: mobileUrl,
               title: heroData.title ?? '',
               subtitle: heroData.subtitle ?? '',
               ctaText: slide.ctaText ?? '',
               ctaLink: slide.ctaLink ?? '/menu',
               align: slide.align ?? 'center',
+              heroLink: slide.heroLink ?? '',
             };
           }) ?? [];
 
-        // INTRO (sin fallback externo)
         const mappedIntro: IntroSection | null = data?.introSection
           ? {
-              title: data.introSection.title ?? '',
-              text: data.introSection.text ?? '',
-              imageUrl: data.introSection.image
-                ? urlFor(data.introSection.image)
-                : '',
+              titleType: data.introSection.titleType ?? 'text',
+              titleText: data.introSection.titleText ?? '',
+              titleImageUrl: data.introSection.titleImage ? urlFor(data.introSection.titleImage) : '',
+              imageUrl: data.introSection.image ? urlFor(data.introSection.image) : '',
             }
           : null;
 
-        // LEYENDA / SEGUNDA SECCIÓN (sin fallback externo)
         const mappedLegend: LegendSection[] =
           data?.legendSections?.map((s) => ({
             id: s._key,
@@ -211,7 +197,6 @@ const Home = () => {
             imagePosition: s.imagePosition ?? 'right',
           })) ?? [];
 
-        // PROMOS (sin fallback externo)
         const mappedPromos: PromoCard[] =
           data?.promotions?.map((p) => ({
             id: p._key,
@@ -236,12 +221,10 @@ const Home = () => {
   // ===== Auto–slide =====
   useEffect(() => {
     if (!heroSlides.length) return;
-    const timer = setInterval(
-      () => setCurrentSlide((prev) => (prev + 1) % heroSlides.length),
-      6000
-    );
+    const timer = setInterval(() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length), 3000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
+  
 
   return (
     <div className="w-full">
@@ -255,41 +238,33 @@ const Home = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1 }}
+                transition={{ duration: 0.35 }}
                 className="absolute inset-0 w-full h-full"
               >
-                {/* Media */}
+                {!slide.ctaText && slide.heroLink ? (
+                  <Link to={slide.heroLink} className="absolute inset-0 z-10" aria-label="Ir al enlace del hero" />
+                ) : null}
+
                 <div className="w-full h-full relative">
-                  {/* Desktop */}
                   <div className="hidden md:block w-full h-full">
-                    {slide.type === 'image' && slide.srcDesktop ? (
-                      <img
-                        src={slide.srcDesktop}
-                        alt={slide.title}
-                        className="w-full h-full object-cover"
-                      />
+                    {slide.srcDesktop ? (
+                      <img src={slide.srcDesktop} alt={slide.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white font-nexa text-2xl">
-                        VIDEO HERO
+                        HERO SIN IMAGEN
                       </div>
                     )}
                   </div>
 
-                  {/* Mobile */}
                   <div className="md:hidden w-full h-full">
-                    {slide.type === 'image' && slide.srcMobile ? (
-                      <img
-                        src={slide.srcMobile}
-                        alt={slide.title}
-                        className="w-full h-full object-cover"
-                      />
+                    {slide.srcMobile ? (
+                      <img src={slide.srcMobile} alt={slide.title} className="w-full h-full object-cover" />
                     ) : null}
                   </div>
 
                   <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" />
                 </div>
 
-                {/* Content */}
                 <div
                   className={`absolute inset-0 flex flex-col justify-center px-8 md:px-24 container mx-auto ${
                     slide.align === 'left'
@@ -303,24 +278,25 @@ const Home = () => {
                     initial={{ y: 30, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.5, duration: 0.8 }}
+                    className="relative z-20"
                   >
+                    <Title
+                      variant={TitleVariant.REGULAR}
+                      text={slide.title || ''}
+                      className="text-5xl md:text-8xl text-white mb-4 drop-shadow-lg"
+                      align={slide.align || 'center'}
+                    />
+
                     {slide.subtitle && (
-                      <h3 className="font-nexa text-mitica-yellow text-xl md:text-3xl mb-2 tracking-widest shadow-black drop-shadow-md">
+                      <h3 className="font-nexa text-mitica-yellow text-xl md:text-3xl mb-8 tracking-widest shadow-black drop-shadow-md">
                         {slide.subtitle}
                       </h3>
                     )}
 
-                    <Title
-                      variant={TitleVariant.REGULAR}
-                      text={slide.title || ''}
-                      className="text-5xl md:text-8xl text-white mb-8 drop-shadow-lg"
-                      align={slide.align || 'center'}
-                    />
-
                     {slide.ctaText && (
                       <Link
                         to={slide.ctaLink || '/'}
-                        className="bg-mitica-yellow text-black font-nexa uppercase px-10 py-4 rounded-full hover:bg-white hover:scale-105 transition-all shadow-lg text-lg inline-block"
+                        className="relative z-30 bg-mitica-yellow text-black font-nexa uppercase px-10 py-4 rounded-full hover:bg-white hover:scale-105 transition-all shadow-lg text-lg inline-block"
                       >
                         {slide.ctaText}
                       </Link>
@@ -332,15 +308,11 @@ const Home = () => {
           )}
         </AnimatePresence>
 
-        {/* FLECHAS */}
         {heroSlides.length > 1 && (
           <>
             <button
               onClick={prevSlide}
-              className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-30
-                         text-white hover:text-mitica-yellow
-                         transition-transform duration-200 hover:scale-110
-                         drop-shadow-lg"
+              className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-40 text-white hover:text-mitica-yellow transition-transform duration-200 hover:scale-110 drop-shadow-lg"
               aria-label="Slide anterior"
             >
               <ChevronLeft className="w-7 h-7 md:w-9 md:h-9" />
@@ -348,10 +320,7 @@ const Home = () => {
 
             <button
               onClick={nextSlide}
-              className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-30
-                         text-white hover:text-mitica-yellow
-                         transition-transform duration-200 hover:scale-110
-                         drop-shadow-lg"
+              className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-40 text-white hover:text-mitica-yellow transition-transform duration-200 hover:scale-110 drop-shadow-lg"
               aria-label="Siguiente slide"
             >
               <ChevronRight className="w-7 h-7 md:w-9 md:h-9" />
@@ -359,18 +328,16 @@ const Home = () => {
           </>
         )}
 
-        {/* Dots */}
         {heroSlides.length > 1 && (
-          <div className="absolute bottom-10 left-0 w-full flex justify-center gap-3 z-30">
+          <div className="absolute bottom-10 left-0 w-full flex justify-center gap-3 z-40">
             {heroSlides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
                 className={`h-2 rounded-full transition-all duration-500 ${
-                  idx === currentSlide
-                    ? 'bg-mitica-yellow w-12'
-                    : 'bg-white/50 w-2'
+                  idx === currentSlide ? 'bg-mitica-yellow w-12' : 'bg-white/50 w-2'
                 }`}
+                aria-label={`Ir al slide ${idx + 1}`}
               />
             ))}
           </div>
@@ -388,7 +355,7 @@ const Home = () => {
                   whileInView={{ x: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   src={introSection.imageUrl}
-                  alt={introSection.title}
+                  alt="Intro"
                   className="w-full max-w-2xl md:max-w-3xl mx-auto drop-shadow-2xl md:scale-110 lg:scale-125 hover:scale-110 transition-transform duration-500 object-contain"
                 />
               ) : (
@@ -397,23 +364,22 @@ const Home = () => {
             </div>
 
             <div className="flex-1 text-center md:text-left">
-              <Title
-                variant={TitleVariant.REGULAR}
-                text={introSection.title || 'MOMENTOS CON SABOR LEGENDARIO'}
-                className="text-4xl md:text-6xl mb-6 leading-none"
-                align="left"
-              />
-
-              <BodyText
-                text={introSection.text}
-                className="text-gray-600 text-lg text-justify"
-              />
+              {introSection.titleType === 'image' && introSection.titleImageUrl ? (
+                <img src={introSection.titleImageUrl} alt="Título" className="mb-6 max-w-full h-auto" />
+              ) : (
+                <Title
+                  variant={TitleVariant.REGULAR}
+                  text={introSection.titleText || 'MOMENTOS CON SABOR LEGENDARIO'}
+                  className="text-4xl md:text-6xl mb-6 leading-none"
+                  align="left"
+                />
+              )}
             </div>
           </div>
         </section>
       )}
 
-      {/* SEGUNDA SECCIÓN – en móvil: imagen arriba, texto abajo del mismo ancho */}
+      {/* SEGUNDA SECCIÓN */}
       {legendSections.length > 0 && (
         <section className="pt-10 pb-16 bg-white">
           <div className="container mx-auto px-6 space-y-16">
@@ -427,7 +393,6 @@ const Home = () => {
                     imageOnRight ? 'md:flex-row-reverse' : 'md:flex-row'
                   }`}
                 >
-                  {/* Imagen */}
                   <div
                     className={`flex justify-center md:basis-7/12 lg:basis-8/12 ${
                       imageOnRight ? 'md:justify-end' : 'md:justify-start'
@@ -436,35 +401,24 @@ const Home = () => {
                     <div className="relative w-full max-w-3xl md:max-w-2xl aspect-[4/3]">
                       <div
                         className={`absolute inset-0 border-4 border-mitica-yellow -z-10 ${
-                          imageOnRight
-                            ? 'translate-x-4 translate-y-4'
-                            : '-translate-x-4 -translate-y-4'
+                          imageOnRight ? 'translate-x-4 translate-y-4' : '-translate-x-4 -translate-y-4'
                         }`}
                       />
                       {section.imageUrl ? (
-                        <img
-                          src={section.imageUrl}
-                          alt={section.title}
-                          className="w-full h-full object-cover shadow-xl"
-                        />
+                        <img src={section.imageUrl} alt={section.title} className="w-full h-full object-cover shadow-xl" />
                       ) : (
                         <div className="w-full h-full bg-gray-100 shadow-xl" />
                       )}
                     </div>
                   </div>
 
-                  {/* Texto */}
                   <div className="md:basis-5/12 lg:basis-4/12 md:flex md:flex-col md:justify-center">
                     <div className="w-full max-w-3xl mx-auto">
-                      {/* SUBTÍTULO con Rethink ExtraBold */}
                       <h3 className="font-rethink-bold text-3xl mb-4 uppercase text-left">
                         {section.title || 'SÉ PARTE DE LA LEYENDA'}
                       </h3>
 
-                      <BodyText
-                        text={section.text}
-                        className="text-lg text-gray-600 mb-6 text-justify"
-                      />
+                      <BodyText text={section.text} className="text-lg text-gray-600 mb-6 text-justify" />
 
                       {section.buttonText && (
                         <Link
@@ -488,12 +442,9 @@ const Home = () => {
         <section className="pt-12 pb-20 bg-white">
           <div className="container mx-auto px-6 text-center">
             <Title
-              variant={TitleVariant.BORDERED}
+              variant={TitleVariant.REGULAR}
               text="PROMOCIONES"
-              color="text-[#1D1D1B]"
-              borderColor="#F6BA27"
-              borderWidth={10}
-              className="text-4xl md:text-6xl mb-14"
+              className="text-4xl md:text-6xl mb-14 text-black"
               align="center"
             />
 
@@ -514,15 +465,8 @@ const Home = () => {
                     </div>
 
                     <div className="p-8 text-left">
-                      {/* SUBTÍTULO de tarjeta con Rethink ExtraBold */}
-                      <h3 className="font-rethink-bold text-lg mb-2">
-                        {promo.title || 'Promoción'}
-                      </h3>
-
-                      <p className="font-rethink text-gray-500 text-sm mb-4 text-justify">
-                        {promo.desc}
-                      </p>
-
+                      <h3 className="font-rethink-bold text-lg mb-2">{promo.title || 'Promoción'}</h3>
+                      <p className="font-rethink text-gray-500 text-sm mb-4 text-justify">{promo.desc}</p>
                       <div className="w-8 h-1 bg-mitica-yellow group-hover:w-full transition-all duration-300" />
                     </div>
                   </div>

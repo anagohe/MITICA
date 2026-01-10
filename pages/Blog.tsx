@@ -162,7 +162,7 @@ const Blog = () => {
 
 
           <Title
-            variant={TitleVariant.BORDERED}
+            variant={TitleVariant.REGULAR}
             text="BLOG"
             color="text-[#1D1D1B]"
             borderColor="#F6BA27"

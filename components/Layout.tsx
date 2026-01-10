@@ -1,5 +1,5 @@
 // Layout.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, Instagram, Facebook } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,14 +13,53 @@ interface LayoutProps {
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // ✅ (solo para animación del logo)
+  const [scrollY, setScrollY] = useState(0);
+  const scrollRafRef = useRef<number | null>(null);
+  const SWITCH_AT = 120;
+  const OPTICAL_DOWN = 26;
+  const p = Math.max(0, Math.min(1, scrollY / SWITCH_AT));
+
+  const circleWrapStyle: React.CSSProperties = {
+    transform: `translateY(${OPTICAL_DOWN - Math.min(scrollY, SWITCH_AT)}px)`,
+    opacity: 1 - p,
+    transition: 'opacity 150ms ease-out',
+    willChange: 'transform, opacity',
+  };
+
+  const altLogoStyle: React.CSSProperties = {
+    opacity: p,
+    transform: `translateY(${(1 - p) * 6}px)`,
+    transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+    willChange: 'transform, opacity',
+  };
+
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
+    const handleScroll = () => {
+      // ✅ (solo para animación del logo) rAF + scrollY
+      if (!scrollRafRef.current) {
+        scrollRafRef.current = requestAnimationFrame(() => {
+          const y = window.scrollY || 0;
+          setScrollY(y);
+          if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+          scrollRafRef.current = null;
+        });
+      }
+
+      setScrolled(window.scrollY > 50);
+    };
+
+    handleScroll();
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -74,26 +113,40 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed w-full z-50 bg-mitica-black transition-all duration-300 py-4 shadow-md`}
+      // ✅ SOLO CAMBIO: un poquito más alto (py-5 en lugar de py-4)
+      className={`fixed w-full z-50 bg-mitica-black transition-all duration-300 py-5 shadow-md`}
     >
       <div className="container mx-auto px-6 flex justify-between items-center">
         {/* Logo Logic: Circle at top, Image logo when scrolled */}
         <Link to="/" className="z-50 flex items-center gap-2 group">
-          {!scrolled ? (
-            <div className="w-14 h-14 bg-mitica-yellow rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ml-4">
-              <img
-                src="/images/brand/logo-icono.png"
-                alt="Mítica icono circular"
-                className="h-9 w-9 object-contain"
-              />
+          {/* ✅ Logo grande pero SIN aumentar el alto del navbar, queda a la mitad */}
+          <div className="relative ml-4">
+            <div className="absolute left-0 top-full -translate-y-1/2 w-24 h-24 flex items-center justify-center">
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={circleWrapStyle}
+              >
+                <div className="w-24 h-24 bg-mitica-yellow rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <img
+                    src="/images/brand/logo-icono.png"
+                    alt="Mítica icono circular"
+                    className="h-14 w-14 object-contain"
+                  />
+                </div>
+              </div>
+
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={altLogoStyle}
+              >
+                <img
+                  src="/images/brand/logo.png"
+                  alt="MÍTICA"
+                  className="h-10 w-auto object-contain animate-in fade-in duration-300"
+                />
+              </div>
             </div>
-          ) : (
-            <img
-              src="/images/brand/logo.png"
-              alt="MÍTICA"
-              className="h-7 w-auto object-contain animate-in fade-in duration-300"
-            />
-          )}
+          </div>
         </Link>
 
         {/* Desktop Nav */}
@@ -106,7 +159,6 @@ const Navbar = () => {
               onMouseLeave={() => setActiveDropdown(null)}
             >
               {link.dropdown ? (
-                // ✅ TOP-LEVEL DESKTOP EN NEXA (mismo tamaño)
                 <button className="flex items-center gap-1 text-white font-nexa font-bold text-sm hover:text-mitica-yellow uppercase transition-colors tracking-wide">
                   {link.name}{' '}
                   <ChevronDown
@@ -117,7 +169,6 @@ const Navbar = () => {
                   />
                 </button>
               ) : (
-                // ✅ TOP-LEVEL DESKTOP EN NEXA (mismo tamaño)
                 <Link
                   to={link.path}
                   className="text-white font-nexa font-bold text-sm hover:text-mitica-yellow uppercase transition-colors tracking-wide"
@@ -250,7 +301,6 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
       {/* ===================== BANNER AMARILLO (con toggle de Sanity) ===================== */}
       {showBanner && (
         <section className="relative z-20 w-full bg-amber-400">
-          {/* ↑↑↑ AUMENTÉ altura solo en mobile con pt-20 y pb-14 (mantengo tu intención) ↑↑↑ */}
           <div className="mx-auto max-w-7xl px-4 pt-20 pb-14 md:pt-2 md:pb-0 md:px-6 lg:px-8">
             <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-3">
               {/* === CELULARES === */}
@@ -335,13 +385,16 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Column 1: Logo */}
           <div className="flex flex-col items-center md:items-start">
-            <div className="w-28 h-28 border-4 border-mitica-yellow rounded-full flex items-center justify-center mb-6 group hover:bg-mitica-yellow hover:border-white transition-colors duration-500">
-              <span className="font-nexa text-mitica-yellow text-5xl group-hover:text-black transition-colors">
-                M
-              </span>
-            </div>
+            {/* ✅ LOGO FOOTER MÁS GRANDE (como referencia) */}
+            <img
+              src="/images/brand/logo-footer.png"
+              alt="Mítica Burgers"
+              className="h-28 md:h-32 lg:h-36 w-auto max-w-[220px] object-contain mb-6"
+              loading="lazy"
+            />
+
             <p className="text-gray-500 text-xs font-rethink">
-              Copyright © 2024 Mítica Burgers
+              Copyright © {new Date().getFullYear()} Mítica Burgers
             </p>
           </div>
 
@@ -350,6 +403,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
             <h4 className="font-nexa text-mitica-yellow text-lg mb-6">
               SÍGUENOS EN REDES
             </h4>
+
             <div className="flex gap-4 mb-8">
               <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer">
                 <Instagram size={20} />
@@ -365,9 +419,62 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
             <h4 className="font-nexa text-mitica-yellow text-lg mb-4">
               DESCARGA NUESTRA APP
             </h4>
+
+            {/* ✅ ICONOS APPLE + ANDROID (ya no son cuadritos) */}
             <div className="flex gap-3">
-              <div className="w-8 h-8 bg-white rounded-md hover:scale-110 transition-transform cursor-pointer"></div>
-              <div className="w-8 h-8 bg-white rounded-md hover:scale-105 transition-transform cursor-pointer"></div>
+              {/* Apple */}
+              <a
+                href="https://apple.com"
+                target="_blank"
+                rel="noreferrer"
+                className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center
+                           hover:bg-mitica-yellow hover:border-mitica-yellow transition-colors"
+                aria-label="App Store"
+                title="App Store"
+              >
+                <svg
+                  className="w-5 h-5 text-white group-hover:text-black transition-colors"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {/* Apple icon (simple) */}
+                  <path d="M16 13c0 3-2 7-4 7s-4-4-4-7 2-5 4-5 4 2 4 5z" />
+                  <path d="M14.5 5.5c-.8 1.2-2 2-3.5 2 .2-1.5 1.2-3 3.5-3 0 0 .2.3 0 1z" />
+                </svg>
+              </a>
+
+              {/* Android */}
+              <a
+                href="https://play.google.com"
+                target="_blank"
+                rel="noreferrer"
+                className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center
+                           hover:bg-mitica-yellow hover:border-mitica-yellow transition-colors"
+                aria-label="Google Play"
+                title="Google Play"
+              >
+                <svg
+                  className="w-5 h-5 text-white group-hover:text-black transition-colors"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {/* Android robot (simple) */}
+                  <path d="M8 9l-1.5-2" />
+                  <path d="M16 9l1.5-2" />
+                  <path d="M7 10h10a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z" />
+                  <path d="M9 14h0" />
+                  <path d="M15 14h0" />
+                  <path d="M10 10a2 2 0 0 1 4 0" />
+                </svg>
+              </a>
             </div>
           </div>
 

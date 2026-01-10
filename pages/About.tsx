@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { Title, TitleVariant, BodyText } from '../components/Typography';
 import { client } from '../sanity/client';
 import imageUrlBuilder from '@sanity/image-url';
+import { PortableText } from '@portabletext/react';
 
 // ===== Sanity image builder =====
 const builder = imageUrlBuilder(client);
@@ -124,9 +125,7 @@ const About: React.FC = () => {
     if (location.hash) {
       const elementId = location.hash.replace('#', '');
       const element = document.getElementById(elementId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
+      if (element) element.scrollIntoView({ behavior: 'smooth' });
     }
   }, [location]);
 
@@ -158,8 +157,7 @@ const About: React.FC = () => {
   const whoContentParagraphs = blocksToParagraphs(who?.content);
 
   const vm = data?.visionMission;
-  const visionText =
-    vm?.visionText || 'Queremos ser la marca líder de hamburguesas...';
+  const visionText = vm?.visionText || 'Queremos ser la marca líder de hamburguesas...';
   const missionText =
     vm?.missionText ||
     'Generar en cada uno de nuestros clientes la mejor experiencia...';
@@ -168,25 +166,38 @@ const About: React.FC = () => {
   const values =
     data?.values && data.values.length > 0
       ? data.values
-      : [
-          'TOLERANCIA',
-          'LEALTAD',
-          'COMPROMISO',
-          'HONESTIDAD',
-          'RESPONSABILIDAD',
-          'RESPETO',
-        ];
+      : ['TOLERANCIA', 'LEALTAD', 'COMPROMISO', 'HONESTIDAD', 'RESPONSABILIDAD', 'RESPETO'];
 
   const manifesto = data?.manifesto;
-  const manifestoParagraphs = blocksToParagraphs(manifesto?.content);
+  const hasManifestoContent =
+    Array.isArray(manifesto?.content) && manifesto!.content!.length > 0;
 
   const manifestoHasImageBg =
     manifesto?.backgroundType === 'image' && manifesto.backgroundImage;
 
   const manifestoBgImageUrl =
-    manifestoHasImageBg && manifesto?.backgroundImage
-      ? urlFor(manifesto.backgroundImage)
-      : null;
+    manifestoHasImageBg && manifesto?.backgroundImage ? urlFor(manifesto.backgroundImage) : null;
+
+  // ✅ PortableText components (usa tu mark value: 'highlight' del schema)
+  const manifestoComponents = {
+    block: {
+      normal: ({ children }: any) => (
+        <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
+          {children}
+        </p>
+      ),
+    },
+    marks: {
+      // tu botón "Y" en Sanity
+      highlight: ({ children }: any) => (
+        <span className="text-mitica-yellow font-bold">{children}</span>
+      ),
+      // opcional: negrita normal en blanco
+      strong: ({ children }: any) => <strong className="font-bold text-white">{children}</strong>,
+      em: ({ children }: any) => <em className="italic">{children}</em>,
+    },
+    hardBreak: () => <br />,
+  };
 
   return (
     <div className="w-full">
@@ -216,10 +227,9 @@ const About: React.FC = () => {
 
           {heroLine3 && (
             <Title
-              variant={TitleVariant.BORDERED}
+              variant={TitleVariant.REGULAR}
               text={heroLine3}
-              borderColor="#FFF"
-              className="text-5xl md:text-8xl text-white leading-none"
+              className="text-5xl md:text-8xl text-black leading-none"
             />
           )}
         </div>
@@ -229,12 +239,9 @@ const About: React.FC = () => {
       <section className="bg-white py-20">
         <div className="container mx-auto px-6 text-center">
           <Title
-            variant={TitleVariant.BORDERED}
+            variant={TitleVariant.REGULAR}
             text="¿QUIÉNES SOMOS?"
-            color="text-[#1D1D1B]"
-            borderColor="#F6BA27"
-            borderWidth={10}
-            className="text-4xl md:text-6xl mb-6"
+            className="text-4xl md:text-6xl mb-6 text-black"
             align="center"
           />
 
@@ -269,13 +276,11 @@ const About: React.FC = () => {
             ) : (
               <p className="font-rethink text-base md:text-lg text-gray-700 text-justify">
                 <strong className="text-black">MÍTICA</strong> está inspirada en el verdadero{' '}
-                <span className="text-mitica-yellow font-bold">
-                  amor por las hamburguesas
-                </span>
-                . El menú es un equilibrio entre lo clásico y la innovación, que atrae tanto a
-                los principiantes como a los amantes de la comida, a través de un toque que
-                abarca nuestro ingrediente clave, <strong className="text-black">la carne</strong>.
-                Nuestro objetivo es compartir nuestra comida con todos.
+                <span className="text-mitica-yellow font-bold">amor por las hamburguesas</span>. El
+                menú es un equilibrio entre lo clásico y la innovación, que atrae tanto a los
+                principiantes como a los amantes de la comida, a través de un toque que abarca
+                nuestro ingrediente clave, <strong className="text-black">la carne</strong>. Nuestro
+                objetivo es compartir nuestra comida con todos.
                 <br />
                 <br />
                 Cuando nuestros clientes comen con nosotros, queremos que sea algo más que una
@@ -331,12 +336,9 @@ const About: React.FC = () => {
       <section className="bg-[#f5f5f5] pb-20 pt-2 md:pt-6">
         <div className="text-center container mx-auto px-6">
           <Title
-            variant={TitleVariant.BORDERED}
+            variant={TitleVariant.REGULAR}
             text="VALORES"
-            color="text-white"
-            borderColor="#F6BA27"
-            borderWidth={10}
-            className="text-4xl md:text-6xl mb-10"
+            className="text-4xl md:text-6xl mb-10 text-black"
             align="center"
           />
 
@@ -358,7 +360,7 @@ const About: React.FC = () => {
         </div>
       </section>
 
-      {/* MANIFIESTO – estilo plano como referencia */}
+      {/* MANIFIESTO – ahora con párrafos reales + highlight amarillo desde Sanity */}
       <section
         id="manifesto"
         className="py-28 md:py-32 bg-mitica-black text-white relative overflow-hidden"
@@ -385,7 +387,6 @@ const About: React.FC = () => {
         {/* Contenido plano (sin tarjeta/borde) */}
         <div className="container mx-auto px-6 relative z-10">
           <div className="mx-auto max-w-2xl text-center">
-            {/* Título más pequeño */}
             <Title
               variant={TitleVariant.REGULAR}
               text="MANIFIESTO"
@@ -399,29 +400,30 @@ const About: React.FC = () => {
               className="text-3xl md:text-4xl mb-10 leading-none"
             />
 
-            <div className="space-y-6 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
-              {manifestoParagraphs.length > 0 ? (
-                manifestoParagraphs.map((p, idx) => <p key={idx}>{p}</p>)
+            <div className="space-y-6">
+              {hasManifestoContent ? (
+                <PortableText
+                  value={manifesto?.content || []}
+                  components={manifestoComponents}
+                />
               ) : (
                 <>
-                  <p>
-                    Ser <strong className="text-mitica-yellow">MÍTICA</strong> es saber que pase lo que
-                    pase siempre será un buen día. Soy cool sin darme cuenta y todo lo que hago lo
-                    convierto en un momento{' '}
+                  <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
+                    Ser <strong className="text-mitica-yellow">MÍTICA</strong> es saber que pase lo
+                    que pase siempre será un buen día. Soy cool sin darme cuenta y todo lo que hago
+                    lo convierto en un momento{' '}
                     <span className="text-mitica-yellow font-bold">LEGENDARIO</span>.
                   </p>
-                  <p>
+                  <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
                     Se podría decir que soy extraordinario... pero no es así, soy igual que tú:
                     único, original y sobre todo, auténtico, no importa lo que haga, sino cómo lo
                     hago, lo que cuenta no es el acto,{' '}
                     <span className="text-mitica-yellow font-bold">#EsLaActitud.</span>
                   </p>
-                  <p>
+                  <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
                     Juntos, logramos algo increíble, somos{' '}
                     <strong className="text-mitica-yellow">MÍTICA</strong> y creamos{' '}
-                    <strong className="text-mitica-yellow">
-                      #MomentosConSaborLegendario.
-                    </strong>
+                    <strong className="text-mitica-yellow">#MomentosConSaborLegendario.</strong>
                   </p>
                 </>
               )}

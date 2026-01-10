@@ -9,7 +9,8 @@ const homePage = defineType({
     defineField({
       name: 'heroSlides',
       title: 'Slides del Hero (Slider Principal)',
-      description: 'Cada slide usa el objeto "hero" (imagen / video, títulos, etc.).',
+      description:
+        'Cada slide usa imágenes Desktop + Mobile (responsivo), títulos y botón. Si no hay botón, puedes configurar un link para todo el hero.',
       type: 'array',
       of: [
         defineField({
@@ -19,20 +20,56 @@ const homePage = defineType({
           fields: [
             defineField({
               name: 'hero',
-              type: 'hero',
               title: 'Configuración del Hero',
+              type: 'object',
+              fields: [
+                defineField({
+                  name: 'desktopImage',
+                  title: 'Imagen Desktop',
+                  type: 'image',
+                  options: { hotspot: true },
+                }),
+                defineField({
+                  name: 'mobileImage',
+                  title: 'Imagen Mobile (Responsiva)',
+                  type: 'image',
+                  options: { hotspot: true },
+                }),
+                defineField({
+                  name: 'title',
+                  title: 'Título',
+                  type: 'string',
+                }),
+                defineField({
+                  name: 'subtitle',
+                  title: 'Subtítulo',
+                  type: 'string',
+                }),
+              ],
             }),
+
             defineField({
               name: 'ctaText',
               title: 'Texto del botón',
               type: 'string',
+              description: 'Si dejas vacío, el slide puede usar el "Link del hero completo".',
             }),
             defineField({
               name: 'ctaLink',
               title: 'Enlace del botón',
               type: 'string',
               description: 'Ej. /menu, /franchise, URL completa, etc.',
+              hidden: ({ parent }) => !parent?.ctaText,
             }),
+            defineField({
+              name: 'heroLink',
+              title: 'Link del hero completo (sin botón)',
+              type: 'string',
+              description:
+                'Si no hay botón, al tocar/clic en cualquier parte del hero redirige a este link (ej. /menu o URL completa).',
+              hidden: ({ parent }) => !!parent?.ctaText,
+            }),
+
             defineField({
               name: 'align',
               title: 'Alineación del texto',
@@ -56,7 +93,7 @@ const homePage = defineType({
             prepare({ title, subtitle }) {
               return {
                 title: title || 'Slide del Hero',
-                subtitle: subtitle || 'Configura título, imagen y botón',
+                subtitle: subtitle || 'Configura título, imágenes y botón/link',
               };
             },
           },
@@ -75,16 +112,37 @@ const homePage = defineType({
           type: 'image',
           options: { hotspot: true },
         }),
+
         defineField({
-          name: 'title',
-          title: 'Título',
+          name: 'titleType',
+          title: 'Tipo de Título',
           type: 'string',
+          options: {
+            list: [
+              { title: 'Texto', value: 'text' },
+              { title: 'Imagen', value: 'image' },
+            ],
+            layout: 'radio',
+          },
+          initialValue: 'text',
         }),
+
         defineField({
-          name: 'text',
-          title: 'Texto',
-          type: 'text',
+          name: 'titleText',
+          title: 'Título (Texto)',
+          type: 'string',
+          hidden: ({ parent }) => parent?.titleType === 'image',
         }),
+
+        defineField({
+          name: 'titleImage',
+          title: 'Título (Imagen)',
+          type: 'image',
+          options: { hotspot: true },
+          hidden: ({ parent }) => parent?.titleType !== 'image',
+        }),
+
+        // ✅ CAMBIO PUNTUAL: Se quitó el campo "text"
       ],
     }),
 
@@ -135,9 +193,7 @@ const homePage = defineType({
           preview: {
             select: { title: 'title' },
             prepare({ title }) {
-              return {
-                title: title || 'Apartado de Segunda sección',
-              };
+              return { title: title || 'Apartado de Segunda sección' };
             },
           },
         }),
@@ -155,11 +211,7 @@ const homePage = defineType({
           type: 'object',
           fields: [
             defineField({ name: 'title', title: 'Título', type: 'string' }),
-            defineField({
-              name: 'description',
-              title: 'Descripción',
-              type: 'text',
-            }),
+            defineField({ name: 'description', title: 'Descripción', type: 'text' }),
             defineField({
               name: 'image',
               title: 'Imagen / GIF',
@@ -176,20 +228,11 @@ const homePage = defineType({
           preview: {
             select: { title: 'title' },
             prepare({ title }) {
-              return {
-                title: title || 'Promoción',
-              };
+              return { title: title || 'Promoción' };
             },
           },
         }),
       ],
-    }),
-
-    defineField({
-      name: 'showFooterBanner',
-      title: 'Mostrar banner amarillo en el footer',
-      type: 'boolean',
-      initialValue: true,
     }),
   ],
 

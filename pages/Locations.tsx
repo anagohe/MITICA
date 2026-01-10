@@ -748,7 +748,7 @@ const LocationsPage: React.FC = () => {
                             </div>
 
                             {/* FOTO DEL NEGOCIO DESDE GOOGLE */}
-                            {/* {details?.photoUrl && (
+                            {details?.photoUrl && (
                               <div className="w-full rounded-2xl overflow-hidden mb-3">
                                 <img
                                   src={details.photoUrl}
@@ -757,7 +757,7 @@ const LocationsPage: React.FC = () => {
                                   loading="lazy"
                                 />
                               </div>
-                            )} */}
+                            )} 
 
                             {/* RATING GOOGLE */}
                             {details && (

@@ -44,7 +44,7 @@ const Events = () => {
         <div className="container mx-auto px-6 py-20 text-center max-w-4xl">
           {/* ✅ EVENTOS: negro con borde amarillo */}
           <Title
-            variant={TitleVariant.BORDERED}
+            variant={TitleVariant.REGULAR}
             text="EVENTOS"
             color="text-[#1D1D1B]"
             borderColor="#F6BA27"
