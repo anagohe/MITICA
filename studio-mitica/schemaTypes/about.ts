@@ -6,35 +6,67 @@ const aboutPage = defineType({
   title: 'Página Nosotros',
   type: 'document',
   fields: [
+    // ✅ HERO SIMPLE (solo título + subtítulo) + imágenes responsivas
     defineField({
       name: 'hero',
-      title: 'Hero (Nosotros) - Imagen / Video',
-      type: 'hero',
-    }),
-
-    // Hero: SOLO textos sobre la imagen
-    defineField({
-      name: 'heroOverlay',
-      title: 'Hero: Textos sobre la imagen',
+      title: 'Hero (Nosotros)',
       type: 'object',
       fields: [
         defineField({
-          name: 'line1',
-          title: 'Línea 1 (Título grande con textura)',
+          name: 'mediaType',
+          title: 'Tipo en Desktop',
           type: 'string',
-          description: 'Ejemplo: ¿QUIÉNES SOMOS?',
+          options: {
+            list: [
+              { title: 'Imagen', value: 'image' },
+              { title: 'Video', value: 'video' },
+            ],
+            layout: 'radio',
+          },
+          initialValue: 'image',
+        }),
+
+        // Desktop image
+        defineField({
+          name: 'desktopImage',
+          title: 'Imagen Desktop',
+          type: 'image',
+          options: { hotspot: true },
+          hidden: ({ parent }) => parent?.mediaType !== 'image',
+        }),
+
+        // Desktop video (si lo usas)
+        defineField({
+          name: 'desktopVideo',
+          title: 'Video Desktop (MP4)',
+          type: 'file',
+          options: {
+            accept: 'video/mp4',
+          },
+          hidden: ({ parent }) => parent?.mediaType !== 'video',
+        }),
+
+        // ✅ Mobile image (obligatoria)
+        defineField({
+          name: 'mobileImage',
+          title: 'Imagen Móvil (Obligatoria para responsivo)',
+          description:
+            'Esta imagen se mostrará en celulares incluso si eliges video para desktop.',
+          type: 'image',
+          options: { hotspot: true },
+          validation: (Rule) => Rule.required(),
+        }),
+
+        // ✅ SOLO título y subtítulo
+        defineField({
+          name: 'title',
+          title: 'Título Principal',
+          type: 'string',
         }),
         defineField({
-          name: 'line2',
-          title: 'Línea 2 (Título amarillo)',
+          name: 'subtitle',
+          title: 'Subtítulo',
           type: 'string',
-          description: 'Ejemplo: CON SABOR',
-        }),
-        defineField({
-          name: 'line3',
-          title: 'Línea 3 (Título con borde)',
-          type: 'string',
-          description: 'Ejemplo: LEGENDARIO',
         }),
       ],
     }),
@@ -44,10 +76,11 @@ const aboutPage = defineType({
       title: '¿Quiénes Somos?',
       type: 'object',
       fields: [
+        // ✅ ahora rich text para negritas + highlight
         defineField({
           name: 'mainText',
-          type: 'text',
-          title: 'Texto Principal Centrado',
+          type: 'blockContent',
+          title: 'Texto Principal Centrado (Rico)',
         }),
         defineField({
           name: 'sideImage',
@@ -55,6 +88,7 @@ const aboutPage = defineType({
           title: 'Imagen Lateral',
           options: { hotspot: true },
         }),
+        // ✅ ya era blockContent, se queda
         defineField({
           name: 'content',
           type: 'blockContent',
@@ -68,15 +102,16 @@ const aboutPage = defineType({
       title: 'Visión y Misión',
       type: 'object',
       fields: [
+        // ✅ ahora rich text para negritas + highlight
         defineField({
           name: 'visionText',
-          type: 'text',
-          title: 'Texto Visión',
+          type: 'blockContent',
+          title: 'Texto Visión (Rico)',
         }),
         defineField({
           name: 'missionText',
-          type: 'text',
-          title: 'Texto Misión',
+          type: 'blockContent',
+          title: 'Texto Misión (Rico)',
         }),
         defineField({
           name: 'centerImage',

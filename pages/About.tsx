@@ -1,5 +1,5 @@
 // src/pages/About.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Title, TitleVariant, BodyText } from '../components/Typography';
 import { client } from '../sanity/client';
@@ -9,66 +9,48 @@ import { PortableText } from '@portabletext/react';
 // ===== Sanity image builder =====
 const builder = imageUrlBuilder(client);
 function urlFor(source: any) {
-  return builder.image(source).url();
+  return builder.image(source).auto('format').url();
 }
 
-// ===== Fallbacks LOCALES (NO PICSUM) =====
-const FALLBACK_HERO = '/images/about/hero-fallback.jpg';
+// ✅ Builder conAttach sizes (legacy / si lo necesitas en otras partes)
+function imgUrl(source: any, w: number, h?: number) {
+  let img = builder.image(source).width(w);
+  if (h) img = img.height(h);
+  return img.auto('format').fit('crop').url();
+}
+
+// ✅ Mobile: NO recorte, mantiene imagen completa (para srcset móvil)
+function imgUrlContain(source: any, w: number) {
+  return builder.image(source).width(w).auto('format').fit('max').url();
+}
+
+// ===== Fallbacks LOCALES =====
+const FALLBACK_HERO_DESKTOP = '/images/about/hero-fallback.jpg';
+const FALLBACK_HERO_MOBILE = '/images/about/hero-fallback-mobile.jpg';
 const FALLBACK_WHO_SIDE = '/images/about/who-fallback.jpg';
 const FALLBACK_CENTER = '/images/about/vision-mission-fallback.png';
 const FALLBACK_MANIFESTO_TEXTURE = '/images/textures/stardust.png';
 const FALLBACK_BRAND_LOGO = '/images/brand/logo-mitica.png';
 
-// ===== Helpers =====
-function findFirstImage(obj: any): any | null {
-  if (!obj || typeof obj !== 'object') return null;
-
-  if (obj._type === 'image' && obj.asset?._ref) return obj;
-  if (obj.asset?._ref && !obj._type) return obj;
-
-  for (const value of Object.values(obj)) {
-    if (value && typeof value === 'object') {
-      const found = findFirstImage(value);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-function blocksToParagraphs(blocks?: any[]): string[] {
-  if (!Array.isArray(blocks)) return [];
-  return blocks
-    .filter((b) => b && b._type === 'block')
-    .map((block) => {
-      const children = Array.isArray(block.children) ? block.children : [];
-      return children.map((c: any) => c.text || '').join('');
-    })
-    .filter((txt) => txt.trim().length > 0);
-}
-
 // ===== Tipos Sanity =====
-type HeroSanity = {
+type AboutHeroSanity = {
   mediaType?: 'image' | 'video';
+  desktopImage?: any;
+  desktopVideo?: any;
+  mobileImage?: any;
   title?: string;
   subtitle?: string;
-  [key: string]: any;
-};
-
-type HeroOverlaySanity = {
-  line1?: string;
-  line2?: string;
-  line3?: string;
 };
 
 type WhoWeAreSanity = {
-  mainText?: string;
+  mainText?: any[];
   sideImage?: any;
   content?: any[];
 };
 
 type VisionMissionSanity = {
-  visionText?: string;
-  missionText?: string;
+  visionText?: any[];
+  missionText?: any[];
   centerImage?: any;
 };
 
@@ -79,8 +61,7 @@ type ManifestoSanity = {
 };
 
 type AboutPageSanity = {
-  hero?: HeroSanity;
-  heroOverlay?: HeroOverlaySanity;
+  hero?: AboutHeroSanity;
   whoWeAre?: WhoWeAreSanity;
   visionMission?: VisionMissionSanity;
   values?: string[];
@@ -88,13 +69,16 @@ type AboutPageSanity = {
   showFooterBanner?: boolean;
 };
 
+// ========= GROQ =========
 const ABOUT_QUERY = `
 *[_type == "aboutPage"][0]{
-  hero,
-  heroOverlay{
-    line1,
-    line2,
-    line3
+  hero{
+    mediaType,
+    desktopImage,
+    desktopVideo,
+    mobileImage,
+    title,
+    subtitle
   },
   whoWeAre{
     mainText,
@@ -143,24 +127,23 @@ const About: React.FC = () => {
     fetchAbout();
   }, []);
 
-  // ===== Derivados de Sanity =====
-  const heroImage = data?.hero ? findFirstImage(data.hero) : null;
-  const heroImageUrl = heroImage ? urlFor(heroImage) : FALLBACK_HERO;
-
-  const overlay = data?.heroOverlay || {};
-  const heroLine1 = overlay.line1 || '';
-  const heroLine2 = overlay.line2 || '';
-  const heroLine3 = overlay.line3 || '';
-
+  // ===== Derivados =====
+  const hero = data?.hero;
   const who = data?.whoWeAre;
-  const whoSideImageUrl = who?.sideImage ? urlFor(who.sideImage) : FALLBACK_WHO_SIDE;
-  const whoContentParagraphs = blocksToParagraphs(who?.content);
-
   const vm = data?.visionMission;
-  const visionText = vm?.visionText || 'Queremos ser la marca líder de hamburguesas...';
-  const missionText =
-    vm?.missionText ||
-    'Generar en cada uno de nuestros clientes la mejor experiencia...';
+  const manifesto = data?.manifesto;
+
+  const heroTitle = hero?.title || '¿QUIÉNES SOMOS?';
+  const heroSubtitle = hero?.subtitle || '';
+
+  const heroDesktopUrl = hero?.desktopImage ? urlFor(hero.desktopImage) : FALLBACK_HERO_DESKTOP;
+  const heroMobileUrl = hero?.mobileImage
+    ? urlFor(hero.mobileImage)
+    : (FALLBACK_HERO_MOBILE || heroDesktopUrl);
+
+  const heroDesktopVideoUrl = hero?.desktopVideo?.asset?.url || '';
+
+  const whoSideImageUrl = who?.sideImage ? urlFor(who.sideImage) : FALLBACK_WHO_SIDE;
   const centerImageUrl = vm?.centerImage ? urlFor(vm.centerImage) : FALLBACK_CENTER;
 
   const values =
@@ -168,147 +151,229 @@ const About: React.FC = () => {
       ? data.values
       : ['TOLERANCIA', 'LEALTAD', 'COMPROMISO', 'HONESTIDAD', 'RESPONSABILIDAD', 'RESPETO'];
 
-  const manifesto = data?.manifesto;
   const hasManifestoContent =
-    Array.isArray(manifesto?.content) && manifesto!.content!.length > 0;
+    Array.isArray(manifesto?.content) && (manifesto?.content?.length || 0) > 0;
 
   const manifestoHasImageBg =
-    manifesto?.backgroundType === 'image' && manifesto.backgroundImage;
+    manifesto?.backgroundType === 'image' && !!manifesto?.backgroundImage;
 
   const manifestoBgImageUrl =
     manifestoHasImageBg && manifesto?.backgroundImage ? urlFor(manifesto.backgroundImage) : null;
 
-  // ✅ PortableText components (usa tu mark value: 'highlight' del schema)
-  const manifestoComponents = {
-    block: {
-      normal: ({ children }: any) => (
-        <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
-          {children}
-        </p>
-      ),
-    },
-    marks: {
-      // tu botón "Y" en Sanity
-      highlight: ({ children }: any) => (
-        <span className="text-mitica-yellow font-bold">{children}</span>
-      ),
-      // opcional: negrita normal en blanco
-      strong: ({ children }: any) => <strong className="font-bold text-white">{children}</strong>,
-      em: ({ children }: any) => <em className="italic">{children}</em>,
-    },
-    hardBreak: () => <br />,
-  };
+  // ===== PortableText components =====
+  const portableLight = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-700 text-justify">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        highlight: ({ children }: any) => (
+          <span className="text-mitica-yellow font-bold">{children}</span>
+        ),
+        strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
+        em: ({ children }: any) => <em className="italic">{children}</em>,
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  );
+
+  const portableMainCentered = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="m-0 font-rethink text-lg md:text-xl leading-relaxed text-gray-800 text-center">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        highlight: ({ children }: any) => (
+          <span className="text-mitica-yellow font-bold">{children}</span>
+        ),
+        strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
+        em: ({ children }: any) => <em className="italic">{children}</em>,
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  );
+
+  const portableDark = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        highlight: ({ children }: any) => (
+          <span className="text-mitica-yellow font-bold">{children}</span>
+        ),
+        strong: ({ children }: any) => <strong className="font-bold text-white">{children}</strong>,
+        em: ({ children }: any) => <em className="italic">{children}</em>,
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  );
 
   return (
     <div className="w-full">
-      {/* Hero Section - "Nosotros" */}
-      <div className="relative h-screen w-full bg-mitica-black overflow-hidden">
+      {/* ✅ HERO: en móvil NO usamos h-screen; usamos una proporción fija para evitar barras negras */}
+      {/* ✅ HERO: debajo del navbar en móvil */}
+<div className="relative w-full overflow-hidden bg-mitica-black md:h-screen pt-24 md:pt-0">
+  {/* En móvil: alto = pantalla - navbar. En desktop: h-full */}
+  <div className="relative w-full h-[calc(100svh-96px)] md:h-full">
+    {hero?.mediaType === 'video' && heroDesktopVideoUrl ? (
+      <>
+        {/* Desktop video */}
+        <video
+          className="hidden md:block w-full h-full object-cover opacity-60"
+          autoPlay
+          muted
+          loop
+          playsInline
+        >
+          <source src={heroDesktopVideoUrl} type="video/mp4" />
+        </video>
+
+        {/* Mobile image */}
         <img
-          src={heroImageUrl}
+          src={heroMobileUrl}
+          alt="Nosotros Hero Mobile"
+          className="md:hidden w-full h-full object-cover opacity-60"
+        />
+      </>
+    ) : (
+      <picture>
+        <source
+          media="(max-width: 767px)"
+          srcSet={
+            hero?.mobileImage
+              ? [
+                  `${imgUrlContain(hero.mobileImage, 480)} 480w`,
+                  `${imgUrlContain(hero.mobileImage, 640)} 640w`,
+                  `${imgUrlContain(hero.mobileImage, 750)} 750w`,
+                  `${imgUrlContain(hero.mobileImage, 900)} 900w`,
+                  `${imgUrlContain(hero.mobileImage, 1080)} 1080w`,
+                ].join(', ')
+              : heroMobileUrl
+          }
+        />
+        <img
+          src={heroDesktopUrl}
           alt="Nosotros Hero"
           className="w-full h-full object-cover opacity-60"
+          loading="eager"
+          decoding="async"
         />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-          {heroLine1 && (
-            <Title
-              variant={TitleVariant.TEXTURED}
-              text={heroLine1}
-              className="text-5xl md:text-8xl text-white leading-none"
-            />
-          )}
+      </picture>
+    )}
 
-          {heroLine2 && (
-            <Title
-              variant={TitleVariant.REGULAR}
-              text={heroLine2}
-              className="text-4xl md:text-6xl text-mitica-yellow leading-none mb-2"
-            />
-          )}
+    {/* Overlay */}
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+      {heroTitle && (
+        <Title
+          variant={TitleVariant.TEXTURED}
+          text={heroTitle}
+          className="text-5xl md:text-8xl text-white leading-none"
+        />
+      )}
 
-          {heroLine3 && (
-            <Title
-              variant={TitleVariant.REGULAR}
-              text={heroLine3}
-              className="text-5xl md:text-8xl text-black leading-none"
-            />
-          )}
-        </div>
-      </div>
+      {heroSubtitle && (
+        <Title
+          variant={TitleVariant.REGULAR}
+          text={heroSubtitle}
+          className="text-3xl md:text-5xl text-mitica-yellow leading-none mt-3"
+        />
+      )}
+    </div>
+  </div>
+</div>
+
 
       {/* ¿QUIÉNES SOMOS? */}
       <section className="bg-white py-20">
-        <div className="container mx-auto px-6 text-center">
-          <Title
-            variant={TitleVariant.REGULAR}
-            text="¿QUIÉNES SOMOS?"
-            className="text-4xl md:text-6xl mb-6 text-black"
-            align="center"
-          />
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center">
+            <Title
+              variant={TitleVariant.REGULAR}
+              text="¿QUIÉNES SOMOS?"
+              className="text-4xl md:text-6xl mb-6 text-black"
+              align="center"
+            />
 
-          <BodyText
-            text={
-              who?.mainText ||
-              'MÍTICA es un concepto de hamburguesería FAST-CASUAL que nace el 30 de Enero de 2020...'
-            }
-            className="text-gray-800 text-lg md:text-xl mb-6 text-center"
-          />
-        </div>
-
-        {/* Imagen Izquierda / Texto Derecha */}
-        <div className="container mx-auto px-6 mt-12 flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1 flex justify-center">
-            <div className="w-full max-w-md lg:max-w-lg xl:max-w-xl aspect-[4/5] md:aspect-[4/3]">
-              <img
-                src={whoSideImageUrl}
-                className="w-full h-full object-cover"
-                alt="Quiénes somos"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 text-left">
-            {whoContentParagraphs.length > 0 ? (
-              <div className="font-rethink text-base md:text-lg text-gray-700 text-justify space-y-4">
-                {whoContentParagraphs.map((p, i) => (
-                  <p key={i}>{p}</p>
-                ))}
+            {Array.isArray(who?.mainText) && (who?.mainText?.length || 0) > 0 ? (
+              <div className="mx-auto max-w-6xl space-y-4">
+                <PortableText value={who?.mainText || []} components={portableMainCentered} />
               </div>
             ) : (
-              <p className="font-rethink text-base md:text-lg text-gray-700 text-justify">
-                <strong className="text-black">MÍTICA</strong> está inspirada en el verdadero{' '}
-                <span className="text-mitica-yellow font-bold">amor por las hamburguesas</span>. El
-                menú es un equilibrio entre lo clásico y la innovación, que atrae tanto a los
-                principiantes como a los amantes de la comida, a través de un toque que abarca
-                nuestro ingrediente clave, <strong className="text-black">la carne</strong>. Nuestro
-                objetivo es compartir nuestra comida con todos.
-                <br />
-                <br />
-                Cuando nuestros clientes comen con nosotros, queremos que sea algo más que una
-                comida, queremos que sea una <strong className="text-black">experiencia</strong>.
-                Nuestro enfoque está en la calidad y el sabor de nuestra comida, presentación
-                consistente y excelente servicio al cliente.
-              </p>
+              <div className="mx-auto max-w-6xl">
+                <BodyText
+                  text="MÍTICA es un concepto de hamburguesería FAST-CASUAL que nace el 30 de Enero de 2020..."
+                  className="text-gray-800 text-lg md:text-xl leading-relaxed text-center"
+                />
+              </div>
             )}
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-14 items-start">
+            <div className="w-full">
+              <div className="w-full aspect-[4/3] overflow-hidden">
+                <img
+                  src={whoSideImageUrl}
+                  alt="Quiénes somos"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+
+            <div className="w-full text-left">
+              {Array.isArray(who?.content) && (who?.content?.length || 0) > 0 ? (
+                <div className="space-y-6">
+                  <PortableText value={who?.content || []} components={portableLight} />
+                </div>
+              ) : (
+                <div className="space-y-6 font-rethink text-base md:text-lg text-gray-700 text-justify">
+                  <p>
+                    <strong className="text-black">MÍTICA</strong> está inspirada en el verdadero{' '}
+                    <span className="text-mitica-yellow font-bold">amor por las hamburguesas</span>.
+                    Nuestro enfoque está en la calidad y el sabor, presentación consistente y excelente
+                    servicio al cliente.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* VISIÓN & MISIÓN – estilo plano */}
+      {/* VISIÓN & MISIÓN */}
       <section id="vision" className="py-20 bg-[#f5f5f5]">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* VISIÓN */}
           <div className="flex-1 flex justify-start md:justify-end">
             <div className="max-w-xl border-l-4 border-mitica-yellow pl-6">
               <h3 className="font-rethink font-extrabold text-2xl mb-4 uppercase tracking-wider">
                 VISIÓN
               </h3>
-              <p className="font-rethink text-base md:text-lg text-gray-700 text-justify">
-                {visionText}
-              </p>
+
+              {Array.isArray(vm?.visionText) && (vm?.visionText?.length || 0) > 0 ? (
+                <PortableText value={vm?.visionText || []} components={portableLight} />
+              ) : (
+                <p className="font-rethink text-base md:text-lg text-gray-700 text-justify">
+                  Queremos ser la marca líder de hamburguesas...
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Burger al centro */}
           <div className="w-72 md:w-80 lg:w-96 flex-shrink-0 mx-1 h-64 md:h-72 flex items-end justify-center overflow-hidden">
             <img
               src={centerImageUrl}
@@ -318,15 +383,19 @@ const About: React.FC = () => {
             />
           </div>
 
-          {/* MISIÓN */}
           <div className="flex-1 flex justify-end md:justify-start">
             <div className="max-w-xl border-r-4 border-mitica-yellow pr-6 text-left">
               <h3 className="font-rethink font-extrabold text-2xl mb-4 uppercase tracking-wider">
                 MISIÓN
               </h3>
-              <p className="font-rethink text-base md:text-lg text-gray-700 text-justify">
-                {missionText}
-              </p>
+
+              {Array.isArray(vm?.missionText) && (vm?.missionText?.length || 0) > 0 ? (
+                <PortableText value={vm?.missionText || []} components={portableLight} />
+              ) : (
+                <p className="font-rethink text-base md:text-lg text-gray-700 text-justify">
+                  Generar en cada uno de nuestros clientes la mejor experiencia...
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -350,7 +419,7 @@ const About: React.FC = () => {
                   key={val}
                   className={`font-nexa uppercase text-lg md:text-xl tracking-tight ${
                     isYellow ? 'text-mitica-yellow' : 'text-black'
-                  } hover:text-mitica-yellow transition-colors cursor-default`}
+                  }`}
                 >
                   {val}
                 </h4>
@@ -360,31 +429,31 @@ const About: React.FC = () => {
         </div>
       </section>
 
-      {/* MANIFIESTO – ahora con párrafos reales + highlight amarillo desde Sanity */}
+      {/* MANIFIESTO */}
       <section
         id="manifesto"
         className="py-28 md:py-32 bg-mitica-black text-white relative overflow-hidden"
       >
-        {/* Fondo: imagen de Sanity si existe, si no textura LOCAL */}
-        {manifestoBgImageUrl ? (
-          <div className="absolute inset-0 opacity-25">
-            <img
-              src={manifestoBgImageUrl}
-              className="w-full h-full object-cover"
-              alt="Fondo manifiesto"
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-0 opacity-10">
-            <img
-              src={FALLBACK_MANIFESTO_TEXTURE}
-              className="w-full h-full object-cover"
-              alt="Textura manifiesto"
-            />
-          </div>
-        )}
+        {manifesto?.backgroundType === 'image' ? (
+          manifestoBgImageUrl ? (
+            <div className="absolute inset-0 opacity-25">
+              <img
+                src={manifestoBgImageUrl}
+                className="w-full h-full object-cover"
+                alt="Fondo manifiesto"
+              />
+            </div>
+          ) : (
+            <div className="absolute inset-0 opacity-10">
+              <img
+                src={FALLBACK_MANIFESTO_TEXTURE}
+                className="w-full h-full object-cover"
+                alt="Textura manifiesto"
+              />
+            </div>
+          )
+        ) : null}
 
-        {/* Contenido plano (sin tarjeta/borde) */}
         <div className="container mx-auto px-6 relative z-10">
           <div className="mx-auto max-w-2xl text-center">
             <Title
@@ -402,34 +471,15 @@ const About: React.FC = () => {
 
             <div className="space-y-6">
               {hasManifestoContent ? (
-                <PortableText
-                  value={manifesto?.content || []}
-                  components={manifestoComponents}
-                />
+                <PortableText value={manifesto?.content || []} components={portableDark} />
               ) : (
-                <>
-                  <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
-                    Ser <strong className="text-mitica-yellow">MÍTICA</strong> es saber que pase lo
-                    que pase siempre será un buen día. Soy cool sin darme cuenta y todo lo que hago
-                    lo convierto en un momento{' '}
-                    <span className="text-mitica-yellow font-bold">LEGENDARIO</span>.
-                  </p>
-                  <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
-                    Se podría decir que soy extraordinario... pero no es así, soy igual que tú:
-                    único, original y sobre todo, auténtico, no importa lo que haga, sino cómo lo
-                    hago, lo que cuenta no es el acto,{' '}
-                    <span className="text-mitica-yellow font-bold">#EsLaActitud.</span>
-                  </p>
-                  <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
-                    Juntos, logramos algo increíble, somos{' '}
-                    <strong className="text-mitica-yellow">MÍTICA</strong> y creamos{' '}
-                    <strong className="text-mitica-yellow">#MomentosConSaborLegendario.</strong>
-                  </p>
-                </>
+                <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-300 text-center md:text-justify">
+                  Ser <strong className="text-mitica-yellow">MÍTICA</strong> es saber que pase lo que
+                  pase siempre será un buen día...
+                </p>
               )}
             </div>
 
-            {/* Logo LOCAL permitido */}
             <div className="mt-14">
               <img
                 src={FALLBACK_BRAND_LOGO}
