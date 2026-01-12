@@ -13,10 +13,9 @@ import imageUrlBuilder from '@sanity/image-url';
 import {
   GoogleMap,
   Marker,
-  useLoadScript,
   MarkerClusterer,
+  useJsApiLoader, // ✅ CAMBIO
 } from '@react-google-maps/api';
-import type { Libraries } from '@react-google-maps/api';
 
 // ================= Sanity image builder =================
 const builder = imageUrlBuilder(client);
@@ -25,10 +24,16 @@ function urlFor(source: any) {
 }
 
 // ================= Google Maps Config =================
-// ⚠️ Mover a .env en producción
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBDpj8pOR-LV5BxCDJMdEnAcI7bBOzF3H0';
+// ✅ KEY desde .env (Vite)
+const GOOGLE_MAPS_API_KEY = import.meta.env
+  .VITE_GOOGLE_MAPS_API_KEY as string;
 
-const libraries: Libraries = ['places'];
+if (!GOOGLE_MAPS_API_KEY) {
+  console.error('Missing VITE_GOOGLE_MAPS_API_KEY');
+}
+
+// ✅ Importante: si usas PlacesService, necesitas "places"
+const libraries: ('places')[] = ['places'];
 
 const MAP_CONTAINER_STYLE = {
   width: '100%',
@@ -72,7 +77,6 @@ const clusterStyles = [
     url: CLUSTER_ICON_SVG,
     height: 50,
     width: 50,
-    // [x, y] desde la esquina superior izquierda
     anchorText: [-3, -1] as const,
   },
 ] as const;
@@ -135,7 +139,7 @@ type GooglePlaceDetails = {
   userRatingsTotal?: number;
   phoneNumber?: string;
   weekdayText?: string[];
-  photoUrl?: string; // 👈 foto del negocio
+  photoUrl?: string;
 };
 
 // ================= GROQ =================
@@ -175,7 +179,6 @@ const LocationsPage: React.FC = () => {
   const [ctaCards, setCtaCards] = useState<CtaCard[]>([]);
 
   const [pageTitle, setPageTitle] = useState('Encuentra tu Restaurante');
-  // subtítulo opcional (por defecto vacío para que NO salga “MÍTICA MÉXICO”)
   const [pageSubtitle, setPageSubtitle] = useState<string>('');
   const [searchPlaceholder, setSearchPlaceholder] = useState(
     'Escribe al menos 3 caracteres'
@@ -201,19 +204,18 @@ const LocationsPage: React.FC = () => {
 
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  const { isLoaded: isMapLoaded } = useLoadScript({
+  // ✅ CAMBIO: Loader que evita el “places provided more than once”
+  const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
+    id: 'google-maps-script', // 👈 IMPORTANTÍSIMO para dedupe
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries,
   });
-
 
   // ============= Fetch =============
   useEffect(() => {
     const fetchLocationsPage = async () => {
       try {
-        const data = await client.fetch<LocationsPageSanity>(
-          LOCATIONS_QUERY
-        );
+        const data = await client.fetch<LocationsPageSanity>(LOCATIONS_QUERY);
 
         if (data?.title) setPageTitle(data.title);
         if (data?.subtitle) setPageSubtitle(data.subtitle);
@@ -274,8 +276,7 @@ const LocationsPage: React.FC = () => {
     let list = locations;
     if (selectedCity) {
       list = list.filter(
-        (loc) =>
-          loc.city.toLowerCase() === selectedCity.toLowerCase()
+        (loc) => loc.city.toLowerCase() === selectedCity.toLowerCase()
       );
     }
     if (searchTerm.trim().length >= 3) {
@@ -292,8 +293,7 @@ const LocationsPage: React.FC = () => {
   }, [locations, searchTerm, selectedCity]);
 
   const activeLocation = useMemo(
-    () =>
-      locations.find((loc) => loc.id === activeLocationId) ?? null,
+    () => locations.find((loc) => loc.id === activeLocationId) ?? null,
     [activeLocationId, locations]
   );
 
@@ -301,48 +301,23 @@ const LocationsPage: React.FC = () => {
     mapRef.current = map;
   }, []);
 
-  const handleMarkerClick = (location: RestaurantLocation) => {
-    setActiveLocationId(location.id);
-    setViewMode('detail');
-    setIsSidebarOpen(true);
-
+  const handleDirectionsClick = (location: RestaurantLocation) => {
     if (mapRef.current) {
       mapRef.current.panTo({
         lat: location.latitude,
         lng: location.longitude,
       });
-      mapRef.current.setZoom(16);
+      mapRef.current.setZoom(17);
     }
-
-    // También pedir detalles de Google al tocar el pin o la card
-    fetchPlaceDetails(location);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
+    window.open(url, '_blank');
   };
-
-  const handleListSelect = (location: RestaurantLocation) => {
-    handleMarkerClick(location);
-  };
-  const handleDirectionsClick = (location: RestaurantLocation) => {
-  // 1. Zoom y centrar el mapa en esa sucursal
-  if (mapRef.current) {
-    mapRef.current.panTo({
-      lat: location.latitude,
-      lng: location.longitude,
-    });
-    mapRef.current.setZoom(17);
-  }
-
-  // 2. Abrir Google Maps con la ruta hacia esa ubicación
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
-  window.open(url, '_blank');
-};
 
   // =========== Google Places: detalles ===========
   const fetchPlaceDetails = useCallback((loc: RestaurantLocation) => {
     if (!mapRef.current) return;
 
-    const service = new google.maps.places.PlacesService(
-      mapRef.current
-    );
+    const service = new google.maps.places.PlacesService(mapRef.current);
     setIsDetailsLoading(true);
 
     const query = `${loc.name} ${loc.city} ${loc.address}`;
@@ -372,7 +347,7 @@ const LocationsPage: React.FC = () => {
           'user_ratings_total',
           'formatted_phone_number',
           'opening_hours',
-          'photos', // 👈 pedimos fotos
+          'photos',
         ],
       };
 
@@ -403,6 +378,26 @@ const LocationsPage: React.FC = () => {
       });
     });
   }, []);
+
+  const handleMarkerClick = (location: RestaurantLocation) => {
+    setActiveLocationId(location.id);
+    setViewMode('detail');
+    setIsSidebarOpen(true);
+
+    if (mapRef.current) {
+      mapRef.current.panTo({
+        lat: location.latitude,
+        lng: location.longitude,
+      });
+      mapRef.current.setZoom(16);
+    }
+
+    fetchPlaceDetails(location);
+  };
+
+  const handleListSelect = (location: RestaurantLocation) => {
+    handleMarkerClick(location);
+  };
 
   const handleMoreInfo = (location: RestaurantLocation) => {
     handleMarkerClick(location);
@@ -441,7 +436,6 @@ const LocationsPage: React.FC = () => {
             className="text-3xl md:text-4xl lg:text-5xl mt-10 mb-4"
             align="center"
           />
-
         </div>
       </section>
 
@@ -450,7 +444,13 @@ const LocationsPage: React.FC = () => {
           <div className="relative w-full overflow-hidden shadow-2xl bg-sky-100 min-h-[500px] md:min-h-[600px] h-[80vh]">
             {/* --- GOOGLE MAP --- */}
             <div className="absolute inset-0">
-              {isMapLoaded ? (
+              {loadError ? (
+                <div className="w-full h-full flex items-center justify-center bg-slate-100 px-6 text-center">
+                  <p className="font-rethink text-slate-700">
+                    Error cargando Google Maps: {loadError.message}
+                  </p>
+                </div>
+              ) : isMapLoaded ? (
                 <GoogleMap
                   mapContainerStyle={MAP_CONTAINER_STYLE}
                   center={DEFAULT_CENTER}
@@ -460,16 +460,13 @@ const LocationsPage: React.FC = () => {
                     disableDefaultUI: true,
                     zoomControl: true,
                     styles: [
-                      {
-                        featureType: 'poi',
-                        stylers: [{ visibility: 'off' }],
-                      },
+                      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
                     ],
                   }}
                 >
                   <MarkerClusterer
                     options={{
-                      styles: clusterStyles,
+                      styles: clusterStyles as any,
                       gridSize: 50,
                     }}
                   >
@@ -478,10 +475,7 @@ const LocationsPage: React.FC = () => {
                         {locations.map((loc) => (
                           <Marker
                             key={loc.id}
-                            position={{
-                              lat: loc.latitude,
-                              lng: loc.longitude,
-                            }}
+                            position={{ lat: loc.latitude, lng: loc.longitude }}
                             onClick={() => handleMarkerClick(loc)}
                             clusterer={clusterer}
                             icon={{
@@ -497,9 +491,7 @@ const LocationsPage: React.FC = () => {
                 </GoogleMap>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-100">
-                  <p className="font-rethink text-slate-600">
-                    Cargando mapa...
-                  </p>
+                  <p className="font-rethink text-slate-600">Cargando mapa...</p>
                 </div>
               )}
             </div>
@@ -551,9 +543,7 @@ const LocationsPage: React.FC = () => {
                             <input
                               type="text"
                               value={searchTerm}
-                              onChange={(e) =>
-                                setSearchTerm(e.target.value)
-                              }
+                              onChange={(e) => setSearchTerm(e.target.value)}
                               placeholder={searchPlaceholder}
                               className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-rethink text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
                             />
@@ -608,9 +598,7 @@ const LocationsPage: React.FC = () => {
                                   <button
                                     key={c}
                                     onClick={() =>
-                                      setSelectedCity(
-                                        c === selectedCity ? null : c
-                                      )
+                                      setSelectedCity(c === selectedCity ? null : c)
                                     }
                                     className={`text-[10px] px-2 py-1 rounded border ${
                                       selectedCity === c
@@ -659,12 +647,11 @@ const LocationsPage: React.FC = () => {
                                     {loc.address}
                                   </p>
 
-                                  {/* TEXTO CAMBIADO: "Cómo llegar" */}
-                                 <div
+                                  <div
                                     className="flex items-center gap-1 text-blue-900 text-[11px] font-rethink-bold underline decoration-1 underline-offset-2 group-hover:text-blue-700 cursor-pointer"
                                     onClick={(e) => {
-                                      e.stopPropagation();          // para que no dispare el click de la card
-                                      handleDirectionsClick(loc);   // 👈 aquí lo usamos
+                                      e.stopPropagation();
+                                      handleDirectionsClick(loc);
                                     }}
                                   >
                                     <svg
@@ -679,7 +666,6 @@ const LocationsPage: React.FC = () => {
                                     </svg>
                                     Cómo llegar
                                   </div>
-
 
                                   <button
                                     type="button"
@@ -733,7 +719,6 @@ const LocationsPage: React.FC = () => {
                           </button>
                         </div>
 
-                        {/* TARJETA DETALLE MÍTICA */}
                         <div className="p-6 overflow-y-auto">
                           <div className="w-full p-5 rounded-3xl border-2 border-[#F6BA27] bg-white shadow-xl mb-4">
                             <div className="flex items-start justify-between mb-3">
@@ -747,7 +732,6 @@ const LocationsPage: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* FOTO DEL NEGOCIO DESDE GOOGLE */}
                             {details?.photoUrl && (
                               <div className="w-full rounded-2xl overflow-hidden mb-3">
                                 <img
@@ -757,16 +741,14 @@ const LocationsPage: React.FC = () => {
                                   loading="lazy"
                                 />
                               </div>
-                            )} 
+                            )}
 
-                            {/* RATING GOOGLE */}
                             {details && (
                               <div className="flex items-center gap-1 mb-3 mt-1">
                                 <div className="flex text-yellow-400 text-xs">
-                                  {'★★★★★'.split('').map((star, idx) => (
+                                  {'★★★★★'.split('').map((_, idx) => (
                                     <span key={idx}>
-                                      {details.rating &&
-                                      idx < Math.round(details.rating)
+                                      {details.rating && idx < Math.round(details.rating)
                                         ? '★'
                                         : '☆'}
                                     </span>
@@ -792,7 +774,6 @@ const LocationsPage: React.FC = () => {
                               {activeLocation.address}
                             </p>
 
-                            {/* HORARIO */}
                             <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 gap-4">
                               <div>
                                 <p className="text-[11px] font-rethink-bold text-slate-900 mb-1">
@@ -819,14 +800,12 @@ const LocationsPage: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* DELIVERY & PICKUP */}
                             <div className="mt-5 pt-4 border-t border-slate-100">
                               <p className="text-[11px] font-rethink-bold text-slate-900 mb-3">
                                 Delivery &amp; Pickup
                               </p>
 
                               <div className="space-y-3">
-                                {/* Teléfono (primer apartado) */}
                                 <div className="flex items-center gap-3">
                                   <div className="w-11 h-11 rounded-xl bg-[#F6BA27] flex items-center justify-center shadow-sm">
                                     <svg
@@ -846,11 +825,9 @@ const LocationsPage: React.FC = () => {
                                     <p className="text-[11px] font-rethink-bold text-slate-900">
                                       Teléfono
                                     </p>
-                                    {details?.phoneNumber ||
-                                    activeLocation.phone ? (
+                                    {details?.phoneNumber || activeLocation.phone ? (
                                       <p className="text-[12px] font-rethink text-slate-800 leading-tight">
-                                        {details?.phoneNumber ??
-                                          activeLocation.phone}
+                                        {details?.phoneNumber ?? activeLocation.phone}
                                       </p>
                                     ) : (
                                       <p className="text-[11px] text-slate-500">
@@ -860,7 +837,6 @@ const LocationsPage: React.FC = () => {
                                   </div>
                                 </div>
 
-                                {/* MÍTICA APP */}
                                 <div className="flex items-center gap-3">
                                   <div className="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm overflow-hidden">
                                     <img
@@ -874,7 +850,6 @@ const LocationsPage: React.FC = () => {
                                   </p>
                                 </div>
 
-                                {/* Rappi */}
                                 <div className="flex items-center gap-3">
                                   <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm overflow-hidden">
                                     <img
@@ -895,7 +870,6 @@ const LocationsPage: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  // MINIMIZADO
                   <button
                     onClick={() => setIsSidebarOpen(true)}
                     className="pointer-events-auto bg-white h-12 w-12 rounded-full shadow-xl flex items-center justify-center text-slate-700 hover:bg-slate-50 hover:text-blue-900 transition-all"
@@ -923,7 +897,7 @@ const LocationsPage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA CARDS (Sin cambios) */}
+      {/* CTA CARDS */}
       {ctaCards.length > 0 && (
         <section className="pb-20 bg-white pt-10">
           <div className="container mx-auto px-6">
