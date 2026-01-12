@@ -4,6 +4,14 @@ import { TitleProps, TitleVariant } from '../types';
 
 export { TitleVariant };
 
+const FONT_TITLE_MAIN = `var(--font-title-main)`;
+const FONT_TITLE_TEXTURED = `var(--font-title-textured)`;
+const FONT_BODY = `var(--font-body)`;
+
+/**
+ * Title
+ * - Fuerza la fuente por inline style para ganarle a Tailwind CDN (incluyendo !utilities).
+ */
 export const Title: React.FC<TitleProps> = ({
   variant,
   text,
@@ -14,43 +22,42 @@ export const Title: React.FC<TitleProps> = ({
   align = 'center',
 }) => {
   const alignment =
-    align === 'left'
-      ? 'text-left'
-      : align === 'right'
-      ? 'text-right'
-      : 'text-center';
+    align === 'left' ? 'text-left' : align === 'right' ? 'text-right' : 'text-center';
 
-  // === Fuente base según variante ===
   const isTextured =
-    variant === TitleVariant.TEXTURED ||
-    variant === TitleVariant.TEXTURED_BORDERED;
+    variant === TitleVariant.TEXTURED || variant === TitleVariant.TEXTURED_BORDERED;
 
-  const fontClass = isTextured ? 'font-nexa-textured' : 'font-nexa';
+  // Fuente base (forzada)
+  const forcedFontFamily = isTextured ? FONT_TITLE_TEXTURED : FONT_TITLE_MAIN;
 
-  const baseClasses = `${fontClass} uppercase tracking-tighter leading-[0.9] ${alignment} ${className}`;
+  // Nota: NO confiamos en tailwind font classes para fonts, solo para layout/spacing.
+  const baseClasses = `uppercase tracking-tighter leading-[0.9] ${alignment} ${className}`;
 
-  // === TEXTURED effect para T2 y T4 ===
-  const useTextureEffect =
-    variant === TitleVariant.TEXTURED ||
-    variant === TitleVariant.TEXTURED_BORDERED;
+  // Para que SIEMPRE gane a cualquier CSS/Tailwind:
+  const forceFontStyle: React.CSSProperties = {
+    fontFamily: forcedFontFamily,
+    fontWeight: 700, // NexaRustSans-Black
+  };
 
-  // ✅ NUEVO COMPORTAMIENTO:
-  // BORDERED ahora es "Outside" (doble capa)
+  // ✅ BORDERED: doble capa (stroke afuera + fill)
   if (variant === TitleVariant.BORDERED) {
     return (
-      <h2 className={baseClasses}>
+      <h2 className={baseClasses} style={forceFontStyle}>
         <span className="relative inline-block">
-          {/* Capa de stroke */}
+          {/* stroke */}
           <span
             aria-hidden="true"
             className="absolute inset-0 text-transparent"
-            style={{ WebkitTextStroke: `${borderWidth}px ${borderColor}` }}
+            style={{
+              ...forceFontStyle,
+              WebkitTextStroke: `${borderWidth}px ${borderColor}`,
+            }}
           >
             {text}
           </span>
 
-          {/* Capa de fill */}
-          <span className={`relative ${color}`}>
+          {/* fill */}
+          <span className={`relative ${color}`} style={forceFontStyle}>
             {text}
           </span>
         </span>
@@ -58,13 +65,14 @@ export const Title: React.FC<TitleProps> = ({
     );
   }
 
-  // === TEXTURED sin borde (T2) ===
-  if (useTextureEffect && variant === TitleVariant.TEXTURED) {
+  // ✅ TEXTURED (sin borde)
+  if (variant === TitleVariant.TEXTURED) {
     return (
-      <h2 className={`${baseClasses} ${color} relative`}>
+      <h2 className={`${baseClasses} ${color} relative`} style={forceFontStyle}>
         <span
           className="relative z-10"
           style={{
+            ...forceFontStyle,
             WebkitMaskImage:
               'url(https://www.transparenttextures.com/patterns/stardust.png)',
             maskImage:
@@ -77,18 +85,15 @@ export const Title: React.FC<TitleProps> = ({
     );
   }
 
-  // === TEXTURED + borde hollow (T4) ===
+  // ✅ TEXTURED + BORDERED (hollow)
   if (variant === TitleVariant.TEXTURED_BORDERED) {
-    const strokeStyle: React.CSSProperties = {
-      WebkitTextStroke: `${borderWidth}px ${borderColor}`,
-      color: 'transparent',
-    };
-
     return (
       <h2
         className={baseClasses}
         style={{
-          ...strokeStyle,
+          ...forceFontStyle,
+          WebkitTextStroke: `${borderWidth}px ${borderColor}`,
+          color: 'transparent',
           WebkitMaskImage:
             'url(https://www.transparenttextures.com/patterns/stardust.png)',
           maskImage:
@@ -100,24 +105,25 @@ export const Title: React.FC<TitleProps> = ({
     );
   }
 
-  // === REGULAR (T1) ===
+  // ✅ REGULAR
   return (
-    <h2 className={`${baseClasses} ${color}`}>
+    <h2 className={`${baseClasses} ${color}`} style={forceFontStyle}>
       {text}
     </h2>
   );
 };
 
 /**
- * Subtítulos
- * - sub1 (default): NexaRustSans-Black
- * - sub2 (alt): RethinkSans-ExtraBold
+ * Subtitle
+ * - sub1: Nexa (700)
+ * - sub2: Rethink (800)
  */
 type SubtitleProps = {
   text: string;
   className?: string;
   color?: string;
   variant?: 'sub1' | 'sub2';
+  align?: 'left' | 'center' | 'right';
 };
 
 export const Subtitle: React.FC<SubtitleProps> = ({
@@ -125,40 +131,55 @@ export const Subtitle: React.FC<SubtitleProps> = ({
   className = '',
   color = 'text-mitica-black',
   variant = 'sub1',
+  align = 'center',
 }) => {
-  const fontClass =
-    variant === 'sub2'
-      ? 'font-rethink font-extrabold'
-      : 'font-nexa';
+  const alignment =
+    align === 'left' ? 'text-left' : align === 'right' ? 'text-right' : 'text-center';
+
+  const isAlt = variant === 'sub2';
+
+  const style: React.CSSProperties = {
+    fontFamily: isAlt ? FONT_BODY : FONT_TITLE_MAIN,
+    fontWeight: isAlt ? 800 : 700,
+  };
 
   return (
-    <h3 className={`${fontClass} uppercase tracking-wide ${color} ${className}`}>
+    <h3 className={`uppercase tracking-wide ${alignment} ${color} ${className}`} style={style}>
       {text}
     </h3>
   );
 };
 
 /**
- * Texto general
- * - Usa RethinkSans-Regular por defecto
- * - Si bold = true → RethinkSans-ExtraBold
+ * BodyText
+ * - default: Rethink 400
+ * - bold: Rethink 800
  */
 type BodyTextProps = {
   text: string;
   className?: string;
   bold?: boolean;
+  align?: 'left' | 'center' | 'right';
 };
 
 export const BodyText: React.FC<BodyTextProps> = ({
   text,
   className = '',
   bold = false,
-}) => (
-  <p
-    className={`font-rethink ${
-      bold ? 'font-extrabold' : 'font-normal'
-    } ${className}`}
-  >
-    {text}
-  </p>
-);
+  align = 'left',
+}) => {
+  const alignment =
+    align === 'left' ? 'text-left' : align === 'right' ? 'text-right' : 'text-center';
+
+  return (
+    <p
+      className={`${alignment} ${className}`}
+      style={{
+        fontFamily: FONT_BODY,
+        fontWeight: bold ? 800 : 400,
+      }}
+    >
+      {text}
+    </p>
+  );
+};

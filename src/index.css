@@ -20,9 +20,7 @@ body {
   color: #000000;
 }
 
-/* 2) FUENTES (rutas absolutas desde /public) */
-/* ✅ Importante: los nombres de archivo aquí coinciden con tu carpeta public/fonts */
-
+/* 2) FUENTES (desde /public/fonts) */
 @font-face {
   font-family: 'NexaRustSans';
   src: url('/fonts/NexaRustSans-Black.otf') format('opentype');
@@ -39,6 +37,7 @@ body {
   font-display: swap;
 }
 
+/* Rethink Regular */
 @font-face {
   font-family: 'RethinkSans';
   src: url('/fonts/RethinkSans-Regular.ttf') format('truetype');
@@ -47,6 +46,21 @@ body {
   font-display: swap;
 }
 
+/*
+  ✅ PARCHE CLAVE:
+  Si tu UI usa font-bold (700) pero tú solo tienes ExtraBold (800),
+  el navegador puede caer a fallback o verse “distinto”.
+  Mapeamos ExtraBold también a 700 para que `font-bold` siempre agarre tu archivo.
+*/
+@font-face {
+  font-family: 'RethinkSans';
+  src: url('/fonts/RethinkSans-ExtraBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Si también usas font-extrabold (800), déjalo también */
 @font-face {
   font-family: 'RethinkSans';
   src: url('/fonts/RethinkSans-ExtraBold.ttf') format('truetype');
@@ -65,36 +79,28 @@ body {
     'Segoe UI', sans-serif;
 }
 
-/* 4) Clases usadas por Typography.tsx */
+/* 4) Clases usadas por Typography.tsx (✅ forzadas con !important) */
 .font-nexa {
-  font-family: var(--font-title-main);
+  font-family: var(--font-title-main) !important;
 }
 
 .font-nexa-textured {
-  font-family: var(--font-title-textured);
+  font-family: var(--font-title-textured) !important;
 }
 
 .font-rethink {
-  font-family: var(--font-body);
+  font-family: var(--font-body) !important;
 }
 
-/* Si quieres negrita real con rethink (usa font-weight) */
-.font-rethink.font-extrabold {
-  font-weight: 800;
-}
-
-/* 5) Base typography */
+/* 5) Base typography global */
 body {
   font-family: var(--font-body);
   line-height: 1.5;
 }
 
-
-body {
-  font-family: 'RethinkSans', system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
-}
-
-h1, h2, h3, .font-nexa {
-  font-family: 'NexaRustSans', system-ui, sans-serif;
+/* ✅ Opcional: por si hay textos fuera de Typography */
+h1,
+h2,
+h3 {
+  font-family: var(--font-title-main);
 }
