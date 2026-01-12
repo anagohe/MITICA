@@ -47,19 +47,23 @@ type LegendSectionSanity = {
   image?: any;
 };
 
-type PromotionSanity = {
-  _key: string;
+// ✅ Post de Blog (Promoción)
+type PromotionPostSanity = {
+  _id: string;
   title?: string;
-  description?: string;
-  isGif?: boolean;
-  image?: any;
+  excerpt?: string;
+  publishedAt?: string;
+  category?: string;
+  slug?: string;
+  mainImage?: any;
 };
 
 type HomePageSanity = {
   heroSlides?: HeroSlideSanity[];
   introSection?: IntroSectionSanity;
   legendSections?: LegendSectionSanity[];
-  promotions?: PromotionSanity[];
+  promotionsTitle?: string; // ✅ nuevo
+  promotions?: PromotionPostSanity[]; // viene resuelto desde GROQ
 };
 
 // ========= Tipos locales =========
@@ -85,7 +89,7 @@ type PromoCard = {
   title: string;
   desc: string;
   imageUrl: string;
-  isGif?: boolean;
+  slug: string;
 };
 
 // ========= GROQ =========
@@ -122,13 +126,30 @@ coalesce(
     imagePosition,
     image
   },
-  promotions[]{
-    _key,
-    title,
-    description,
-    isGif,
-    image
-  }
+
+  promotionsTitle,
+
+  "promotions": select(
+    count(promotionsPosts) > 0 =>
+      promotionsPosts[]->{
+        _id,
+        title,
+        excerpt,
+        publishedAt,
+        category,
+        mainImage,
+        "slug": slug.current
+      },
+    *[_type == "post" && category == "Promociones"] | order(publishedAt desc)[0...3]{
+      _id,
+      title,
+      excerpt,
+      publishedAt,
+      category,
+      mainImage,
+      "slug": slug.current
+    }
+  )
 }
 `;
 
@@ -138,6 +159,9 @@ const Home: React.FC = () => {
   const [legendSections, setLegendSections] = useState<LegendSection[]>([]);
   const [promos, setPromos] = useState<PromoCard[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // ✅ nuevo: título editable
+  const [promotionsTitle, setPromotionsTitle] = useState('PROMOCIONES');
 
   const nextSlide = () => {
     if (!heroSlides.length) return;
@@ -198,18 +222,24 @@ const Home: React.FC = () => {
           })) ?? [];
 
         const mappedPromos: PromoCard[] =
-          data?.promotions?.map((p) => ({
-            id: p._key,
-            title: p.title ?? 'Promoción',
-            desc: p.description ?? '',
-            imageUrl: p.image ? urlFor(p.image) : '',
-            isGif: p.isGif,
-          })) ?? [];
+          (data?.promotions || [])
+            .filter((p) => !!p?.slug)
+            .slice(0, 3)
+            .map((p) => ({
+              id: p._id,
+              title: p.title ?? 'Promoción',
+              desc: p.excerpt ?? '',
+              imageUrl: p.mainImage ? urlFor(p.mainImage) : '',
+              slug: p.slug ?? p._id,
+            })) ?? [];
 
         setHeroSlides(mappedHeroSlides);
         setIntroSection(mappedIntro);
         setLegendSections(mappedLegend);
         setPromos(mappedPromos);
+
+        // ✅ set título editable (fallback PROMOCIONES)
+        setPromotionsTitle(data?.promotionsTitle?.trim() ? data.promotionsTitle.trim() : 'PROMOCIONES');
       } catch (error) {
         console.error('Error fetching homePage from Sanity', error);
       }
@@ -224,7 +254,6 @@ const Home: React.FC = () => {
     const timer = setInterval(() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length), 3000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
-  
 
   return (
     <div className="w-full">
@@ -443,14 +472,14 @@ const Home: React.FC = () => {
           <div className="container mx-auto px-6 text-center">
             <Title
               variant={TitleVariant.REGULAR}
-              text="PROMOCIONES"
+              text={promotionsTitle}
               className="text-4xl md:text-6xl mb-14 text-black"
               align="center"
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {promos.map((promo) => (
-                <div key={promo.id} className="group block">
+                <Link to={`/blog/${promo.slug}`} key={promo.id} className="group block">
                   <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
                     <div className="h-64 overflow-hidden">
                       {promo.imageUrl ? (
@@ -466,11 +495,15 @@ const Home: React.FC = () => {
 
                     <div className="p-8 text-left">
                       <h3 className="font-rethink-bold text-lg mb-2">{promo.title || 'Promoción'}</h3>
-                      <p className="font-rethink text-gray-500 text-sm mb-4 text-justify">{promo.desc}</p>
+
+                      <p className="font-rethink text-gray-500 text-sm mb-4 text-justify line-clamp-3">
+                        {promo.desc}
+                      </p>
+
                       <div className="w-8 h-1 bg-mitica-yellow group-hover:w-full transition-all duration-300" />
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
 

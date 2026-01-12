@@ -83,7 +83,6 @@ const Ingredients: React.FC = () => {
   const hero = page.hero;
   const sections = page.sections || [];
   const sauces = page.sauces || [];
-  const saucesIntro = page.saucesIntro;
   const nutritionText = page.nutritionText;
 
   // URL segura del video
@@ -154,9 +153,9 @@ const Ingredients: React.FC = () => {
                 key={idx}
                 className="flex flex-col md:flex-row items-center gap-16 mb-24"
               >
-                {/* Texto */}
+                {/* Texto (móvil: título -> texto; desktop: como antes) */}
                 <div
-                  className={`w-full md:w-1/2 ${
+                  className={`w-full md:w-[38%] ${
                     isTextLeft ? 'order-1' : 'order-2'
                   } text-left`}
                 >
@@ -176,15 +175,15 @@ const Ingredients: React.FC = () => {
                   )}
                 </div>
 
-                {/* Imagen (más chica, sin borde redondeado) */}
+                {/* Imagen (más alta, y en móvil siempre abajo del texto) */}
                 {section.image && (
                   <div
-                    className={`w-full md:w-1/2 ${
-                      isTextLeft ? 'order-2' : 'order-1'
-                    } h-[280px] md:h-[380px] overflow-hidden relative group`}
+                    className={`w-full md:w-[62%] ${
+                      isTextLeft ? 'order-3 md:order-2' : 'order-3 md:order-1'
+                    } h-[340px] md:h-[460px] overflow-hidden relative group`}
                   >
                     <img
-                      src={urlFor(section.image).width(800).height(800).url()}
+                      src={urlFor(section.image).width(1200).height(900).url()}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       alt={section.title || 'Ingredientes Mítica'}
                     />
@@ -198,23 +197,24 @@ const Ingredients: React.FC = () => {
           {/* ADEREZOS CON IMAGEN */}
           {sauces.length > 0 && (
             <>
-              <div className="text-center mb-12">
+              {/* Título y texto centrados */}
+              <div className="text-center mb-10">
                 <Title
-                  variant={TitleVariant.TEXTURED_BORDERED}
+                  variant={TitleVariant.REGULAR}
                   text="ADEREZOS"
-                  borderColor="#000"
-                  className="text-5xl md:text-7xl mb-4"
+                  align="center"
+                  className="text-4xl md:text-5xl mb-8"
                 />
-                <Subtitle
-                  text={
-                    saucesIntro ||
-                    'Nuestros aderezos de la casa son el complemento perfecto para nuestras hamburguesas.'
-                  }
-                  className="text-gray-500 max-w-2xl mx-auto normal-case tracking-normal"
-                />
+
+                <p className="font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center">
+                  Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras
+                  hamburguesas. Elabora elaboradas en casa con recetas únicas. Son el toque final
+                  secreto que transforma una hamburguesa en tu hamburguesa favorita.
+                </p>
               </div>
 
-              <div className="relative w-full overflow-hidden py-10 bg-white group">
+              {/* Carrusel a ancho completo (sin “bordes” blancos laterales) */}
+              <div className="relative w-screen left-1/2 -translate-x-1/2 overflow-hidden py-10 bg-white group">
                 <div className="flex w-max animate-scroll group-hover:paused">
                   {[...sauces, ...sauces, ...sauces].map((sauce, idx) => (
                     <div

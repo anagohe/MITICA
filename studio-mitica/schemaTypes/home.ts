@@ -141,8 +141,6 @@ const homePage = defineType({
           options: { hotspot: true },
           hidden: ({ parent }) => parent?.titleType !== 'image',
         }),
-
-        // ✅ CAMBIO PUNTUAL: Se quitó el campo "text"
       ],
     }),
 
@@ -200,36 +198,30 @@ const homePage = defineType({
       ],
     }),
 
+    // ✅ NUEVO: Título editable de la sección Promociones
     defineField({
-      name: 'promotions',
-      title: 'Promociones (tarjetas)',
+      name: 'promotionsTitle',
+      title: 'Título de Promociones',
+      type: 'string',
+      initialValue: 'PROMOCIONES',
+    }),
+
+    // ✅ Promociones conectadas al Blog (solo posts con categoría "Promociones")
+    defineField({
+      name: 'promotionsPosts',
+      title: 'Promociones (desde Blog)',
+      description:
+        'Selecciona hasta 3 artículos del Blog con categoría "Promociones" para mostrarlos en el Home.',
       type: 'array',
+      validation: (Rule) => Rule.max(3),
       of: [
         defineField({
-          name: 'promotion',
-          title: 'Promoción',
-          type: 'object',
-          fields: [
-            defineField({ name: 'title', title: 'Título', type: 'string' }),
-            defineField({ name: 'description', title: 'Descripción', type: 'text' }),
-            defineField({
-              name: 'image',
-              title: 'Imagen / GIF',
-              type: 'image',
-              options: { hotspot: true },
-            }),
-            defineField({
-              name: 'isGif',
-              title: '¿Es un GIF?',
-              type: 'boolean',
-              initialValue: false,
-            }),
-          ],
-          preview: {
-            select: { title: 'title' },
-            prepare({ title }) {
-              return { title: title || 'Promoción' };
-            },
+          name: 'promotionPost',
+          title: 'Artículo promocional',
+          type: 'reference',
+          to: [{ type: 'post' }],
+          options: {
+            filter: '_type == "post" && category == "Promociones"',
           },
         }),
       ],
