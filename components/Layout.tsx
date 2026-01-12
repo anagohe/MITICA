@@ -24,20 +24,31 @@ const Navbar = () => {
   const OPTICAL_DOWN = 26; // tu ajuste óptico original
   const p = Math.max(0, Math.min(1, scrollY / SWITCH_AT)); // 0 → 1
 
+  /**
+   * ✅ FIX DEL “TRABE” AL REGRESAR:
+   * El “stutter” suele pasar por tener `transition` en `transform` mientras el scroll está actualizando
+   * cada frame. Eso genera una interpolación “con atraso” y se nota sobre todo al regresar hacia arriba.
+   *
+   * SOLUCIÓN: NO animar transform con transition; el movimiento ya viene suave por rAF.
+   * Dejamos transición solo en opacity (muy ligera) y usamos translate3d para GPU.
+   */
+
   // ✅ Logo 1 (círculo): desaparece gradual
   const circleWrapStyle: React.CSSProperties = {
     opacity: 1 - p,
-    transform: `translateY(${OPTICAL_DOWN - Math.min(scrollY, SWITCH_AT)}px) scale(${1 - 0.06 * p})`,
-    transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+    transform: `translate3d(0, ${
+      OPTICAL_DOWN - Math.min(scrollY, SWITCH_AT) + 4
+    }px, 0) scale(${1 - 0.06 * p})`,
+    transition: 'opacity 120ms linear', // ✅ solo opacity (sin transform)
     willChange: 'transform, opacity',
     pointerEvents: 'none',
   };
 
-  // ✅ Logo 2 (ancho): aparece gradual
+  // ✅ Logo 2 (ancho): aparece gradual (misma animación que ya tienes)
   const wideLogoStyle: React.CSSProperties = {
     opacity: p,
-    transform: `translateY(${(1 - p) * 10}px)`,
-    transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+    transform: `translate3d(0, ${(1 - p) * 10}px, 0)`,
+    transition: 'opacity 120ms linear', // ✅ solo opacity (sin transform)
     willChange: 'transform, opacity',
     pointerEvents: 'none',
   };
@@ -46,7 +57,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ✅ Scroll listener (corregido para que SI actualice scrollY siempre)
+  // ✅ Scroll listener (igual, correcto)
   useEffect(() => {
     const handleScroll = () => {
       if (scrollRafRef.current) return;
@@ -132,46 +143,46 @@ const Navbar = () => {
         <div className="hidden lg:flex w-[260px] items-center">
           <Link to="/" className="z-50 flex items-center gap-2 group">
             <div className="relative ml-4">
-              {/* ✅ Wrapper ABSOLUTO fijo para que no “salte” el layout */}
-              <div className="absolute left-0 top-full -translate-y-1/2 flex items-center justify-center w-[260px] h-[96px]">
-                {/* ✅ Logo 1: círculo (fade out) */}
+              {/* Wrapper ABSOLUTO fijo */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-[260px] h-[96px]">
+                {/* Logo 1: círculo */}
                 {!isOpen && (
                   <div
                     className="absolute inset-0 flex items-center justify-center"
                     style={circleWrapStyle}
                     aria-hidden
                   >
-                    <div className="w-24 h-24 bg-mitica-yellow rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-28 h-28 bg-mitica-yellow rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                       <img
                         src="/images/brand/logo-icono.png"
                         alt="Mítica icono circular"
-                        className="h-14 w-14 object-contain"
+                        className="h-16 w-16 object-contain"
                       />
                     </div>
                   </div>
                 )}
 
-                {/* ✅ Logo 2: ancho (fade in) */}
+                {/* Logo 2: ancho */}
                 <div
-                  className="absolute inset-0 flex items-center justify-center"
+                  className="absolute inset-0 flex items-center justify-center -mt-2"
                   style={wideLogoStyle}
                   aria-hidden
                 >
                   <img
                     src="/images/brand/logo.png"
                     alt="MÍTICA"
-                    className="h-14 md:h-16 lg:h-20 w-auto object-contain"
+                    className="h-12 md:h-14 lg:h-16 w-auto object-contain"
                   />
                 </div>
               </div>
 
-              {/* espaciador invisible para que el absolute no colapse el layout */}
+              {/* espaciador invisible */}
               <div className="w-24 h-10" />
             </div>
           </Link>
         </div>
 
-        {/* Logo en mobile (tu original) */}
+        {/* Logo en mobile */}
         <div className="lg:hidden flex items-center -ml-2">
           <Link to="/" className="z-50 flex items-center">
             <img
