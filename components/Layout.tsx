@@ -12,44 +12,56 @@ interface LayoutProps {
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [openMobileSub, setOpenMobileSub] = useState<string | null>(null);
 
-  // ✅ (solo para animación del logo)
+  // ✅ Scroll state (para animación de logos)
   const [scrollY, setScrollY] = useState(0);
+  const [scrolled, setScrolled] = useState(false); // (lo dejo por si lo usas en estilos más adelante)
   const scrollRafRef = useRef<number | null>(null);
-  const SWITCH_AT = 120;
-  const OPTICAL_DOWN = 26;
-  const p = Math.max(0, Math.min(1, scrollY / SWITCH_AT));
 
+  // ✅ Ajustes de animación
+  const SWITCH_AT = 120; // cuántos px tarda en completar la transición
+  const OPTICAL_DOWN = 26; // tu ajuste óptico original
+  const p = Math.max(0, Math.min(1, scrollY / SWITCH_AT)); // 0 → 1
+
+  // ✅ Logo 1 (círculo): desaparece gradual
   const circleWrapStyle: React.CSSProperties = {
-    transform: `translateY(${OPTICAL_DOWN - Math.min(scrollY, SWITCH_AT)}px)`,
     opacity: 1 - p,
-    transition: 'opacity 150ms ease-out',
+    transform: `translateY(${OPTICAL_DOWN - Math.min(scrollY, SWITCH_AT)}px) scale(${1 - 0.06 * p})`,
+    transition: 'opacity 150ms ease-out, transform 150ms ease-out',
     willChange: 'transform, opacity',
+    pointerEvents: 'none',
+  };
+
+  // ✅ Logo 2 (ancho): aparece gradual
+  const wideLogoStyle: React.CSSProperties = {
+    opacity: p,
+    transform: `translateY(${(1 - p) * 10}px)`,
+    transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+    willChange: 'transform, opacity',
+    pointerEvents: 'none',
   };
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
+  // ✅ Scroll listener (corregido para que SI actualice scrollY siempre)
   useEffect(() => {
     const handleScroll = () => {
-      // ✅ rAF + scrollY
-      if (!scrollRafRef.current) {
-        scrollRafRef.current = requestAnimationFrame(() => {
-          const y = window.scrollY || 0;
-          setScrollY(y);
-          if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
-          scrollRafRef.current = null;
-        });
-      }
+      if (scrollRafRef.current) return;
 
-      setScrolled(window.scrollY > 50);
+      scrollRafRef.current = requestAnimationFrame(() => {
+        const y = window.scrollY || 0;
+        setScrollY(y);
+        setScrolled(y > 50);
+        scrollRafRef.current = null;
+      });
     };
 
     handleScroll();
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
@@ -114,22 +126,20 @@ const Navbar = () => {
 
   return (
     <nav className="fixed w-full z-50 bg-mitica-black transition-all duration-300 py-5 shadow-md">
-      {/* ✅ CAMBIO: layout en 3 columnas (izq logo / centro links / der CTA) */}
+      {/* layout en 3 columnas (izq logo / centro links / der CTA) */}
       <div className="container mx-auto px-6 flex items-center">
-        {/* IZQUIERDA: Logo (ancho fijo para balancear) */}
+        {/* IZQUIERDA: Logo (desktop) */}
         <div className="hidden lg:flex w-[260px] items-center">
           <Link to="/" className="z-50 flex items-center gap-2 group">
             <div className="relative ml-4">
-              <div
-                className={`absolute left-0 top-full -translate-y-1/2 flex items-center justify-center
-                  ${scrolled ? 'w-56 h-20 md:w-64 md:h-24' : 'w-24 h-24'}
-                `}
-              >
-                {/* Circulo amarillo (solo cuando NO hay scroll y el menú móvil NO está abierto) */}
-                {!scrolled && !isOpen && (
+              {/* ✅ Wrapper ABSOLUTO fijo para que no “salte” el layout */}
+              <div className="absolute left-0 top-full -translate-y-1/2 flex items-center justify-center w-[260px] h-[96px]">
+                {/* ✅ Logo 1: círculo (fade out) */}
+                {!isOpen && (
                   <div
                     className="absolute inset-0 flex items-center justify-center"
                     style={circleWrapStyle}
+                    aria-hidden
                   >
                     <div className="w-24 h-24 bg-mitica-yellow rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                       <img
@@ -141,37 +151,36 @@ const Navbar = () => {
                   </div>
                 )}
 
-                {/* Logo horizontal (solo cuando hay scroll) */}
-                {scrolled && (
-                <div className="absolute inset-0 flex items-center justify-center -translate-y-4 md:-translate-y-5 lg:-translate-y-6">
+                {/* ✅ Logo 2: ancho (fade in) */}
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={wideLogoStyle}
+                  aria-hidden
+                >
                   <img
                     src="/images/brand/logo.png"
                     alt="MÍTICA"
                     className="h-14 md:h-16 lg:h-20 w-auto object-contain"
                   />
                 </div>
-              )}
-
               </div>
 
-              {/* ✅ “espaciador” invisible para que el absolute no colapse el layout */}
+              {/* espaciador invisible para que el absolute no colapse el layout */}
               <div className="w-24 h-10" />
             </div>
           </Link>
         </div>
 
-        {/* ✅ Logo en mobile (para que exista a la izquierda) */}
-       {/* ✅ Logo en mobile (más chico y más a la izquierda) */}
-<div className="lg:hidden flex items-center -ml-2">
-  <Link to="/" className="z-50 flex items-center">
-    <img
-      src="/images/brand/logo.png"
-      alt="MÍTICA"
-      className="h-4 w-auto object-contain"
-    />
-  </Link>
-</div>
-
+        {/* Logo en mobile (tu original) */}
+        <div className="lg:hidden flex items-center -ml-2">
+          <Link to="/" className="z-50 flex items-center">
+            <img
+              src="/images/brand/logo.png"
+              alt="MÍTICA"
+              className="h-4 w-auto object-contain"
+            />
+          </Link>
+        </div>
 
         {/* CENTRO: Desktop Nav centrado */}
         <div className="hidden lg:flex flex-1 justify-center">
@@ -229,7 +238,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* DERECHA: CTA (ancho fijo para balancear y mantener centrado el menú) */}
+        {/* DERECHA: CTA (desktop) */}
         <div className="hidden lg:flex w-[260px] justify-end">
           <Link
             to="/delivery"
@@ -252,7 +261,7 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* ✅ ÚNICO Mobile Nav Overlay */}
+      {/* Mobile Nav Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.aside
