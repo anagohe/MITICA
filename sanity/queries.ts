@@ -29,8 +29,6 @@ export const MENU_PAGE_QUERY = `
 }
 `;
 
-
-
 // INGREDIENTS PAGE
 export const INGREDIENTS_PAGE_QUERY = `
 *[
@@ -41,13 +39,30 @@ export const INGREDIENTS_PAGE_QUERY = `
     mediaType,
     title,
     subtitle,
+
+    // ✅ nuevo
+    titleVariant,
+    titleColor,
+    subtitleColor,
+
+    // ✅ legacy
     textColor,
+
     desktopImage,
     mobileImage,
     videoFile{
       asset->{ url }
+    },
+    mobileVideoFile{
+      asset->{ url }
     }
   },
+
+  // ✅ nuevo
+  sectionsTitle,
+  saucesTitle,
+  nutritionTitle,
+
   sections[]{
     title,
     content,
@@ -63,8 +78,6 @@ export const INGREDIENTS_PAGE_QUERY = `
   showFooterBanner
 }
 `;
-
-// src/sanity/queries.ts
 
 export const LOCATIONS_QUERY = `
 *[_type == "location"]{

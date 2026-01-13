@@ -1,6 +1,6 @@
 // src/pages/Ingredients.tsx
 import React, { useEffect, useState } from 'react';
-import { Title, TitleVariant, Subtitle } from '../components/Typography';
+import { Title, TitleVariant } from '../components/Typography';
 import { client } from '../sanity/client';
 import { INGREDIENTS_PAGE_QUERY } from '../sanity/queries';
 import { urlFor } from '../sanity/image';
@@ -10,14 +10,20 @@ type HeroType = {
   mediaType?: 'image' | 'video';
   desktopImage?: any;
   mobileImage?: any;
-  videoFile?: {
-    asset?: {
-      url?: string;
-    };
-  };
+
+  videoFile?: { asset?: { url?: string }; url?: string };
+  mobileVideoFile?: { asset?: { url?: string }; url?: string };
+
   title?: string;
   subtitle?: string;
-  textColor?: string;
+
+  // ✅ nuevo
+  titleVariant?: 'regular' | 'textured';
+  titleColor?: string; // tailwind class: text-white | text-[#F6BA27] | text-[#1D1D1B]
+  subtitleColor?: string; // tailwind class
+
+  // ✅ legacy
+  textColor?: string; // text-white | text-black | text-mitica-yellow
 };
 
 type Section = {
@@ -34,12 +40,22 @@ type Sauce = {
 
 type IngredientsPageDoc = {
   hero?: HeroType;
+
+  // ✅ nuevos
+  sectionsTitle?: string;
+  saucesTitle?: string;
+  nutritionTitle?: string;
+
   sections?: Section[];
   saucesIntro?: string;
   sauces?: Sauce[];
   nutritionText?: string;
   showFooterBanner?: boolean;
 };
+
+function getFileUrl(file: any): string | undefined {
+  return file?.asset?.url || file?.url || undefined;
+}
 
 const Ingredients: React.FC = () => {
   const [page, setPage] = useState<IngredientsPageDoc | null>(null);
@@ -85,23 +101,70 @@ const Ingredients: React.FC = () => {
   const sauces = page.sauces || [];
   const nutritionText = page.nutritionText;
 
-  // URL segura del video
-  const videoUrl =
-    hero?.videoFile?.asset?.url || (hero as any)?.videoFile?.url || undefined;
+  const sectionsTitle = page.sectionsTitle;
+  const saucesTitle = page.saucesTitle;
+  const nutritionTitle = page.nutritionTitle;
+  const saucesIntro = page.saucesIntro;
+
+  const desktopVideoUrl = getFileUrl(hero?.videoFile);
+  const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile);
+
+  // ✅ Colores: usa nuevos si existen, si no cae a legacy, si no a blanco
+  const titleColorClass = hero?.titleColor || hero?.textColor || 'text-white';
+  const subtitleColorClass = hero?.subtitleColor || hero?.textColor || 'text-[#F6BA27]';
+
+  // ✅ TEXTURED: usamos TEXTURED_BORDERED (que es el que ya sabes que funciona en tu Typography)
+  const heroTitleVariant =
+    hero?.titleVariant === 'textured'
+      ? TitleVariant.TEXTURED_BORDERED
+      : TitleVariant.REGULAR;
 
   return (
     <div className="w-full">
       {/* === HERO DESDE SANITY === */}
       <div className="relative h-screen w-full bg-mitica-black overflow-hidden">
-        {hero?.mediaType === 'video' && videoUrl ? (
-          <video
-            className="w-full h-full object-cover opacity-70"
-            autoPlay
-            muted
-            loop
-            playsInline
-            src={videoUrl}
-          />
+        {hero?.mediaType === 'video' ? (
+          <>
+            {/* Desktop video */}
+            {desktopVideoUrl && (
+              <video
+                className="hidden md:block w-full h-full object-cover opacity-70"
+                autoPlay
+                muted
+                loop
+                playsInline
+                src={desktopVideoUrl}
+              />
+            )}
+
+            {/* Mobile video */}
+            {mobileVideoUrl && (
+              <video
+                className="block md:hidden w-full h-full object-cover opacity-70"
+                autoPlay
+                muted
+                loop
+                playsInline
+                src={mobileVideoUrl}
+              />
+            )}
+
+            {/* Fallbacks por si falta video */}
+            {!desktopVideoUrl && hero?.desktopImage && (
+              <img
+                src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
+                alt={hero?.title || 'Ingredientes'}
+                className="hidden md:block w-full h-full object-cover opacity-70"
+              />
+            )}
+            {!mobileVideoUrl && hero?.mobileImage && (
+              <img
+                src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
+                alt={hero?.title || 'Ingredientes'}
+                className="block md:hidden w-full h-full object-cover opacity-70"
+              />
+            )}
+          </>
         ) : (
           <>
             {hero?.desktopImage && (
@@ -121,21 +184,23 @@ const Ingredients: React.FC = () => {
           </>
         )}
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
           {hero?.title && (
             <Title
-              variant={TitleVariant.TEXTURED_BORDERED}
+              variant={heroTitleVariant}
               text={hero.title}
+              align="center"
               borderColor="#FFF"
-              className="text-5xl md:text-8xl text-white"
+              className={`text-5xl md:text-8xl ${titleColorClass}`}
             />
           )}
+
           {hero?.subtitle && (
-            <Title
-              variant={TitleVariant.REGULAR}
-              text={hero.subtitle}
-              className="text-5xl md:text-8xl text-mitica-yellow"
-            />
+            <p
+              className={`mt-5 md:mt-6 font-rethink ${subtitleColorClass} text-base md:text-2xl leading-relaxed max-w-4xl`}
+            >
+              {hero.subtitle}
+            </p>
           )}
         </div>
       </div>
@@ -143,6 +208,18 @@ const Ingredients: React.FC = () => {
       {/* === CONTENIDO PRINCIPAL === */}
       <div className="w-full py-20 bg-white">
         <div className="container mx-auto px-6">
+          {/* ✅ TÍTULO ARRIBA DE SECCIONES (más grande) */}
+          {sectionsTitle && (
+            <div className="text-center mb-14">
+              <Title
+                variant={TitleVariant.REGULAR}
+                text={sectionsTitle}
+                align="center"
+                className="text-5xl md:text-6xl"
+              />
+            </div>
+          )}
+
           {/* SECCIONES DINÁMICAS */}
           {sections.map((section, idx) => {
             const isTextLeft =
@@ -153,7 +230,7 @@ const Ingredients: React.FC = () => {
                 key={idx}
                 className="flex flex-col md:flex-row items-center gap-16 mb-24"
               >
-                {/* Texto (móvil: título -> texto; desktop: como antes) */}
+                {/* Texto */}
                 <div
                   className={`w-full md:w-[38%] ${
                     isTextLeft ? 'order-1' : 'order-2'
@@ -164,7 +241,7 @@ const Ingredients: React.FC = () => {
                       variant={TitleVariant.REGULAR}
                       text={section.title}
                       align="left"
-                      className="text-4xl md:text-5xl mb-8"
+                      className="text-3xl md:text-4xl mb-8"
                     />
                   )}
 
@@ -175,7 +252,7 @@ const Ingredients: React.FC = () => {
                   )}
                 </div>
 
-                {/* Imagen (más alta, y en móvil siempre abajo del texto) */}
+                {/* Imagen */}
                 {section.image && (
                   <div
                     className={`w-full md:w-[62%] ${
@@ -197,23 +274,22 @@ const Ingredients: React.FC = () => {
           {/* ADEREZOS CON IMAGEN */}
           {sauces.length > 0 && (
             <>
-              {/* Título y texto centrados */}
+              {/* ✅ Título editable desde Sanity */}
               <div className="text-center mb-10">
                 <Title
                   variant={TitleVariant.REGULAR}
-                  text="ADEREZOS"
+                  text={saucesTitle || 'ADEREZOS'}
                   align="center"
                   className="text-4xl md:text-5xl mb-8"
                 />
 
-                <p className="font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center">
-                  Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras
-                  hamburguesas. Elabora elaboradas en casa con recetas únicas. Son el toque final
-                  secreto que transforma una hamburguesa en tu hamburguesa favorita.
+                <p className="font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center whitespace-pre-line">
+                  {saucesIntro ||
+                    'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'}
                 </p>
               </div>
 
-              {/* Carrusel a ancho completo (sin “bordes” blancos laterales) */}
+              {/* Carrusel a ancho completo */}
               <div className="relative w-screen left-1/2 -translate-x-1/2 overflow-hidden py-10 bg-white group">
                 <div className="flex w-max animate-scroll group-hover:paused">
                   {[...sauces, ...sauces, ...sauces].map((sauce, idx) => (
@@ -240,12 +316,13 @@ const Ingredients: React.FC = () => {
             </>
           )}
 
-          {/* NUTRICIÓN Y ALÉRGENOS – raya amarilla que abarca todo el bloque */}
+          {/* NUTRICIÓN Y ALÉRGENOS */}
           {nutritionText && (
             <div className="mt-16 pt-8 border-t border-gray-200">
               <div className="pl-4 md:pl-6 border-l-4 md:border-l-[6px] border-mitica-yellow">
+                {/* ✅ Título editable desde Sanity */}
                 <h3 className="font-nexa text-xl mb-3 uppercase">
-                  NUTRICIÓN Y ALÉRGENOS
+                  {nutritionTitle || 'NUTRICIÓN Y ALÉRGENOS'}
                 </h3>
                 <p className="font-rethink text-sm md:text-base text-gray-600 leading-relaxed text-justify whitespace-pre-line">
                   {nutritionText}

@@ -1,6 +1,4 @@
 // studio-mitica/schemaTypes/products.ts
-
-
 import { defineType, defineField } from 'sanity'
 
 // --- MENU ITEM ---
@@ -12,9 +10,16 @@ export const menuItem = defineType({
     defineField({ name: 'name', type: 'string', title: 'Nombre' }),
     defineField({ name: 'description', type: 'text', title: 'Descripción' }),
     defineField({ name: 'image', type: 'image', title: 'Imagen' }),
-    defineField({ name: 'category', type: 'string', title: 'Categoría', options: { list: ['Black Angus', 'Chicken', 'Veggie', 'Hotdogs', 'To Share', 'Salad', 'Kids', 'Sides'] } }),
+    defineField({
+      name: 'category',
+      type: 'string',
+      title: 'Categoría',
+      options: {
+        list: ['Black Angus', 'Chicken', 'Veggie', 'Hotdogs', 'To Share', 'Salad', 'Kids', 'Sides'],
+      },
+    }),
     defineField({ name: 'price', type: 'number', title: 'Precio (Opcional)' }),
-  ]
+  ],
 })
 
 // --- MENU PAGE ---
@@ -27,8 +32,7 @@ export const menuPage = defineType({
       name: 'hero',
       type: 'hero',
       title: 'Hero Menú',
-      description:
-        'Configura aquí la imagen / video y los textos del hero de la página Menú.',
+      description: 'Configura aquí la imagen / video y los textos del hero de la página Menú.',
     }),
     defineField({
       name: 'showFooterBanner',
@@ -46,16 +50,11 @@ export const menuPage = defineType({
     prepare({ heroTitle, heroSubtitle }) {
       return {
         title: 'Página Menú',
-        subtitle:
-          heroTitle ||
-          heroSubtitle ||
-          'Configura el hero y los platillos del menú',
-      };
+        subtitle: heroTitle || heroSubtitle || 'Configura el hero y los platillos del menú',
+      }
     },
   },
-});
-
-
+})
 
 // --- INGREDIENTS PAGE ---
 export const ingredientsPage = defineType({
@@ -70,7 +69,15 @@ export const ingredientsPage = defineType({
       type: 'hero',
     }),
 
-    // SECCIONES DE CONTENIDO (Behind the scenes, Burgers, Pollo, etc.)
+    // ✅ Título centrado arriba de secciones
+    defineField({
+      name: 'sectionsTitle',
+      title: 'Título arriba de Secciones de Contenido',
+      type: 'string',
+      description: 'Se muestra centrado arriba del bloque de secciones.',
+    }),
+
+    // SECCIONES DE CONTENIDO
     defineField({
       name: 'sections',
       title: 'Secciones de Contenido',
@@ -110,6 +117,14 @@ export const ingredientsPage = defineType({
           ],
         },
       ],
+    }),
+
+    // ✅ Título editable de ADEREZOS
+    defineField({
+      name: 'saucesTitle',
+      title: 'Título de la sección Aderezos',
+      type: 'string',
+      initialValue: 'ADEREZOS',
     }),
 
     // TEXTO INTRO DE ADEREZOS
@@ -152,13 +167,20 @@ export const ingredientsPage = defineType({
       ],
     }),
 
+    // ✅ Título editable de Nutrición
+    defineField({
+      name: 'nutritionTitle',
+      title: 'Título de la sección Nutrición y Alérgenos',
+      type: 'string',
+      initialValue: 'NUTRICIÓN Y ALÉRGENOS',
+    }),
+
     // TEXTO NUTRICIÓN Y ALÉRGENOS
     defineField({
       name: 'nutritionText',
       title: 'Texto Nutrición y Alérgenos',
       type: 'text',
-      description:
-        'Texto que se muestra en la sección NUTRICIÓN Y ALÉRGENOS al final de la página.',
+      description: 'Texto que se muestra en la sección NUTRICIÓN Y ALÉRGENOS al final de la página.',
     }),
 
     // TOGGLE FOOTER
@@ -175,7 +197,7 @@ export const ingredientsPage = defineType({
       return {
         title: 'Página Ingredientes',
         subtitle: 'Contenido de la sección Ingredientes',
-      };
+      }
     },
   },
-});
+})

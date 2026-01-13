@@ -62,8 +62,8 @@ type HomePageSanity = {
   heroSlides?: HeroSlideSanity[];
   introSection?: IntroSectionSanity;
   legendSections?: LegendSectionSanity[];
-  promotionsTitle?: string; // ✅ nuevo
-  promotions?: PromotionPostSanity[]; // viene resuelto desde GROQ
+  promotionsTitle?: string;
+  promotions?: PromotionPostSanity[];
 };
 
 // ========= Tipos locales =========
@@ -160,7 +160,6 @@ const Home: React.FC = () => {
   const [promos, setPromos] = useState<PromoCard[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // ✅ nuevo: título editable
   const [promotionsTitle, setPromotionsTitle] = useState('PROMOCIONES');
 
   const nextSlide = () => {
@@ -197,7 +196,7 @@ const Home: React.FC = () => {
               ctaText: slide.ctaText ?? '',
               ctaLink: slide.ctaLink ?? '/menu',
               align: slide.align ?? 'center',
-              heroLink: slide.heroLink ?? '',
+              heroLink: (slide.heroLink || '').trim(),
             };
           }) ?? [];
 
@@ -238,7 +237,6 @@ const Home: React.FC = () => {
         setLegendSections(mappedLegend);
         setPromos(mappedPromos);
 
-        // ✅ set título editable (fallback PROMOCIONES)
         setPromotionsTitle(data?.promotionsTitle?.trim() ? data.promotionsTitle.trim() : 'PROMOCIONES');
       } catch (error) {
         console.error('Error fetching homePage from Sanity', error);
@@ -271,7 +269,7 @@ const Home: React.FC = () => {
                 className="absolute inset-0 w-full h-full"
               >
                 {!slide.ctaText && slide.heroLink ? (
-                  <Link to={slide.heroLink} className="absolute inset-0 z-10" aria-label="Ir al enlace del hero" />
+                  <Link to={slide.heroLink} className="absolute inset-0 z-20" aria-label="Ir al enlace del hero" />
                 ) : null}
 
                 <div className="w-full h-full relative">
@@ -399,8 +397,8 @@ const Home: React.FC = () => {
                 <Title
                   variant={TitleVariant.REGULAR}
                   text={introSection.titleText || 'MOMENTOS CON SABOR LEGENDARIO'}
-                  className="text-4xl md:text-6xl mb-6 leading-none"
-                  align="left"
+                  className="text-4xl md:text-6xl mb-6 leading-none md:text-left"
+                  align="center"
                 />
               )}
             </div>
@@ -441,7 +439,12 @@ const Home: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="md:basis-5/12 lg:basis-4/12 md:flex md:flex-col md:justify-center">
+                  {/* ✅ ÚNICO CAMBIO: ahora solo aplica en XL+ */}
+                  <div
+                    className={`md:basis-5/12 lg:basis-4/12 md:flex md:flex-col md:justify-center xl:transform ${
+                      imageOnRight ? 'xl:translate-x-16' : 'xl:-translate-x-16'
+                    }`}
+                  >
                     <div className="w-full max-w-3xl mx-auto">
                       <h3 className="font-rethink-bold text-3xl mb-4 uppercase text-left">
                         {section.title || 'SÉ PARTE DE LA LEYENDA'}
