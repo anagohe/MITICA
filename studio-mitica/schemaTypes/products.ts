@@ -10,14 +10,17 @@ export const menuItem = defineType({
     defineField({ name: 'name', type: 'string', title: 'Nombre' }),
     defineField({ name: 'description', type: 'text', title: 'Descripción' }),
     defineField({ name: 'image', type: 'image', title: 'Imagen' }),
+
+    // ✅ Cambiado: ya NO está hardcodeado con list.
+    // Ahora es texto libre para que pueda funcionar con categorías editables en menuPage.
     defineField({
       name: 'category',
       type: 'string',
       title: 'Categoría',
-      options: {
-        list: ['Black Angus', 'Chicken', 'Veggie', 'Hotdogs', 'To Share', 'Salad', 'Kids', 'Sides'],
-      },
+      description:
+        'Escribe aquí la categoría (debe coincidir con alguna de las categorías configuradas en "Página Menú").',
     }),
+
     defineField({ name: 'price', type: 'number', title: 'Precio (Opcional)' }),
   ],
 })
@@ -34,6 +37,18 @@ export const menuPage = defineType({
       title: 'Hero Menú',
       description: 'Configura aquí la imagen / video y los textos del hero de la página Menú.',
     }),
+
+    // ✅ NUEVO: categorías editables del menú (para tabs/chips)
+    defineField({
+      name: 'menuCategories',
+      title: 'Categorías del Menú',
+      description:
+        'Estas categorías se muestran en la sección de categorías del Menú. Puedes agregar/eliminar y reordenar.',
+      type: 'array',
+      of: [{ type: 'string' }],
+      validation: (Rule) => Rule.unique(),
+    }),
+
     defineField({
       name: 'showFooterBanner',
       title: 'Mostrar Banner Amarillo en Footer',
@@ -50,7 +65,7 @@ export const menuPage = defineType({
     prepare({ heroTitle, heroSubtitle }) {
       return {
         title: 'Página Menú',
-        subtitle: heroTitle || heroSubtitle || 'Configura el hero y los platillos del menú',
+        subtitle: heroTitle || heroSubtitle || 'Configura el hero, categorías y los platillos del menú',
       }
     },
   },
@@ -62,14 +77,12 @@ export const ingredientsPage = defineType({
   title: 'Página Ingredientes',
   type: 'document',
   fields: [
-    // HERO reutiliza el objeto "hero"
     defineField({
       name: 'hero',
       title: 'Hero (Ingredientes)',
       type: 'hero',
     }),
 
-    // ✅ Título centrado arriba de secciones
     defineField({
       name: 'sectionsTitle',
       title: 'Título arriba de Secciones de Contenido',
@@ -77,7 +90,6 @@ export const ingredientsPage = defineType({
       description: 'Se muestra centrado arriba del bloque de secciones.',
     }),
 
-    // SECCIONES DE CONTENIDO
     defineField({
       name: 'sections',
       title: 'Secciones de Contenido',
@@ -119,7 +131,6 @@ export const ingredientsPage = defineType({
       ],
     }),
 
-    // ✅ Título editable de ADEREZOS
     defineField({
       name: 'saucesTitle',
       title: 'Título de la sección Aderezos',
@@ -127,7 +138,6 @@ export const ingredientsPage = defineType({
       initialValue: 'ADEREZOS',
     }),
 
-    // TEXTO INTRO DE ADEREZOS
     defineField({
       name: 'saucesIntro',
       title: 'Texto debajo del título "ADEREZOS"',
@@ -135,7 +145,6 @@ export const ingredientsPage = defineType({
       description: 'Texto corto que aparece debajo del título ADEREZOS en la página.',
     }),
 
-    // ADEREZOS CON IMAGEN
     defineField({
       name: 'sauces',
       title: 'Aderezos (Carrusel)',
@@ -167,7 +176,6 @@ export const ingredientsPage = defineType({
       ],
     }),
 
-    // ✅ Título editable de Nutrición
     defineField({
       name: 'nutritionTitle',
       title: 'Título de la sección Nutrición y Alérgenos',
@@ -175,7 +183,6 @@ export const ingredientsPage = defineType({
       initialValue: 'NUTRICIÓN Y ALÉRGENOS',
     }),
 
-    // TEXTO NUTRICIÓN Y ALÉRGENOS
     defineField({
       name: 'nutritionText',
       title: 'Texto Nutrición y Alérgenos',
@@ -183,7 +190,6 @@ export const ingredientsPage = defineType({
       description: 'Texto que se muestra en la sección NUTRICIÓN Y ALÉRGENOS al final de la página.',
     }),
 
-    // TOGGLE FOOTER
     defineField({
       name: 'showFooterBanner',
       title: 'Mostrar Banner Amarillo en Footer',

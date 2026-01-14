@@ -28,6 +28,7 @@ type MenuQueryResult = {
   page?: {
     hero?: HeroType;
     showFooterBanner?: boolean;
+    menuCategories?: string[]; // ✅ categorías desde Sanity (menuPage.menuCategories)
   };
   items: MenuItem[];
 };
@@ -46,18 +47,38 @@ const Menu: React.FC = () => {
 
   const items = data?.items || [];
 
-  // === Categorías dinámicas de Sanity ===
+  // ✅ Categorías desde Sanity (si existen) con fallback a categorías derivadas de items
   const categories = useMemo(() => {
+    const sanityCatsRaw = Array.isArray(data?.page?.menuCategories) ? data?.page?.menuCategories : [];
+    const sanityCats = sanityCatsRaw.map((c) => (c || '').trim()).filter(Boolean);
+
+    if (sanityCats.length > 0) {
+      // unique preservando orden
+      const seen = new Set<string>();
+      const orderedUnique = sanityCats.filter((c) => (seen.has(c) ? false : (seen.add(c), true)));
+      return ['Todos', ...orderedUnique];
+    }
+
+    // Fallback: derivadas de items (como antes)
     const set = new Set<string>();
     items.forEach((item) => {
-      if (item.category) set.add(item.category);
+      const c = (item.category || '').trim();
+      if (c) set.add(c);
     });
+
     return ['Todos', ...Array.from(set)];
-  }, [items]);
+  }, [items, data?.page?.menuCategories]);
+
+  // ✅ Mantener categoría válida si cambian categorías
+  useEffect(() => {
+    if (!categories.includes(activeCategory)) {
+      setActiveCategory('Todos');
+    }
+  }, [categories, activeCategory]);
 
   const filteredItems = useMemo(() => {
     if (activeCategory === 'Todos') return items;
-    return items.filter((item) => item.category === activeCategory);
+    return items.filter((item) => (item.category || '').trim() === activeCategory);
   }, [items, activeCategory]);
 
   if (loading) {
@@ -122,9 +143,7 @@ const Menu: React.FC = () => {
             <Title
               variant={TitleVariant.TEXTURED}
               text={hero.title}
-              className={`text-4xl md:text-7xl ${
-                hero.textColor || 'text-white'
-              } mb-4`}
+              className={`text-4xl md:text-7xl ${hero.textColor || 'text-white'} mb-4`}
             />
           )}
 
@@ -143,10 +162,10 @@ const Menu: React.FC = () => {
             variant={TitleVariant.BORDERED}
             text="MENÚ"
             borderColor="#000"
-            className="text-6xl md:text-8xl font-nexa" // tipografía de título
+            className="text-6xl md:text-8xl font-nexa"
           />
 
-          {/* Filtros de categoría (dinámicos de Sanity) */}
+          {/* Filtros de categoría (desde Sanity con fallback) */}
           <div className="flex flex-wrap justify-center gap-4 mt-8 font-nexa text-sm uppercase">
             {categories.map((cat) => (
               <button
@@ -166,9 +185,7 @@ const Menu: React.FC = () => {
 
         {/* Grid de productos */}
         {filteredItems.length === 0 ? (
-          <div className="text-center text-gray-500">
-            No hay productos en esta categoría.
-          </div>
+          <div className="text-center text-gray-500">No hay productos en esta categoría.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8 max-w-6xl mx-auto">
             {filteredItems.map((item, index) => (
@@ -188,30 +205,26 @@ const Menu: React.FC = () => {
                       />
                     )}
                   </div>
-                  <h3 className="font-nexa text-xl mb-2 uppercase tracking-wide">
-                    {item.name}
-                  </h3>
+
+                  <h3 className="font-nexa text-xl mb-2 uppercase tracking-wide">{item.name}</h3>
+
                   {item.category && (
                     <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">
                       {item.category}
                     </p>
                   )}
+
                   <p className="font-rethink text-gray-500 text-sm mb-4 leading-relaxed text-justify">
                     {item.description}
                   </p>
+
                   {typeof item.price === 'number' && (
                     <p className="font-nexa text-xs text-gray-800 mb-4">
-                      Desde{' '}
-                      <span className="font-bold">
-                        ${item.price.toFixed(2)}
-                      </span>
+                      Desde <span className="font-bold">${item.price.toFixed(2)}</span>
                     </p>
                   )}
-                  <div className="flex justify-end">
-                    <button className="bg-black text-white text-[10px] px-6 py-2 rounded uppercase font-bold hover:bg-mitica-yellow hover:text-black transition-colors tracking-wider">
-                      Order Now
-                    </button>
-                  </div>
+
+                  {/* ✅ Botón eliminado */}
                 </div>
               </div>
             ))}
