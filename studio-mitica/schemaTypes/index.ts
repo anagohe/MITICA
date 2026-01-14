@@ -8,6 +8,7 @@ import * as community from './community'
 import * as general from './general'
 import * as locationsPage from './locationsPage'
 
+
 // Tomamos todos los exports de cada archivo y los metemos en un solo array.
 // Cualquier cosa que exportes en esos archivos (pages, objetos, etc.) se
 // registrará como schema en el Studio.

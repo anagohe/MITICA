@@ -14,6 +14,7 @@ const singletonTypes = [
   'franchisePage',
   'faqPage',
   'siteSettings',
+  'navbarFooter',   // ✅ nuevo
 ]
 
 // helper para singletons (una sola instancia por tipo)
@@ -48,6 +49,7 @@ export const deskStructure = (S: StructureBuilder) =>
               singletonItem(S, 'Eventos – configuración', 'eventsPage'),
               singletonItem(S, 'Bolsa de trabajo', 'careersPage'),
               singletonItem(S, 'FAQ – configuración', 'faqPage'),
+              singletonItem(S, 'Navbar & Footer', 'navbarFooter'),
             ])
         ),
 
