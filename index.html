@@ -3,29 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>  MÍTICA - Hamburgesas Legendarias</title>
+    <title>MÍTICA - Hamburgesas Legendarias</title>
 
-    <!-- ✅ Favicons (Vite/Vercel) -->
-    <!-- IMPORTANTE:
-         - Safari/Chrome pueden cachear el favicon agresivamente.
-         - El orden ayuda: dark primero, luego default.
-         - El "principal" siempre será favicon-black; el de color solo aplica en dark mode.
-    -->
+    <!-- ✅ Favicons (RECOMENDADO: .ico como principal) -->
+    <link rel="icon" href="/favicon.ico?v=6" />
+    <link rel="shortcut icon" href="/favicon.ico?v=6" />
+
+    <!-- PNG extras (opcional pero recomendado) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-black.png?v=6" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-black.png?v=6" />
+
+    <!-- Dark mode (opcional) -->
     <link
       rel="icon"
       type="image/png"
-      href="/favicon-color.png?v=5"
+      href="/favicon-color.png?v=6"
       media="(prefers-color-scheme: dark)"
     />
-    <link rel="icon" type="image/png" href="/favicon-black.png?v=5" />
 
-    <!-- (Opcional) iOS / Add to Home Screen -->
-    <link
-      rel="apple-touch-icon"
-      href="/favicon-color.png?v=5"
-      media="(prefers-color-scheme: dark)"
-    />
-    <link rel="apple-touch-icon" href="/favicon-black.png?v=5" />
+    <!-- iOS / Add to Home Screen -->
+    <link rel="apple-touch-icon" href="/favicon-black.png?v=6" />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
