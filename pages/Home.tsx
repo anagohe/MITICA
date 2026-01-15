@@ -482,8 +482,8 @@ const Home: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {promos.map((promo) => (
-                <Link to={`/blog/${promo.slug}`} key={promo.id} className="group block">
-                  <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
+                <Link to={`/blog/${promo.slug}`} key={promo.id} className="group block h-full">
+                  <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
                     <div className="h-64 overflow-hidden">
                       {promo.imageUrl ? (
                         <img
@@ -496,14 +496,16 @@ const Home: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="p-8 text-left">
+                    <div className="p-8 text-left flex flex-col flex-1">
                       <h3 className="font-rethink-bold text-lg mb-2">{promo.title || 'Promoción'}</h3>
 
-                      <p className="font-rethink text-gray-500 text-sm mb-4 text-justify line-clamp-3">
+                      <p className="font-rethink text-gray-500 text-sm mb-4 text-justify line-clamp-3 min-h-[3.75rem] overflow-hidden">
                         {promo.desc}
                       </p>
 
-                      <div className="w-8 h-1 bg-mitica-yellow group-hover:w-full transition-all duration-300" />
+                      <div className="mt-auto">
+                        <div className="w-8 h-1 bg-mitica-yellow group-hover:w-full transition-all duration-300" />
+                      </div>
                     </div>
                   </div>
                 </Link>
