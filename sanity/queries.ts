@@ -16,7 +16,21 @@ export const MENU_PAGE_QUERY = `
         asset->{ url }
       }
     },
-    showFooterBanner
+    showFooterBanner,
+
+    // ✅ NUEVO: categorías + artículos ordenables desde Sanity (menuSections)
+    menuSections[]{
+      _key,
+      title,
+      items[]->{
+        _id,
+        name,
+        description,
+        image,
+        category,
+        price
+      }
+    }
   },
   "items": *[_type == "menuItem"]{
     _id,
