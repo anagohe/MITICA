@@ -10,19 +10,21 @@ export const menuItem = defineType({
     defineField({ name: 'name', type: 'string', title: 'Nombre' }),
     defineField({ name: 'description', type: 'text', title: 'Descripción' }),
     defineField({ name: 'image', type: 'image', title: 'Imagen' }),
-
-    // ✅ Cambiado: ya NO está hardcodeado con list.
-    // Ahora es texto libre para que pueda funcionar con categorías editables en menuPage.
-    defineField({
-      name: 'category',
-      type: 'string',
-      title: 'Categoría',
-      description:
-        'Escribe aquí la categoría (debe coincidir con alguna de las categorías configuradas en "Página Menú").',
-    }),
-
-    defineField({ name: 'price', type: 'number', title: 'Precio (Opcional)' }),
+    // ✅ Quitado: category (ya no se repite)
+    // ✅ Quitado: price
   ],
+  preview: {
+    select: {
+      title: 'name',
+      media: 'image',
+    },
+    prepare({ title, media }) {
+      return {
+        title: title || 'Platillo',
+        media,
+      }
+    },
+  },
 })
 
 // --- MENU PAGE ---
@@ -38,15 +40,42 @@ export const menuPage = defineType({
       description: 'Configura aquí la imagen / video y los textos del hero de la página Menú.',
     }),
 
-    // ✅ NUEVO: categorías editables del menú (para tabs/chips)
+    // ✅ TODO EN UNA SOLA SECCIÓN: categorías + artículos (ordenables)
     defineField({
-      name: 'menuCategories',
-      title: 'Categorías del Menú',
+      name: 'menuSections',
+      title: 'Categorías y Artículos (ordenables)',
       description:
-        'Estas categorías se muestran en la sección de categorías del Menú. Puedes agregar/eliminar y reordenar.',
+        'Crea categorías aquí y dentro agrega artículos existentes o crea nuevos. Puedes ordenar categorías y artículos arrastrando.',
       type: 'array',
-      of: [{ type: 'string' }],
-      validation: (Rule) => Rule.unique(),
+      of: [
+        defineField({
+          name: 'menuSection',
+          title: 'Categoría',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'title',
+              title: 'Nombre de la categoría',
+              type: 'string',
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'items',
+              title: 'Artículos (ordenables)',
+              type: 'array',
+              of: [{ type: 'reference', to: [{ type: 'menuItem' }] }],
+            }),
+          ],
+          preview: {
+            select: {
+              title: 'title',
+            },
+            prepare({ title }) {
+              return { title: title || 'Categoría' }
+            },
+          },
+        }),
+      ],
     }),
 
     defineField({
@@ -65,7 +94,7 @@ export const menuPage = defineType({
     prepare({ heroTitle, heroSubtitle }) {
       return {
         title: 'Página Menú',
-        subtitle: heroTitle || heroSubtitle || 'Configura el hero, categorías y los platillos del menú',
+        subtitle: heroTitle || heroSubtitle || 'Configura el hero y el orden de categorías/artículos',
       }
     },
   },
@@ -98,16 +127,8 @@ export const ingredientsPage = defineType({
         {
           type: 'object',
           fields: [
-            defineField({
-              name: 'title',
-              title: 'Título de la sección',
-              type: 'string',
-            }),
-            defineField({
-              name: 'content',
-              title: 'Contenido (rich text)',
-              type: 'blockContent',
-            }),
+            defineField({ name: 'title', title: 'Título de la sección', type: 'string' }),
+            defineField({ name: 'content', title: 'Contenido (rich text)', type: 'blockContent' }),
             defineField({
               name: 'image',
               title: 'Imagen de la sección',
@@ -142,7 +163,6 @@ export const ingredientsPage = defineType({
       name: 'saucesIntro',
       title: 'Texto debajo del título "ADEREZOS"',
       type: 'text',
-      description: 'Texto corto que aparece debajo del título ADEREZOS en la página.',
     }),
 
     defineField({
@@ -153,23 +173,13 @@ export const ingredientsPage = defineType({
         {
           type: 'object',
           fields: [
-            defineField({
-              name: 'name',
-              title: 'Nombre del aderezo',
-              type: 'string',
-            }),
+            defineField({ name: 'name', title: 'Nombre del aderezo', type: 'string' }),
             defineField({
               name: 'image',
               title: 'Imagen del aderezo',
               type: 'image',
               options: { hotspot: true },
-              fields: [
-                defineField({
-                  name: 'alt',
-                  title: 'Alt (texto alternativo)',
-                  type: 'string',
-                }),
-              ],
+              fields: [defineField({ name: 'alt', title: 'Alt', type: 'string' })],
             }),
           ],
         },
@@ -187,7 +197,6 @@ export const ingredientsPage = defineType({
       name: 'nutritionText',
       title: 'Texto Nutrición y Alérgenos',
       type: 'text',
-      description: 'Texto que se muestra en la sección NUTRICIÓN Y ALÉRGENOS al final de la página.',
     }),
 
     defineField({
@@ -200,10 +209,7 @@ export const ingredientsPage = defineType({
 
   preview: {
     prepare() {
-      return {
-        title: 'Página Ingredientes',
-        subtitle: 'Contenido de la sección Ingredientes',
-      }
+      return { title: 'Página Ingredientes', subtitle: 'Contenido de la sección Ingredientes' }
     },
   },
 })

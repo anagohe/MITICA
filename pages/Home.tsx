@@ -249,7 +249,7 @@ const Home: React.FC = () => {
   // ===== Auto–slide =====
   useEffect(() => {
     if (!heroSlides.length) return;
-    const timer = setInterval(() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length), 3000);
+    const timer = setInterval(() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length), 7000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
 

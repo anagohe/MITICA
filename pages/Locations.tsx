@@ -428,7 +428,7 @@ const LocationsPage: React.FC = () => {
             </p>
           )}
           <Title
-            variant={TitleVariant.BORDERED}
+            variant={TitleVariant.REGULAR}
             text={pageTitle}
             color="text-slate-900"
             borderColor="#F6BA27"
