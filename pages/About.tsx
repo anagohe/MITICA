@@ -8,20 +8,17 @@ import { PortableText } from '@portabletext/react';
 
 // ===== Sanity image builder =====
 const builder = imageUrlBuilder(client);
-function urlFor(source: any) {
-  return builder.image(source).auto('format').url();
-}
 
-// ✅ Builder conAttach sizes (legacy / si lo necesitas en otras partes)
-function imgUrl(source: any, w: number, h?: number) {
-  let img = builder.image(source).width(w);
+// ✅ Imagen optimizada (crop opcional)
+function imgUrl(source: any, w: number, h?: number, q: number = 80) {
+  let img = builder.image(source).width(w).quality(q);
   if (h) img = img.height(h);
   return img.auto('format').fit('crop').url();
 }
 
-// ✅ Mobile: NO recorte, mantiene imagen completa (para srcset móvil)
-function imgUrlContain(source: any, w: number) {
-  return builder.image(source).width(w).auto('format').fit('max').url();
+// ✅ Contain / no recorte (mantiene imagen completa)
+function imgUrlContain(source: any, w: number, q: number = 80) {
+  return builder.image(source).width(w).quality(q).auto('format').fit('max').url();
 }
 
 // ===== Fallbacks LOCALES =====
@@ -36,7 +33,7 @@ const FALLBACK_BRAND_LOGO = '/images/brand/logo-mitica.png';
 type AboutHeroSanity = {
   mediaType?: 'image' | 'video';
   desktopImage?: any;
-  desktopVideo?: any;
+  desktopVideo?: any; // deref en GROQ
   mobileImage?: any;
   title?: string;
   subtitle?: string;
@@ -70,12 +67,13 @@ type AboutPageSanity = {
 };
 
 // ========= GROQ =========
+// ✅ IMPORTANTE: desktopVideo con asset->url para que exista heroDesktopVideoUrl
 const ABOUT_QUERY = `
 *[_type == "aboutPage"][0]{
   hero{
     mediaType,
     desktopImage,
-    desktopVideo,
+    desktopVideo{asset->{url}},
     mobileImage,
     title,
     subtitle
@@ -103,6 +101,29 @@ const ABOUT_QUERY = `
 const About: React.FC = () => {
   const location = useLocation();
   const [data, setData] = useState<AboutPageSanity | null>(null);
+
+  // ✅ Detectar desktop para no montar video + imagen al mismo tiempo
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.matchMedia('(min-width: 768px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+
+    // soporte safari viejo
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else mq.addListener(onChange);
+
+    setIsDesktop(mq.matches);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
 
   // Scroll por hash (#vision, #manifesto)
   useEffect(() => {
@@ -136,15 +157,38 @@ const About: React.FC = () => {
   const heroTitle = hero?.title || '¿QUIÉNES SOMOS?';
   const heroSubtitle = hero?.subtitle || '';
 
-  const heroDesktopUrl = hero?.desktopImage ? urlFor(hero.desktopImage) : FALLBACK_HERO_DESKTOP;
-  const heroMobileUrl = hero?.mobileImage
-    ? urlFor(hero.mobileImage)
-    : (FALLBACK_HERO_MOBILE || heroDesktopUrl);
+  // ✅ HERO IMAGES OPTIMIZADAS
+  const heroDesktopDefault = hero?.desktopImage
+    ? imgUrl(hero.desktopImage, 2200, undefined, 80)
+    : FALLBACK_HERO_DESKTOP;
+
+  const heroDesktopSrcSet = hero?.desktopImage
+    ? [
+        `${imgUrl(hero.desktopImage, 1280, undefined, 80)} 1280w`,
+        `${imgUrl(hero.desktopImage, 1920, undefined, 80)} 1920w`,
+        `${imgUrl(hero.desktopImage, 2560, undefined, 80)} 2560w`,
+      ].join(', ')
+    : undefined;
+
+  const heroMobileDefault = hero?.mobileImage
+    ? imgUrlContain(hero.mobileImage, 900, 80)
+    : (FALLBACK_HERO_MOBILE || heroDesktopDefault);
+
+  const heroMobileSrcSet = hero?.mobileImage
+    ? [
+        `${imgUrlContain(hero.mobileImage, 480, 80)} 480w`,
+        `${imgUrlContain(hero.mobileImage, 640, 80)} 640w`,
+        `${imgUrlContain(hero.mobileImage, 750, 80)} 750w`,
+        `${imgUrlContain(hero.mobileImage, 900, 80)} 900w`,
+        `${imgUrlContain(hero.mobileImage, 1080, 80)} 1080w`,
+      ].join(', ')
+    : undefined;
 
   const heroDesktopVideoUrl = hero?.desktopVideo?.asset?.url || '';
 
-  const whoSideImageUrl = who?.sideImage ? urlFor(who.sideImage) : FALLBACK_WHO_SIDE;
-  const centerImageUrl = vm?.centerImage ? urlFor(vm.centerImage) : FALLBACK_CENTER;
+  // ✅ OTRAS IMÁGENES (optimización suave)
+  const whoSideImageUrl = who?.sideImage ? imgUrl(who.sideImage, 1400, undefined, 80) : FALLBACK_WHO_SIDE;
+  const centerImageUrl = vm?.centerImage ? imgUrlContain(vm.centerImage, 900, 85) : FALLBACK_CENTER;
 
   const values =
     data?.values && data.values.length > 0
@@ -158,7 +202,9 @@ const About: React.FC = () => {
     manifesto?.backgroundType === 'image' && !!manifesto?.backgroundImage;
 
   const manifestoBgImageUrl =
-    manifestoHasImageBg && manifesto?.backgroundImage ? urlFor(manifesto.backgroundImage) : null;
+    manifestoHasImageBg && manifesto?.backgroundImage
+      ? imgUrl(manifesto.backgroundImage, 2400, undefined, 70)
+      : null;
 
   // ===== PortableText components =====
   const portableLight = useMemo(
@@ -226,78 +272,78 @@ const About: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* ✅ HERO: en móvil NO usamos h-screen; usamos una proporción fija para evitar barras negras */}
       {/* ✅ HERO: debajo del navbar en móvil */}
-<div className="relative w-full overflow-hidden bg-mitica-black md:h-screen pt-24 md:pt-0">
-  {/* En móvil: alto = pantalla - navbar. En desktop: h-full */}
-  <div className="relative w-full h-[calc(100svh-96px)] md:h-full">
-    {hero?.mediaType === 'video' && heroDesktopVideoUrl ? (
-      <>
-        {/* Desktop video */}
-        <video
-          className="hidden md:block w-full h-full object-cover opacity-60"
-          autoPlay
-          muted
-          loop
-          playsInline
-        >
-          <source src={heroDesktopVideoUrl} type="video/mp4" />
-        </video>
+      <div className="relative w-full overflow-hidden bg-mitica-black md:h-screen pt-24 md:pt-0">
+        <div className="relative w-full h-[calc(100svh-96px)] md:h-full">
+          {hero?.mediaType === 'video' && heroDesktopVideoUrl ? (
+            isDesktop ? (
+              <video
+                className="w-full h-full object-cover opacity-60"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              >
+                <source src={heroDesktopVideoUrl} type="video/mp4" />
+              </video>
+            ) : (
+              <img
+                src={heroMobileDefault}
+                srcSet={heroMobileSrcSet}
+                sizes="100vw"
+                alt="Nosotros Hero Mobile"
+                className="w-full h-full object-cover opacity-60"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            )
+          ) : (
+            <picture>
+              {/* Desktop */}
+              {heroDesktopSrcSet ? (
+                <source
+                  media="(min-width: 768px)"
+                  srcSet={heroDesktopSrcSet}
+                  sizes="100vw"
+                />
+              ) : null}
 
-        {/* Mobile image */}
-        <img
-          src={heroMobileUrl}
-          alt="Nosotros Hero Mobile"
-          className="md:hidden w-full h-full object-cover opacity-60"
-        />
-      </>
-    ) : (
-      <picture>
-        <source
-          media="(max-width: 767px)"
-          srcSet={
-            hero?.mobileImage
-              ? [
-                  `${imgUrlContain(hero.mobileImage, 480)} 480w`,
-                  `${imgUrlContain(hero.mobileImage, 640)} 640w`,
-                  `${imgUrlContain(hero.mobileImage, 750)} 750w`,
-                  `${imgUrlContain(hero.mobileImage, 900)} 900w`,
-                  `${imgUrlContain(hero.mobileImage, 1080)} 1080w`,
-                ].join(', ')
-              : heroMobileUrl
-          }
-        />
-        <img
-          src={heroDesktopUrl}
-          alt="Nosotros Hero"
-          className="w-full h-full object-cover opacity-60"
-          loading="eager"
-          decoding="async"
-        />
-      </picture>
-    )}
+              {/* Mobile (fallback del <img>) */}
+              <img
+                src={heroMobileDefault}
+                srcSet={heroMobileSrcSet}
+                sizes="100vw"
+                alt="Nosotros Hero"
+                className="w-full h-full object-cover opacity-60"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
+          )}
 
-    {/* Overlay */}
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-      {heroTitle && (
-        <Title
-          variant={TitleVariant.TEXTURED}
-          text={heroTitle}
-          className="text-5xl md:text-8xl text-white leading-none"
-        />
-      )}
+          {/* Overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+            {heroTitle && (
+              <Title
+                variant={TitleVariant.TEXTURED}
+                text={heroTitle}
+                className="text-5xl md:text-8xl text-white leading-none"
+              />
+            )}
 
-      {heroSubtitle && (
-        <Title
-          variant={TitleVariant.REGULAR}
-          text={heroSubtitle}
-          className="text-3xl md:text-5xl text-mitica-yellow leading-none mt-3"
-        />
-      )}
-    </div>
-  </div>
-</div>
-
+            {heroSubtitle && (
+              <Title
+                variant={TitleVariant.REGULAR}
+                text={heroSubtitle}
+                className="text-3xl md:text-5xl text-mitica-yellow leading-none mt-3"
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* ¿QUIÉNES SOMOS? */}
       <section className="bg-white py-20">
@@ -331,6 +377,8 @@ const About: React.FC = () => {
                   src={whoSideImageUrl}
                   alt="Quiénes somos"
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             </div>
@@ -380,6 +428,8 @@ const About: React.FC = () => {
               alt="Visión y misión"
               className="w-full object-contain transform transition-transform duration-300 hover:scale-110 hover:-translate-y-1"
               style={{ transformOrigin: 'center bottom' }}
+              loading="lazy"
+              decoding="async"
             />
           </div>
 
@@ -441,6 +491,8 @@ const About: React.FC = () => {
                 src={manifestoBgImageUrl}
                 className="w-full h-full object-cover"
                 alt="Fondo manifiesto"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           ) : (
@@ -449,6 +501,8 @@ const About: React.FC = () => {
                 src={FALLBACK_MANIFESTO_TEXTURE}
                 className="w-full h-full object-cover"
                 alt="Textura manifiesto"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           )
@@ -485,6 +539,8 @@ const About: React.FC = () => {
                 src={FALLBACK_BRAND_LOGO}
                 alt="Logo Mítica"
                 className="h-16 md:h-18 mx-auto opacity-90"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           </div>

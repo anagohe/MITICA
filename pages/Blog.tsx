@@ -57,7 +57,7 @@ type BlogPostCard = {
   slug: string;
   title: string;
   category: string;
-  img: string;
+  img: string; // ahora puede ser '' (sin fallback)
   date: string;
   excerpt: string;
 };
@@ -109,9 +109,7 @@ const Blog = () => {
           slug: p.slug || p._id,
           title: p.title || '',
           category: p.category || '',
-          img: p.mainImage
-            ? urlFor(p.mainImage)
-            : 'https://picsum.photos/400/300?blog_fallback',
+          img: p.mainImage ? urlFor(p.mainImage) : '',
           date: formatDate(p.publishedAt),
           excerpt: p.excerpt || '',
         }));
@@ -129,23 +127,23 @@ const Blog = () => {
     ? posts.filter((p) => p.category === selectedCategory)
     : posts;
 
-  // Hero: imagen de Sanity si existe, si no el placeholder anterior
+  // Hero: imagen de Sanity si existe, si no, solo fondo (sin picsum, sin fallback)
   const heroImage = heroData ? findFirstImage(heroData) : null;
-  const heroImageUrl = heroImage
-    ? urlFor(heroImage)
-    : 'https://picsum.photos/1920/1080?blog_hero';
-
+  const heroImageUrl = heroImage ? urlFor(heroImage) : '';
   const heroTitle = heroData?.title || 'COMUNIDAD MÍTICA';
 
   return (
     <div className="w-full">
       {/* Hero */}
       <div className="relative h-screen w-full bg-gray-900 overflow-hidden mb-16">
-        <img
-          src={heroImageUrl}
-          className="w-full h-full object-cover opacity-50"
-          alt="Hero Blog"
-        />
+        {heroImageUrl ? (
+          <img
+            src={heroImageUrl}
+            className="w-full h-full object-cover opacity-50"
+            alt="Hero Blog"
+          />
+        ) : null}
+
         <div className="absolute inset-0 flex items-center justify-center">
           <Title
             variant={TitleVariant.TEXTURED_BORDERED}
@@ -159,8 +157,6 @@ const Blog = () => {
       <div className="container mx-auto px-6 pb-20">
         {/* ✅ TÍTULO BLOG ARRIBA DEL BUSCADOR */}
         <div className="max-w-4xl mx-auto -mt-6 mb-10 text-center">
-
-
           <Title
             variant={TitleVariant.REGULAR}
             text="BLOG"
@@ -209,15 +205,21 @@ const Blog = () => {
             >
               <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-shadow duration-300 border border-gray-100 h-full flex flex-col">
                 <div className="h-56 overflow-hidden relative">
-                  <img
-                    src={post.img}
-                    alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
+                  {post.img ? (
+                    <img
+                      src={post.img}
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200" />
+                  )}
+
                   <div className="absolute top-4 left-4 bg-white px-3 py-1 rounded text-[10px] font-bold font-nexa uppercase tracking-wide shadow-sm border border-gray-200">
                     {post.category}
                   </div>
                 </div>
+
                 <div className="p-6 flex-grow flex flex-col">
                   <h3 className="font-nexa text-lg mb-3 leading-tight group-hover:text-mitica-yellow transition-colors uppercase">
                     {post.title}

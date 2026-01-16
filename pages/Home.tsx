@@ -246,12 +246,16 @@ const Home: React.FC = () => {
     fetchHome();
   }, []);
 
-  // ===== Auto–slide =====
+  // ===== Auto–slide (8s y se reinicia al cambiar slide, incluso con flechas/dots) =====
   useEffect(() => {
-    if (!heroSlides.length) return;
-    const timer = setInterval(() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length), 7000);
-    return () => clearInterval(timer);
-  }, [heroSlides.length]);
+    if (heroSlides.length <= 1) return;
+
+    const timer = window.setTimeout(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 8000);
+
+    return () => window.clearTimeout(timer);
+  }, [heroSlides.length, currentSlide]);
 
   return (
     <div className="w-full">
