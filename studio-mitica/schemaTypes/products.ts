@@ -1,6 +1,42 @@
 // studio-mitica/schemaTypes/products.ts
 import { defineType, defineField } from 'sanity'
 
+// --- MENU ICON (nuevo) ---
+export const menuIcon = defineType({
+  name: 'menuIcon',
+  title: 'Ícono de Menú',
+  type: 'document',
+  fields: [
+    defineField({
+      name: 'title',
+      title: 'Texto debajo del ícono',
+      type: 'string',
+      description: 'Ej: GLUTEN, CRUSTÁCEOS, HUEVOS, PESCADO',
+      validation: (Rule) => Rule.required(),
+    }),
+    // ✅ CAMBIO PUNTUAL: renombrado para evitar el campo anterior corrupto que causa "Publishing..." infinito
+    defineField({
+      name: 'iconImage',
+      title: 'Imagen del ícono',
+      type: 'image',
+      options: { hotspot: true },
+      validation: (Rule) => Rule.required(),
+    }),
+  ],
+  preview: {
+    select: {
+      title: 'title',
+      media: 'iconImage',
+    },
+    prepare({ title, media }) {
+      return {
+        title: title || 'Ícono',
+        media,
+      }
+    },
+  },
+})
+
 // --- MENU ITEM ---
 export const menuItem = defineType({
   name: 'menuItem',
@@ -10,6 +46,24 @@ export const menuItem = defineType({
     defineField({ name: 'name', type: 'string', title: 'Nombre' }),
     defineField({ name: 'description', type: 'text', title: 'Descripción' }),
     defineField({ name: 'image', type: 'image', title: 'Imagen' }),
+
+    // ✅ NUEVO: Selección de íconos por platillo
+    defineField({
+      name: 'icons',
+      title: 'Íconos (debajo de la descripción)',
+      type: 'array',
+      description: 'Selecciona los íconos que se mostrarán en la tarjeta del producto.',
+      of: [{ type: 'reference', to: [{ type: 'menuIcon' }] }],
+    }),
+
+    // ✅ NUEVO: kcal (texto libre para mantener formato como en la imagen)
+    defineField({
+      name: 'kcalText',
+      title: 'Texto kcal (abajo derecha)',
+      type: 'string',
+      description: 'Ej: 400 cal/590 cal',
+    }),
+
     // ✅ Quitado: category (ya no se repite)
     // ✅ Quitado: price
   ],
@@ -38,6 +92,16 @@ export const menuPage = defineType({
       type: 'hero',
       title: 'Hero Menú',
       description: 'Configura aquí la imagen / video y los textos del hero de la página Menú.',
+    }),
+
+    // ✅ Biblioteca de íconos (para administrarlos desde Menú Page)
+    defineField({
+      name: 'menuIconLibrary',
+      title: 'Biblioteca de Íconos (Menú)',
+      type: 'array',
+      description:
+        'Aquí agregas los íconos disponibles (con imagen y texto). Luego, en cada Platillo eliges cuáles mostrar.',
+      of: [{ type: 'reference', to: [{ type: 'menuIcon' }] }],
     }),
 
     // ✅ TODO EN UNA SOLA SECCIÓN: categorías + artículos (ordenables)
@@ -213,3 +277,4 @@ export const ingredientsPage = defineType({
     },
   },
 })
+

@@ -17,8 +17,6 @@ export const MENU_PAGE_QUERY = `
       }
     },
     showFooterBanner,
-
-    // ✅ NUEVO: categorías + artículos ordenables desde Sanity (menuSections)
     menuSections[]{
       _key,
       title,
@@ -28,7 +26,16 @@ export const MENU_PAGE_QUERY = `
         description,
         image,
         category,
-        price
+        price,
+
+        // ✅ NUEVO
+        kcalText,
+        icons[]->{
+          _id,
+          title,
+          iconImage,
+          image
+        }
       }
     }
   },
@@ -38,7 +45,16 @@ export const MENU_PAGE_QUERY = `
     description,
     image,
     category,
-    price
+    price,
+
+    // ✅ NUEVO
+    kcalText,
+    icons[]->{
+      _id,
+      title,
+      iconImage,
+      image
+    }
   }
 }
 `;
@@ -103,3 +119,4 @@ export const LOCATIONS_QUERY = `
   "lng": longitude
 } | order(name asc)
 `;
+
