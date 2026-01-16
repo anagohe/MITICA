@@ -100,13 +100,43 @@ export const franchisePage = defineType({
   type: 'document',
   fields: [
     defineField({ name: 'hero', type: 'hero' }),
+
+    // ✅ SECCIÓN DE CONTENIDO (como tu segunda imagen)
     defineField({
-      name: 'content',
-      type: 'blockContent',
-      title: 'Contenido Principal',
+      name: 'sectionTitle',
+      type: 'string',
+      title: 'Título grande (arriba) - “FRANQUICIAS”',
+      initialValue: 'FRANQUICIAS',
     }),
+
+    defineField({
+      name: 'leadText',
+      type: 'text',
+      title: 'Texto principal (negritas)',
+      rows: 3,
+      initialValue:
+        'Únete a la leyenda y lleva el sabor de Mítica a tu ciudad. Un modelo de negocio probado y exitoso.',
+    }),
+
+    defineField({
+      name: 'paragraphText',
+      type: 'text',
+      title: 'Párrafo principal',
+      rows: 4,
+      initialValue:
+        'En octubre de 2024, seguimos expandiéndonos. Mítica ofrece un modelo de negocio rentable y escalable. Con nuestro soporte operativo y de marketing, aseguramos que cada sucursal mantenga los estándares de calidad que nos caracterizan.',
+    }),
+
+    defineField({
+      name: 'whyTitle',
+      type: 'string',
+      title: 'Título sección beneficios',
+      initialValue: '¿POR QUÉ ELEGIRNOS?',
+    }),
+
     defineField({
       name: 'benefits',
+      title: 'Benefits (tarjetas)',
       type: 'array',
       of: [
         {
@@ -117,7 +147,26 @@ export const franchisePage = defineType({
           ],
         },
       ],
+      validation: (Rule) => Rule.max(2),
     }),
+
+    defineField({
+      name: 'closingText',
+      type: 'text',
+      title: 'Párrafo final (abajo de tarjetas)',
+      rows: 3,
+      initialValue:
+        'Parte de nuestra filosofía es crecer junto a nuestros socios. Buscamos emprendedores apasionados por la comida y el servicio.',
+    }),
+
+    // ✅ (Opcional) Mantengo tu campo viejo para no perder lo que ya escribiste ahí
+    defineField({
+      name: 'content',
+      type: 'blockContent',
+      title: 'Contenido Principal (Legacy)',
+      description: 'Campo anterior. Puedes dejarlo o migrar su texto a los campos nuevos.',
+    }),
+
     defineField({
       name: 'showFooterBanner',
       type: 'boolean',
@@ -126,6 +175,7 @@ export const franchisePage = defineType({
     }),
   ],
 })
+
 
 // --- FAQ (preguntas individuales) ---
 export const faq = defineType({

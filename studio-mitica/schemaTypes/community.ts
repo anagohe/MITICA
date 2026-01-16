@@ -87,11 +87,89 @@ export const careersPage = defineType({
   name: 'careersPage',
   title: 'Página Bolsa de Trabajo',
   type: 'document',
+
+  // ✅ Secciones / apartados en el Studio
+  fieldsets: [
+    { name: 'heroSection', title: 'Hero', options: { collapsible: true, collapsed: false } },
+    { name: 'contentSection', title: 'Contenido (izquierda)', options: { collapsible: true, collapsed: false } },
+    { name: 'ctaSection', title: 'CTA (no editable en front)', options: { collapsible: true, collapsed: true } },
+    { name: 'imageSection', title: 'Imagen (derecha)', options: { collapsible: true, collapsed: false } },
+    { name: 'footerSection', title: 'Footer', options: { collapsible: true, collapsed: true } },
+  ],
+
   fields: [
-    defineField({ name: 'hero', type: 'hero' }),
-    defineField({ name: 'title', type: 'string' }),
-    defineField({ name: 'description', type: 'text' }),
-    defineField({ name: 'image', type: 'image' }),
-    defineField({ name: 'showFooterBanner', type: 'boolean', initialValue: true })
-  ]
+    // ===== HERO =====
+    defineField({
+      name: 'hero',
+      type: 'hero',
+      fieldset: 'heroSection',
+    }),
+
+    // ===== CONTENIDO IZQUIERDA =====
+    defineField({
+      name: 'title',
+      title: 'Título amarillo (¡ÚNETE AL EQUIPO MÍTICA!)',
+      type: 'string',
+      fieldset: 'contentSection',
+      initialValue: '¡ÚNETE AL EQUIPO MÍTICA!',
+    }),
+    defineField({
+      name: 'description',
+      title: 'Descripción (párrafo)',
+      type: 'text',
+      rows: 5,
+      fieldset: 'contentSection',
+      initialValue:
+        'En MÍTICA, buscamos talento para formar parte de nuestra leyenda. Si lo tuyo es el servicio al cliente, te destacas por tu rapidez y precisión, y amas interactuar con la gente, ¡Te necesitamos en nuestro equipo! Únete a nuestra plantilla de trabajo enviando tu CV y datos de contacto.',
+    }),
+
+    // ===== CTA (DEJAR NO EDITABLE EN FRONT) =====
+    // ✅ Los guardamos por si luego quieres editarlos, pero tu front puede IGNORARLOS
+    defineField({
+      name: 'ctaTitle',
+      title: 'Título CTA (opcional)',
+      type: 'string',
+      fieldset: 'ctaSection',
+      initialValue: '¿TE INTERESA TRABAJAR CON NOSOTROS?',
+    }),
+    defineField({
+      name: 'ctaSubtitle',
+      title: 'Texto CTA (opcional)',
+      type: 'string',
+      fieldset: 'ctaSection',
+      initialValue: 'Llena nuestro formulario y nos pondremos en contacto contigo lo antes posible.',
+    }),
+    defineField({
+      name: 'ctaButtonText',
+      title: 'Texto botón (opcional)',
+      type: 'string',
+      fieldset: 'ctaSection',
+      initialValue: 'ENVÍA TU SOLICITUD',
+      readOnly: true, // ✅ para que quede “no editable” si quieres
+    }),
+
+    // ===== IMAGEN DERECHA =====
+    defineField({
+      name: 'image',
+      title: 'Imagen derecha',
+      type: 'image',
+      options: { hotspot: true },
+      fieldset: 'imageSection',
+    }),
+
+    // ===== FOOTER =====
+    defineField({
+      name: 'showFooterBanner',
+      type: 'boolean',
+      title: 'Mostrar Banner Amarillo en Footer',
+      initialValue: true,
+      fieldset: 'footerSection',
+    }),
+  ],
+
+  preview: {
+    prepare() {
+      return { title: 'Bolsa de trabajo' }
+    },
+  },
 })
