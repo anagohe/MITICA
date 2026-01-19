@@ -98,17 +98,39 @@ export const franchisePage = defineType({
   name: 'franchisePage',
   title: 'Página Franquicias',
   type: 'document',
-  fields: [
-    defineField({ name: 'hero', type: 'hero' }),
 
-    // ✅ SECCIÓN DE CONTENIDO (como tu segunda imagen)
+  fieldsets: [
+    { name: 'hero', title: 'Hero (Opcional)' },
+    { name: 'intro', title: 'Intro' },
+    { name: 'special', title: 'Sección: What makes special' },
+    { name: 'benefits', title: 'Sección: ¿Por qué elegirnos?' },
+    { name: 'form', title: 'Formulario' },
+  ],
+
+  fields: [
+    // ✅ HERO (Opcional)
     defineField({
-      name: 'sectionTitle',
-      type: 'string',
-      title: 'Título grande (arriba) - “FRANQUICIAS”',
-      initialValue: 'FRANQUICIAS',
+      name: 'showHero',
+      type: 'boolean',
+      title: 'Mostrar hero arriba',
+      initialValue: false,
+      fieldset: 'hero',
+    }),
+    defineField({
+      name: 'hero',
+      type: 'hero',
+      title: 'Hero',
+      fieldset: 'hero',
     }),
 
+    // ✅ INTRO
+    defineField({
+      name: 'pageTitle',
+      type: 'string',
+      title: 'Título principal (H1)',
+      initialValue: 'FRANQUICIAS',
+      fieldset: 'intro',
+    }),
     defineField({
       name: 'leadText',
       type: 'text',
@@ -116,8 +138,8 @@ export const franchisePage = defineType({
       rows: 3,
       initialValue:
         'Únete a la leyenda y lleva el sabor de Mítica a tu ciudad. Un modelo de negocio probado y exitoso.',
+      fieldset: 'intro',
     }),
-
     defineField({
       name: 'paragraphText',
       type: 'text',
@@ -125,46 +147,119 @@ export const franchisePage = defineType({
       rows: 4,
       initialValue:
         'En octubre de 2024, seguimos expandiéndonos. Mítica ofrece un modelo de negocio rentable y escalable. Con nuestro soporte operativo y de marketing, aseguramos que cada sucursal mantenga los estándares de calidad que nos caracterizan.',
+      fieldset: 'intro',
     }),
 
+    // ✅ SPECIAL (3 iconos)
     defineField({
-      name: 'whyTitle',
+      name: 'specialTitle',
       type: 'string',
-      title: 'Título sección beneficios',
-      initialValue: '¿POR QUÉ ELEGIRNOS?',
+      title: 'Título sección especial',
+      initialValue: 'WHAT MAKES GYG SPECIAL',
+      fieldset: 'special',
     }),
-
     defineField({
-      name: 'benefits',
-      title: 'Benefits (tarjetas)',
+      name: 'specialItems',
+      title: 'Items (3 iconos)',
       type: 'array',
+      fieldset: 'special',
       of: [
         {
           type: 'object',
           fields: [
             { name: 'title', type: 'string', title: 'Título' },
-            { name: 'desc', type: 'text', title: 'Descripción' },
+            { name: 'desc', type: 'text', title: 'Descripción', rows: 3 },
+            { name: 'icon', type: 'image', title: 'Icono' },
+          ],
+        },
+      ],
+      validation: (Rule) => Rule.max(3),
+    }),
+
+    // ✅ BENEFICIOS
+    defineField({
+      name: 'benefitsTitle',
+      type: 'string',
+      title: 'Título sección beneficios',
+      initialValue: '¿POR QUÉ ELEGIRNOS?',
+      fieldset: 'benefits',
+    }),
+    defineField({
+      name: 'benefits',
+      title: 'Benefits (2 tarjetas)',
+      type: 'array',
+      fieldset: 'benefits',
+      of: [
+        {
+          type: 'object',
+          fields: [
+            { name: 'title', type: 'string', title: 'Título' },
+            { name: 'desc', type: 'text', title: 'Descripción', rows: 3 },
           ],
         },
       ],
       validation: (Rule) => Rule.max(2),
     }),
-
     defineField({
       name: 'closingText',
       type: 'text',
-      title: 'Párrafo final (abajo de tarjetas)',
+      title: 'Texto final (abajo de beneficios)',
       rows: 3,
       initialValue:
         'Parte de nuestra filosofía es crecer junto a nuestros socios. Buscamos emprendedores apasionados por la comida y el servicio.',
+      fieldset: 'benefits',
     }),
 
-    // ✅ (Opcional) Mantengo tu campo viejo para no perder lo que ya escribiste ahí
+    // ✅ FORM (todo en el mismo apartado)
     defineField({
-      name: 'content',
-      type: 'blockContent',
-      title: 'Contenido Principal (Legacy)',
-      description: 'Campo anterior. Puedes dejarlo o migrar su texto a los campos nuevos.',
+      name: 'formTitle',
+      type: 'string',
+      title: 'Formulario: Título',
+      initialValue: '¿LISTO PARA EMPEZAR?',
+      fieldset: 'form',
+    }),
+    defineField({
+      name: 'formSubtitle',
+      type: 'text',
+      title: 'Formulario: Subtítulo',
+      rows: 2,
+      initialValue: 'Completa el formulario y recibe nuestro dossier de franquicia.',
+      fieldset: 'form',
+    }),
+    defineField({
+      name: 'formNamePlaceholder',
+      type: 'string',
+      title: 'Formulario: Placeholder Nombre',
+      initialValue: 'Nombre Completo',
+      fieldset: 'form',
+    }),
+    defineField({
+      name: 'formEmailPlaceholder',
+      type: 'string',
+      title: 'Formulario: Placeholder Correo',
+      initialValue: 'Correo Electrónico',
+      fieldset: 'form',
+    }),
+    defineField({
+      name: 'formCityPlaceholder',
+      type: 'string',
+      title: 'Formulario: Placeholder Ciudad',
+      initialValue: 'Ciudad',
+      fieldset: 'form',
+    }),
+    defineField({
+      name: 'formPhonePlaceholder',
+      type: 'string',
+      title: 'Formulario: Placeholder Teléfono',
+      initialValue: 'Teléfono',
+      fieldset: 'form',
+    }),
+    defineField({
+      name: 'formButtonText',
+      type: 'string',
+      title: 'Formulario: Texto botón',
+      initialValue: 'SOLICITAR INFORMACIÓN',
+      fieldset: 'form',
     }),
 
     defineField({
@@ -175,7 +270,6 @@ export const franchisePage = defineType({
     }),
   ],
 })
-
 
 // --- FAQ (preguntas individuales) ---
 export const faq = defineType({
