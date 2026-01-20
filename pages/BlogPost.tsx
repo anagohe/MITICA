@@ -4,32 +4,12 @@ import { useParams } from 'react-router-dom';
 import { Title, TitleVariant } from '../components/Typography';
 import { client } from '../sanity/client';
 import imageUrlBuilder from '@sanity/image-url';
+import { PortableText } from '@portabletext/react';
 
 // ===== Sanity helpers =====
 const builder = imageUrlBuilder(client);
 function urlFor(source: any) {
   return builder.image(source).url();
-}
-
-function blocksToParagraphs(blocks?: any[]): string[] {
-  if (!Array.isArray(blocks)) return [];
-
-  const paragraphs: string[] = [];
-
-  blocks
-    .filter((b) => b && b._type === 'block')
-    .forEach((block) => {
-      const children = Array.isArray(block.children) ? block.children : [];
-      const fullText = children.map((c: any) => c.text || '').join('');
-
-      fullText
-        .split(/\n+/)
-        .map((p) => p.trim())
-        .filter((p) => p.length > 0)
-        .forEach((p) => paragraphs.push(p));
-    });
-
-  return paragraphs;
 }
 
 function formatDate(iso?: string | null): string {
@@ -69,6 +49,21 @@ const POST_QUERY = `
 }
 `;
 
+// ✅ PortableText: negritas + color
+const portableComponents = {
+  block: {
+    normal: ({ children }: any) => <p className="mb-4 text-justify">{children}</p>,
+  },
+  marks: {
+    strong: ({ children }: any) => <strong className="font-bold">{children}</strong>,
+
+    // ✅ nuestro annotation: textColor
+    textColor: ({ children, value }: any) => (
+      <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+    ),
+  },
+};
+
 const BlogPost: React.FC = () => {
   const params = useParams();
   const identifier = (params.slug as string) || (params.id as string) || '';
@@ -93,7 +88,6 @@ const BlogPost: React.FC = () => {
 
   const metaDate = formatDate(post?.publishedAt);
   const metaCategory = post?.category?.toUpperCase() || 'NOTICIAS';
-  const bodyParagraphs = blocksToParagraphs(post?.body);
   const heroImageUrl = post?.mainImage
     ? urlFor(post.mainImage)
     : 'https://picsum.photos/1200/800?burgerdetail';
@@ -125,12 +119,8 @@ const BlogPost: React.FC = () => {
         </div>
 
         <div className="prose prose-lg font-rethink text-gray-700 mx-auto">
-          {bodyParagraphs.length > 0 ? (
-            bodyParagraphs.map((p, idx) => (
-              <p key={idx} className="mb-4 text-justify">
-                {p}
-              </p>
-            ))
+          {Array.isArray(post?.body) && post!.body!.length > 0 ? (
+            <PortableText value={post!.body} components={portableComponents as any} />
           ) : (
             <>
               <p className="mb-4 text-justify">

@@ -182,12 +182,12 @@ const Menu: React.FC = () => {
             <Title
               variant={TitleVariant.TEXTURED}
               text={hero.title}
-              className={`text-4xl md:text-7xl ${hero.textColor || 'text-white'} mb-4`}
+              className={`text-4xl md:text-7xl ${hero.textColor || 'text-white'} mb-7 md:mb-9`}
             />
           )}
 
           {hero?.subtitle && (
-            <p className="text-white font-rethink text-lg max-w-2xl text-center opacity-90 text-justify">
+            <p className="text-white font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug text-justify">
               {hero.subtitle}
             </p>
           )}
@@ -424,4 +424,3 @@ const Menu: React.FC = () => {
 };
 
 export default Menu;
-

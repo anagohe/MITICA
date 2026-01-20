@@ -223,10 +223,11 @@ export const ingredientsPage = defineType({
       initialValue: 'ADEREZOS',
     }),
 
+    // ✅ CAMBIO: ahora blockContent (para negritas + color)
     defineField({
       name: 'saucesIntro',
       title: 'Texto debajo del título "ADEREZOS"',
-      type: 'text',
+      type: 'blockContent',
     }),
 
     defineField({
@@ -257,10 +258,11 @@ export const ingredientsPage = defineType({
       initialValue: 'NUTRICIÓN Y ALÉRGENOS',
     }),
 
+    // ✅ CAMBIO: ahora blockContent (para negritas + color)
     defineField({
       name: 'nutritionText',
       title: 'Texto Nutrición y Alérgenos',
-      type: 'text',
+      type: 'blockContent',
     }),
 
     defineField({
@@ -277,4 +279,3 @@ export const ingredientsPage = defineType({
     },
   },
 })
-

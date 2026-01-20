@@ -172,7 +172,7 @@ const About: React.FC = () => {
 
   const heroMobileDefault = hero?.mobileImage
     ? imgUrlContain(hero.mobileImage, 900, 80)
-    : (FALLBACK_HERO_MOBILE || heroDesktopDefault);
+    : FALLBACK_HERO_MOBILE || heroDesktopDefault;
 
   const heroMobileSrcSet = hero?.mobileImage
     ? [
@@ -187,8 +187,12 @@ const About: React.FC = () => {
   const heroDesktopVideoUrl = hero?.desktopVideo?.asset?.url || '';
 
   // ✅ OTRAS IMÁGENES (optimización suave)
-  const whoSideImageUrl = who?.sideImage ? imgUrl(who.sideImage, 1400, undefined, 80) : FALLBACK_WHO_SIDE;
-  const centerImageUrl = vm?.centerImage ? imgUrlContain(vm.centerImage, 900, 85) : FALLBACK_CENTER;
+  const whoSideImageUrl = who?.sideImage
+    ? imgUrl(who.sideImage, 1400, undefined, 80)
+    : FALLBACK_WHO_SIDE;
+  const centerImageUrl = vm?.centerImage
+    ? imgUrlContain(vm.centerImage, 900, 85)
+    : FALLBACK_CENTER;
 
   const values =
     data?.values && data.values.length > 0
@@ -222,6 +226,11 @@ const About: React.FC = () => {
         ),
         strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
         em: ({ children }: any) => <em className="italic">{children}</em>,
+
+        // ✅ NUEVO: color por selección desde Sanity (annotation textColor)
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
       },
       hardBreak: () => <br />,
     }),
@@ -243,6 +252,11 @@ const About: React.FC = () => {
         ),
         strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
         em: ({ children }: any) => <em className="italic">{children}</em>,
+
+        // ✅ NUEVO
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
       },
       hardBreak: () => <br />,
     }),
@@ -264,6 +278,11 @@ const About: React.FC = () => {
         ),
         strong: ({ children }: any) => <strong className="font-bold text-white">{children}</strong>,
         em: ({ children }: any) => <em className="italic">{children}</em>,
+
+        // ✅ NUEVO
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
       },
       hardBreak: () => <br />,
     }),
@@ -303,11 +322,7 @@ const About: React.FC = () => {
             <picture>
               {/* Desktop */}
               {heroDesktopSrcSet ? (
-                <source
-                  media="(min-width: 768px)"
-                  srcSet={heroDesktopSrcSet}
-                  sizes="100vw"
-                />
+                <source media="(min-width: 768px)" srcSet={heroDesktopSrcSet} sizes="100vw" />
               ) : null}
 
               {/* Mobile (fallback del <img>) */}

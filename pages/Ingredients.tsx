@@ -1,5 +1,5 @@
 // src/pages/Ingredients.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Title, TitleVariant } from '../components/Typography';
 import { client } from '../sanity/client';
 import { INGREDIENTS_PAGE_QUERY } from '../sanity/queries';
@@ -47,9 +47,15 @@ type IngredientsPageDoc = {
   nutritionTitle?: string;
 
   sections?: Section[];
-  saucesIntro?: string;
+
+  // ✅ CAMBIO: ahora blockContent
+  saucesIntro?: any[];
+
   sauces?: Sauce[];
-  nutritionText?: string;
+
+  // ✅ CAMBIO: ahora blockContent
+  nutritionText?: any[];
+
   showFooterBanner?: boolean;
 };
 
@@ -61,6 +67,48 @@ const Ingredients: React.FC = () => {
   const [page, setPage] = useState<IngredientsPageDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // ✅ PortableText components: negritas + color
+  const portableTextDefault = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-600 text-justify">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        strong: ({ children }: any) => <strong className="font-bold">{children}</strong>,
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  );
+
+  // ✅ Para textos centrados (ADEREZOS intro)
+  const portableTextCentered = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="m-0 font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        strong: ({ children }: any) => <strong className="font-bold">{children}</strong>,
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  );
 
   useEffect(() => {
     client
@@ -104,6 +152,8 @@ const Ingredients: React.FC = () => {
   const sectionsTitle = page.sectionsTitle;
   const saucesTitle = page.saucesTitle;
   const nutritionTitle = page.nutritionTitle;
+
+  // ✅ CAMBIO: ahora blockContent
   const saucesIntro = page.saucesIntro;
 
   const desktopVideoUrl = getFileUrl(hero?.videoFile);
@@ -247,7 +297,7 @@ const Ingredients: React.FC = () => {
 
                   {section.content && (
                     <div className="space-y-4 text-gray-600 font-rethink text-justify">
-                      <PortableText value={section.content} />
+                      <PortableText value={section.content} components={portableTextDefault} />
                     </div>
                   )}
                 </div>
@@ -283,10 +333,16 @@ const Ingredients: React.FC = () => {
                   className="text-4xl md:text-5xl mb-8"
                 />
 
-                <p className="font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center whitespace-pre-line">
-                  {saucesIntro ||
-                    'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'}
-                </p>
+                {/* ✅ CAMBIO: saucesIntro ahora es blockContent */}
+                {Array.isArray(saucesIntro) && saucesIntro.length > 0 ? (
+                  <div className="space-y-4">
+                    <PortableText value={saucesIntro} components={portableTextCentered} />
+                  </div>
+                ) : (
+                  <p className="font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center whitespace-pre-line">
+                    {'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'}
+                  </p>
+                )}
               </div>
 
               {/* Carrusel a ancho completo */}
@@ -324,9 +380,13 @@ const Ingredients: React.FC = () => {
                 <h3 className="font-nexa text-xl mb-3 uppercase">
                   {nutritionTitle || 'NUTRICIÓN Y ALÉRGENOS'}
                 </h3>
-                <p className="font-rethink text-sm md:text-base text-gray-600 leading-relaxed text-justify whitespace-pre-line">
-                  {nutritionText}
-                </p>
+
+                {/* ✅ CAMBIO: nutritionText ahora es blockContent */}
+                {Array.isArray(nutritionText) && nutritionText.length > 0 ? (
+                  <div className="space-y-3">
+                    <PortableText value={nutritionText} components={portableTextDefault} />
+                  </div>
+                ) : null}
               </div>
             </div>
           )}

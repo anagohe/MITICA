@@ -112,50 +112,56 @@ export const hero = defineType({
       },
       initialValue: 'text-[#F6BA27]',
     }),
-
-    // ✅ Mantengo tu campo viejo para no romper nada (compatibilidad)
-    defineField({
-      name: 'textColor',
-      title: 'Color de Texto (Legacy)',
-      description: 'Campo antiguo. Usa titleColor/subtitleColor para el nuevo Hero.',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Blanco', value: 'text-white' },
-          { title: 'Negro', value: 'text-black' },
-          { title: 'Amarillo', value: 'text-mitica-yellow' },
-        ],
-      },
-      initialValue: 'text-white',
-    }),
   ],
 })
 
-// Standard Rich Text
+/**
+ * ✅ BLOCK CONTENT (tu versión ACTUAL)
+ * - SOLO texto (sin imágenes dentro)
+ * - Negritas
+ * - Color por selección (lista fija)
+ */
 export const blockContent = defineType({
-  title: 'Block Content',
   name: 'blockContent',
+  title: 'Contenido (rich text)',
   type: 'array',
   of: [
     {
-      title: 'Block',
       type: 'block',
-      styles: [
-        { title: 'Normal', value: 'normal' },
-        { title: 'H1', value: 'h1' },
-        { title: 'H2', value: 'h2' },
-        { title: 'H3', value: 'h3' },
-        { title: 'Quote', value: 'blockquote' },
-      ],
-      lists: [{ title: 'Bullet', value: 'bullet' }],
+      styles: [{ title: 'Normal', value: 'normal' }],
+      lists: [],
       marks: {
-        decorators: [
-          { title: 'Strong', value: 'strong' },
-          { title: 'Emphasis', value: 'em' },
-          { title: 'Yellow Highlight', value: 'highlight', icon: () => 'Y' },
+        decorators: [{ title: 'Negritas', value: 'strong' }],
+        annotations: [
+          {
+            name: 'textColor',
+            title: 'Color',
+            type: 'object',
+            fields: [
+              defineField({
+                name: 'color',
+                title: 'Color',
+                type: 'string',
+                validation: (Rule) => Rule.required(),
+                options: {
+                  list: [
+                    { title: 'Amarillo', value: '#F6BA27' },
+                    { title: 'Negro', value: '#1D1D1B' },
+                    { title: 'Naranja', value: '#ec572e' },
+                    { title: 'Rojo', value: '#923a2b' },
+                    { title: 'Azul', value: '#0072c2' },
+                    { title: 'Rosa', value: '#e15980' },
+                    { title: 'Verde', value: '#86ba41' },
+                  ],
+                },
+                initialValue: '#1D1D1B',
+              }),
+            ],
+          },
         ],
       },
     },
-    { type: 'image', options: { hotspot: true } },
+
+    // ❌ Sin { type: 'image' } aquí, así que NO hay imágenes dentro del blockContent
   ],
 })
