@@ -262,6 +262,26 @@ export const franchisePage = defineType({
       fieldset: 'form',
     }),
 
+    // ✅ NUEVO: correo editable desde Sanity
+    defineField({
+      name: 'recipientEmail',
+      type: 'string',
+      title: 'Formulario: Correo destino (recibe solicitudes)',
+      fieldset: 'form',
+      validation: (Rule) =>
+        Rule.required().custom((value) => {
+          if (!value) return 'Requerido'
+          return /^\S+@\S+\.\S+$/.test(value) ? true : 'Correo inválido'
+        }),
+    }),
+    defineField({
+      name: 'emailSubject',
+      type: 'string',
+      title: 'Formulario: Asunto del correo',
+      initialValue: 'Nueva solicitud de franquicia',
+      fieldset: 'form',
+    }),
+
     defineField({
       name: 'showFooterBanner',
       type: 'boolean',
