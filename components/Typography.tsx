@@ -65,27 +65,16 @@ export const Title: React.FC<TitleProps> = ({
     );
   }
 
-  // ✅ TEXTURED (sin borde)
+  // ✅ TEXTURED (solo font, sin máscara)
   if (variant === TitleVariant.TEXTURED) {
     return (
-      <h2 className={`${baseClasses} ${color} relative`} style={forceFontStyle}>
-        <span
-          className="relative z-10"
-          style={{
-            ...forceFontStyle,
-            WebkitMaskImage:
-              'url(https://www.transparenttextures.com/patterns/stardust.png)',
-            maskImage:
-              'url(https://www.transparenttextures.com/patterns/stardust.png)',
-          }}
-        >
-          {text}
-        </span>
+      <h2 className={`${baseClasses} ${color}`} style={forceFontStyle}>
+        {text}
       </h2>
     );
   }
 
-  // ✅ TEXTURED + BORDERED (hollow)
+  // ✅ TEXTURED + BORDERED (hollow) (solo font + stroke, sin máscara)
   if (variant === TitleVariant.TEXTURED_BORDERED) {
     return (
       <h2
@@ -94,10 +83,6 @@ export const Title: React.FC<TitleProps> = ({
           ...forceFontStyle,
           WebkitTextStroke: `${borderWidth}px ${borderColor}`,
           color: 'transparent',
-          WebkitMaskImage:
-            'url(https://www.transparenttextures.com/patterns/stardust.png)',
-          maskImage:
-            'url(https://www.transparenttextures.com/patterns/stardust.png)',
         }}
       >
         {text}
