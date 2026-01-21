@@ -6,69 +6,11 @@ const aboutPage = defineType({
   title: 'Página Nosotros',
   type: 'document',
   fields: [
-    // ✅ HERO SIMPLE (solo título + subtítulo) + imágenes responsivas
+    // ✅ HERO (ahora usa el MISMO objeto hero que Menu: mismos campos)
     defineField({
       name: 'hero',
       title: 'Hero (Nosotros)',
-      type: 'object',
-      fields: [
-        defineField({
-          name: 'mediaType',
-          title: 'Tipo en Desktop',
-          type: 'string',
-          options: {
-            list: [
-              { title: 'Imagen', value: 'image' },
-              { title: 'Video', value: 'video' },
-            ],
-            layout: 'radio',
-          },
-          initialValue: 'image',
-        }),
-
-        // Desktop image
-        defineField({
-          name: 'desktopImage',
-          title: 'Imagen Desktop',
-          type: 'image',
-          options: { hotspot: true },
-          hidden: ({ parent }) => parent?.mediaType !== 'image',
-        }),
-
-        // Desktop video (si lo usas)
-        defineField({
-          name: 'desktopVideo',
-          title: 'Video Desktop (MP4)',
-          type: 'file',
-          options: {
-            accept: 'video/mp4',
-          },
-          hidden: ({ parent }) => parent?.mediaType !== 'video',
-        }),
-
-        // ✅ Mobile image (obligatoria)
-        defineField({
-          name: 'mobileImage',
-          title: 'Imagen Móvil (Obligatoria para responsivo)',
-          description:
-            'Esta imagen se mostrará en celulares incluso si eliges video para desktop.',
-          type: 'image',
-          options: { hotspot: true },
-          validation: (Rule) => Rule.required(),
-        }),
-
-        // ✅ SOLO título y subtítulo
-        defineField({
-          name: 'title',
-          title: 'Título Principal',
-          type: 'string',
-        }),
-        defineField({
-          name: 'subtitle',
-          title: 'Subtítulo',
-          type: 'string',
-        }),
-      ],
+      type: 'hero',
     }),
 
     defineField({

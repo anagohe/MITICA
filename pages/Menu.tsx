@@ -10,9 +10,15 @@ type HeroType = {
   desktopImage?: any;
   mobileImage?: any;
   videoFile?: any;
+  mobileVideoFile?: any;
+
   title?: string;
   subtitle?: string;
   textColor?: string; // ej: "text-white"
+
+  // ✅ overlay opcional (desde Sanity)
+  overlayEnabled?: boolean;
+  overlayOpacity?: number; // 0-80
 };
 
 type MenuIcon = {
@@ -143,39 +149,65 @@ const Menu: React.FC = () => {
 
   const hero = data.page?.hero;
 
+  // ✅ Overlay opcional desde Sanity (defaults: ON y 40)
+  const overlayEnabled = hero?.overlayEnabled ?? true;
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
+
+  // ✅ CLAVE: si overlay está OFF, NO bajes opacidad del media
+  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
+
   return (
     <div className="w-full bg-white">
       {/* === HERO DESDE SANITY === */}
       <div className="relative h-screen w-full bg-black overflow-hidden mb-12">
-        {hero?.mediaType === 'video' && hero.videoFile ? (
-          <video
-            className="w-full h-full object-cover opacity-60"
-            autoPlay
-            muted
-            loop
-            playsInline
-            src={hero.videoFile?.asset?.url}
-          />
+        {hero?.mediaType === 'video' && (hero.videoFile || hero.mobileVideoFile) ? (
+          <>
+            {/* Desktop video */}
+            <video
+              className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              src={(hero.videoFile || hero.mobileVideoFile)?.asset?.url}
+            />
+            {/* Mobile video */}
+            <video
+              className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              src={(hero.mobileVideoFile || hero.videoFile)?.asset?.url}
+            />
+          </>
         ) : (
           <>
             {hero?.desktopImage && (
               <img
                 src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
-                className="hidden md:block w-full h-full object-cover opacity-60"
+                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
                 alt={hero?.title || 'Menú'}
               />
             )}
             {hero?.mobileImage && (
               <img
                 src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
-                className="block md:hidden w-full h-full object-cover opacity-60"
+                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
                 alt={hero?.title || 'Menú'}
               />
             )}
           </>
         )}
 
-        <div className="absolute inset-0 bg-black/40" />
+        {/* ✅ Overlay OPCIONAL desde Sanity */}
+        {overlayEnabled && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+          />
+        )}
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
           {hero?.title && (

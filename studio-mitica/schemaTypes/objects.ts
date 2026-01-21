@@ -112,6 +112,23 @@ export const hero = defineType({
       },
       initialValue: 'text-[#F6BA27]',
     }),
+
+    // ✅ NUEVO: Overlay opcional (capa oscura)
+    defineField({
+      name: 'overlayEnabled',
+      title: 'Oscurecer imagen (overlay)',
+      type: 'boolean',
+      initialValue: true,
+    }),
+    defineField({
+      name: 'overlayOpacity',
+      title: 'Intensidad del overlay (0–80)',
+      description: '40 = como está ahorita. 0 = nada.',
+      type: 'number',
+      initialValue: 40,
+      hidden: ({ parent }) => parent?.overlayEnabled === false,
+      validation: (Rule) => Rule.min(0).max(80),
+    }),
   ],
 })
 

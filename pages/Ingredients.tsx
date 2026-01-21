@@ -24,6 +24,10 @@ type HeroType = {
 
   // ✅ legacy
   textColor?: string; // text-white | text-black | text-mitica-yellow
+
+  // ✅ overlay opcional (desde Sanity)
+  overlayEnabled?: boolean;
+  overlayOpacity?: number; // 0-80
 };
 
 type Section = {
@@ -159,6 +163,14 @@ const Ingredients: React.FC = () => {
   const desktopVideoUrl = getFileUrl(hero?.videoFile);
   const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile);
 
+  // ✅ Overlay opcional desde Sanity (defaults: ON y 40)
+  const overlayEnabled = hero?.overlayEnabled ?? true;
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
+
+  // ✅ CLAVE: si overlay está OFF, NO bajes opacidad del media
+  const mediaOpacityClass = overlayEnabled ? 'opacity-70' : 'opacity-100';
+
   // ✅ Colores: usa nuevos si existen, si no cae a legacy, si no a blanco
   const titleColorClass = hero?.titleColor || hero?.textColor || 'text-white';
   const subtitleColorClass = hero?.subtitleColor || hero?.textColor || 'text-[#F6BA27]';
@@ -178,7 +190,7 @@ const Ingredients: React.FC = () => {
             {/* Desktop video */}
             {desktopVideoUrl && (
               <video
-                className="hidden md:block w-full h-full object-cover opacity-70"
+                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
                 autoPlay
                 muted
                 loop
@@ -190,7 +202,7 @@ const Ingredients: React.FC = () => {
             {/* Mobile video */}
             {mobileVideoUrl && (
               <video
-                className="block md:hidden w-full h-full object-cover opacity-70"
+                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
                 autoPlay
                 muted
                 loop
@@ -204,14 +216,14 @@ const Ingredients: React.FC = () => {
               <img
                 src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
                 alt={hero?.title || 'Ingredientes'}
-                className="hidden md:block w-full h-full object-cover opacity-70"
+                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
               />
             )}
             {!mobileVideoUrl && hero?.mobileImage && (
               <img
                 src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
                 alt={hero?.title || 'Ingredientes'}
-                className="block md:hidden w-full h-full object-cover opacity-70"
+                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
               />
             )}
           </>
@@ -221,33 +233,42 @@ const Ingredients: React.FC = () => {
               <img
                 src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
                 alt={hero?.title || 'Ingredientes'}
-                className="hidden md:block w-full h-full object-cover opacity-70"
+                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
               />
             )}
             {hero?.mobileImage && (
               <img
                 src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
                 alt={hero?.title || 'Ingredientes'}
-                className="block md:hidden w-full h-full object-cover opacity-70"
+                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
               />
             )}
           </>
         )}
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+        {/* ✅ Overlay OPCIONAL desde Sanity */}
+        {overlayEnabled && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+          />
+        )}
+
+        {/* ✅ Text sizes iguales a Menu/About */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
           {hero?.title && (
             <Title
               variant={heroTitleVariant}
               text={hero.title}
               align="center"
               borderColor="#FFF"
-              className={`text-5xl md:text-8xl ${titleColorClass}`}
+              className={`text-4xl md:text-7xl ${titleColorClass} mb-7 md:mb-9`}
             />
           )}
 
           {hero?.subtitle && (
             <p
-              className={`mt-5 md:mt-6 font-rethink ${subtitleColorClass} text-base md:text-2xl leading-relaxed max-w-4xl`}
+              className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${subtitleColorClass}`}
             >
               {hero.subtitle}
             </p>
@@ -272,19 +293,16 @@ const Ingredients: React.FC = () => {
 
           {/* SECCIONES DINÁMICAS */}
           {sections.map((section, idx) => {
-            const isTextLeft =
-              section.layout === 'text-left' || !section.layout;
+            const isTextLeft = section.layout === 'text-left' || !section.layout;
 
             return (
               <div
                 key={idx}
-                className="flex flex-col md:flex-row items-center gap-16 mb-24"
+                className="flex flex-col md:flex-row items-center md:items-stretch gap-16 mb-24"
               >
                 {/* Texto */}
                 <div
-                  className={`w-full md:w-[38%] ${
-                    isTextLeft ? 'order-1' : 'order-2'
-                  } text-left`}
+                  className={`w-full md:w-[38%] ${isTextLeft ? 'order-1' : 'order-2'} text-left`}
                 >
                   {section.title && (
                     <Title
@@ -307,11 +325,11 @@ const Ingredients: React.FC = () => {
                   <div
                     className={`w-full md:w-[62%] ${
                       isTextLeft ? 'order-3 md:order-2' : 'order-3 md:order-1'
-                    } h-[340px] md:h-[460px] overflow-hidden relative group`}
+                    } h-[340px] md:h-auto overflow-hidden relative group`}
                   >
                     <img
                       src={urlFor(section.image).width(1200).height(900).url()}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       alt={section.title || 'Ingredientes Mítica'}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
@@ -340,7 +358,9 @@ const Ingredients: React.FC = () => {
                   </div>
                 ) : (
                   <p className="font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center whitespace-pre-line">
-                    {'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'}
+                    {
+                      'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'
+                    }
                   </p>
                 )}
               </div>
@@ -349,10 +369,7 @@ const Ingredients: React.FC = () => {
               <div className="relative w-screen left-1/2 -translate-x-1/2 overflow-hidden py-10 bg-white group">
                 <div className="flex w-max animate-scroll group-hover:paused">
                   {[...sauces, ...sauces, ...sauces].map((sauce, idx) => (
-                    <div
-                      key={idx}
-                      className="mx-8 flex flex-col items-center justify-center w-32"
-                    >
+                    <div key={idx} className="mx-8 flex flex-col items-center justify-center w-32">
                       <div className="w-24 h-24 rounded-full shadow-lg mb-4 border-4 border-white overflow-hidden transition-transform hover:scale-110 bg-gray-100">
                         {sauce.image && (
                           <img
@@ -362,9 +379,7 @@ const Ingredients: React.FC = () => {
                           />
                         )}
                       </div>
-                      <span className="font-nexa text-xs uppercase text-center">
-                        {sauce.name}
-                      </span>
+                      <span className="font-nexa text-xs uppercase text-center">{sauce.name}</span>
                     </div>
                   ))}
                 </div>

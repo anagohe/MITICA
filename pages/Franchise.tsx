@@ -33,7 +33,13 @@ const FRANCHISE_QUERY = `*[_type == "franchisePage" && _id == "franchisePage"][0
     subtitle,
     titleColor,
     subtitleColor,
-    titleStyle
+    titleStyle,
+
+    // ✅ nuevo (igual que Menu/About)
+    titleVariant,
+    textColor,
+    overlayEnabled,
+    overlayOpacity
   },
 
   pageTitle,
@@ -75,6 +81,12 @@ type FranchiseData = {
     titleColor?: string
     subtitleColor?: string
     titleStyle?: string
+
+    // ✅ nuevo
+    titleVariant?: 'regular' | 'textured'
+    textColor?: string
+    overlayEnabled?: boolean
+    overlayOpacity?: number
   }
 
   pageTitle?: string
@@ -163,13 +175,31 @@ const Franchise = () => {
   const heroTitle = (hero?.title || '').trim()
   const heroSubtitle = (hero?.subtitle || '').trim()
 
+  // ✅ Igual que Menu/About:
+  // - si existe titleVariant lo usa, si no, cae a titleStyle legacy
   const heroTitleVariant =
-    hero?.titleStyle === 'textured' ? TitleVariant.TEXTURED : TitleVariant.REGULAR
+    hero?.titleVariant === 'regular'
+      ? TitleVariant.REGULAR
+      : hero?.titleVariant === 'textured'
+        ? TitleVariant.TEXTURED
+        : hero?.titleStyle === 'textured'
+          ? TitleVariant.TEXTURED
+          : TitleVariant.REGULAR
 
-  const heroTitleColor = hero?.titleColor || 'text-white'
-  const heroSubtitleColor = hero?.subtitleColor || 'text-gray-200'
+  // ✅ Igual que Menu/About: prioriza nuevos, cae a legacy
+  const heroTitleColor = hero?.titleColor || hero?.textColor || 'text-white'
+  const heroSubtitleColor = hero?.subtitleColor || hero?.textColor || 'text-white'
+
+  // ✅ Overlay opcional (igual que Menu/About)
+  const overlayEnabled = hero?.overlayEnabled ?? true
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100
+
+  // ✅ Si overlay OFF, media a 100%
+  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100'
 
   const heroDesktopVideoUrl = hero?.videoFile?.asset?.url || ''
+  const heroMobileVideoUrl = hero?.mobileVideoFile?.asset?.url || ''
 
   const heroDesktopDefault = hero?.desktopImage ? imgUrl(hero.desktopImage, 2200, undefined, 80) : ''
   const heroDesktopSrcSet = hero?.desktopImage
@@ -191,7 +221,7 @@ const Franchise = () => {
       ].join(', ')
     : undefined
 
-  const hasHeroMedia = !!heroDesktopVideoUrl || !!heroDesktopDefault || !!heroMobileDefault
+  const hasHeroMedia = !!heroDesktopVideoUrl || !!heroMobileVideoUrl || !!heroDesktopDefault || !!heroMobileDefault
 
   // ===== CONTENIDO =====
   const pageTitle = data?.pageTitle || ''
@@ -263,74 +293,92 @@ const Franchise = () => {
 
   return (
     <div className="w-full bg-white pb-20">
-      {/* ✅ HERO */}
+      {/* ✅ HERO (mismo que Menu/About) */}
       {showHero && hasHeroMedia ? (
-        <div className="relative w-full overflow-hidden bg-mitica-black md:h-screen pt-24 md:pt-0">
-          <div className="relative w-full h-[calc(100svh-96px)] md:h-full">
-            {hero?.mediaType === 'video' && heroDesktopVideoUrl ? (
-              isDesktop ? (
-                <video
-                  className="w-full h-full object-cover opacity-60"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                >
-                  <source src={heroDesktopVideoUrl} type="video/mp4" />
-                </video>
-              ) : heroMobileDefault ? (
+        <div className="relative h-screen w-full bg-black overflow-hidden mb-12">
+          {hero?.mediaType === 'video' && (heroDesktopVideoUrl || heroMobileVideoUrl) ? (
+            <>
+              {/* Desktop video */}
+              <video
+                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              >
+                <source src={heroDesktopVideoUrl || heroMobileVideoUrl} type="video/mp4" />
+              </video>
+
+              {/* Mobile video */}
+              <video
+                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              >
+                <source src={heroMobileVideoUrl || heroDesktopVideoUrl} type="video/mp4" />
+              </video>
+            </>
+          ) : (
+            <>
+              {/* Desktop image */}
+              {heroDesktopDefault ? (
                 <img
-                  src={heroMobileDefault}
-                  srcSet={heroMobileSrcSet}
+                  src={heroDesktopDefault}
+                  srcSet={heroDesktopSrcSet}
                   sizes="100vw"
                   alt={heroTitle || 'Franquicias Hero'}
-                  className="w-full h-full object-cover opacity-60"
+                  className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
                 />
-              ) : null
-            ) : (
-              <picture>
-                {heroDesktopSrcSet ? (
-                  <source media="(min-width: 768px)" srcSet={heroDesktopSrcSet} sizes="100vw" />
-                ) : null}
+              ) : null}
 
-                {heroMobileDefault || heroDesktopDefault ? (
-                  <img
-                    src={heroMobileDefault || heroDesktopDefault}
-                    srcSet={heroMobileSrcSet}
-                    sizes="100vw"
-                    alt={heroTitle || 'Franquicias Hero'}
-                    className="w-full h-full object-cover opacity-60"
-                    loading="eager"
-                    fetchPriority="high"
-                    decoding="async"
-                  />
-                ) : null}
-              </picture>
-            )}
+              {/* Mobile image */}
+              {heroMobileDefault || heroDesktopDefault ? (
+                <img
+                  src={heroMobileDefault || heroDesktopDefault}
+                  srcSet={heroMobileSrcSet}
+                  sizes="100vw"
+                  alt={heroTitle || 'Franquicias Hero'}
+                  className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              ) : null}
+            </>
+          )}
 
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center px-6">
-                {heroTitle ? (
-                  <Title
-                    variant={heroTitleVariant}
-                    text={heroTitle}
-                    color={heroTitleColor}
-                    className="text-5xl md:text-8xl leading-none"
-                    align="center"
-                  />
-                ) : null}
+          {/* ✅ Overlay opcional */}
+          {overlayEnabled && (
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+            />
+          )}
 
-                {heroSubtitle ? (
-                  <p className={`mt-4 font-rethink text-lg md:text-xl ${heroSubtitleColor}`}>
-                    {heroSubtitle}
-                  </p>
-                ) : null}
-              </div>
-            </div>
+          {/* ✅ Textos igual que Menu/About */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+            {heroTitle ? (
+              <Title
+                variant={heroTitleVariant}
+                text={heroTitle}
+                color={heroTitleColor}
+                className="text-4xl md:text-7xl mb-7 md:mb-9"
+                align="center"
+              />
+            ) : null}
+
+            {heroSubtitle ? (
+              <p className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${heroSubtitleColor}`}>
+                {heroSubtitle}
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}

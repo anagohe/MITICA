@@ -10,9 +10,23 @@ export const MENU_PAGE_QUERY = `
       title,
       subtitle,
       textColor,
+
+      // ✅ nuevo (para About/Menu hero unificado)
+      titleVariant,
+      titleColor,
+      subtitleColor,
+
+      // ✅ overlay opcional
+      overlayEnabled,
+      overlayOpacity,
+
       desktopImage,
       mobileImage,
+
       videoFile{
+        asset->{ url }
+      },
+      mobileVideoFile{
         asset->{ url }
       }
     },
@@ -78,6 +92,10 @@ export const INGREDIENTS_PAGE_QUERY = `
     // ✅ legacy
     textColor,
 
+    // ✅ overlay opcional
+    overlayEnabled,
+    overlayOpacity,
+
     desktopImage,
     mobileImage,
     videoFile{
@@ -119,4 +137,3 @@ export const LOCATIONS_QUERY = `
   "lng": longitude
 } | order(name asc)
 `;
-

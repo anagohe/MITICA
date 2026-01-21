@@ -64,7 +64,28 @@ type BlogPostCard = {
 
 const BLOG_PAGE_QUERY = `
 *[_type == "blogPage"][0]{
-  hero
+  hero{
+    mediaType,
+    title,
+    subtitle,
+
+    // ✅ mismo hero que Menu/About
+    titleVariant,
+    titleColor,
+    subtitleColor,
+
+    // ✅ legacy
+    textColor,
+
+    // ✅ overlay opcional
+    overlayEnabled,
+    overlayOpacity,
+
+    desktopImage,
+    mobileImage,
+    videoFile{asset->{url}},
+    mobileVideoFile{asset->{url}}
+  }
 }
 `;
 
@@ -127,30 +148,110 @@ const Blog = () => {
     ? posts.filter((p) => p.category === selectedCategory)
     : posts;
 
-  // Hero: imagen de Sanity si existe, si no, solo fondo (sin picsum, sin fallback)
-  const heroImage = heroData ? findFirstImage(heroData) : null;
-  const heroImageUrl = heroImage ? urlFor(heroImage) : '';
-  const heroTitle = heroData?.title || 'COMUNIDAD MÍTICA';
+  // ===== HERO (mismo que Menu/About) =====
+  const hero = heroData;
+
+  const overlayEnabled = hero?.overlayEnabled ?? true;
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
+
+  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
+
+  const heroTitle = hero?.title || 'COMUNIDAD MÍTICA';
+  const heroSubtitle = (hero?.subtitle || '').trim();
+
+  const heroTitleColorClass = hero?.titleColor || hero?.textColor || 'text-white';
+  const heroSubtitleColorClass = hero?.subtitleColor || hero?.textColor || 'text-white';
+
+  const desktopVideoUrl = hero?.videoFile?.asset?.url || '';
+  const mobileVideoUrl = hero?.mobileVideoFile?.asset?.url || '';
+
+  // Si por algo te llega un hero viejo sin desktopImage/mobileImage, intentamos “rescatar” una imagen
+  const legacyHeroImage = hero ? findFirstImage(hero) : null;
+
+  const desktopImgUrl = hero?.desktopImage
+    ? builder.image(hero.desktopImage).width(1920).height(1080).url()
+    : legacyHeroImage
+      ? urlFor(legacyHeroImage)
+      : '';
+
+  const mobileImgUrl = hero?.mobileImage
+    ? builder.image(hero.mobileImage).width(1080).height(1920).url()
+    : legacyHeroImage
+      ? urlFor(legacyHeroImage)
+      : '';
 
   return (
     <div className="w-full">
-      {/* Hero */}
-      <div className="relative h-screen w-full bg-gray-900 overflow-hidden mb-16">
-        {heroImageUrl ? (
-          <img
-            src={heroImageUrl}
-            className="w-full h-full object-cover opacity-50"
-            alt="Hero Blog"
-          />
-        ) : null}
+      {/* ✅ Hero (mismo que Menu/About) */}
+      <div className="relative h-screen w-full bg-black overflow-hidden mb-12">
+        {hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl) ? (
+          <>
+            {/* Desktop video */}
+            <video
+              className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              src={desktopVideoUrl || mobileVideoUrl}
+            />
 
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Title
-            variant={TitleVariant.TEXTURED_BORDERED}
-            text={heroTitle}
-            borderColor="#FFC700"
-            className="text-5xl md:text-8xl text-white text-center"
+            {/* Mobile video */}
+            <video
+              className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              src={mobileVideoUrl || desktopVideoUrl}
+            />
+          </>
+        ) : (
+          <>
+            {desktopImgUrl ? (
+              <img
+                src={desktopImgUrl}
+                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
+                alt="Hero Blog"
+              />
+            ) : null}
+
+            {mobileImgUrl ? (
+              <img
+                src={mobileImgUrl}
+                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+                alt="Hero Blog"
+              />
+            ) : null}
+          </>
+        )}
+
+        {/* ✅ Overlay opcional */}
+        {overlayEnabled && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
           />
+        )}
+
+        {/* ✅ Textos (mismos tamaños Menu/About) */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+          {heroTitle ? (
+            <Title
+              variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
+              text={heroTitle}
+              className={`text-4xl md:text-7xl ${heroTitleColorClass} mb-7 md:mb-9`}
+            />
+          ) : null}
+
+          {heroSubtitle ? (
+            <p
+              className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${heroSubtitleColorClass}`}
+            >
+              {heroSubtitle}
+            </p>
+          ) : null}
         </div>
       </div>
 

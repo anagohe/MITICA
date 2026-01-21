@@ -33,10 +33,16 @@ const FALLBACK_BRAND_LOGO = '/images/brand/logo-mitica.png';
 type AboutHeroSanity = {
   mediaType?: 'image' | 'video';
   desktopImage?: any;
-  desktopVideo?: any; // deref en GROQ
   mobileImage?: any;
+  videoFile?: any; // deref en GROQ
+  mobileVideoFile?: any; // deref en GROQ
   title?: string;
   subtitle?: string;
+  titleVariant?: 'regular' | 'textured';
+  titleColor?: string; // tailwind class
+  subtitleColor?: string; // tailwind class
+  overlayEnabled?: boolean;
+  overlayOpacity?: number; // 0-80
 };
 
 type WhoWeAreSanity = {
@@ -67,16 +73,21 @@ type AboutPageSanity = {
 };
 
 // ========= GROQ =========
-// ✅ IMPORTANTE: desktopVideo con asset->url para que exista heroDesktopVideoUrl
 const ABOUT_QUERY = `
 *[_type == "aboutPage"][0]{
   hero{
     mediaType,
     desktopImage,
-    desktopVideo{asset->{url}},
     mobileImage,
+    videoFile{asset->{url}},
+    mobileVideoFile{asset->{url}},
     title,
-    subtitle
+    subtitle,
+    titleVariant,
+    titleColor,
+    subtitleColor,
+    overlayEnabled,
+    overlayOpacity
   },
   whoWeAre{
     mainText,
@@ -154,8 +165,17 @@ const About: React.FC = () => {
   const vm = data?.visionMission;
   const manifesto = data?.manifesto;
 
-  const heroTitle = hero?.title || '¿QUIÉNES SOMOS?';
-  const heroSubtitle = hero?.subtitle || '';
+  // ✅ sin fallback de título
+  const heroTitle = (hero?.title ?? '').trim();
+  const heroSubtitle = (hero?.subtitle ?? '').trim();
+
+  // ✅ Overlay opcional desde Sanity (defaults: ON y 40)
+  const overlayEnabled = hero?.overlayEnabled ?? true;
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
+
+  // ✅ CLAVE: si overlay está OFF, NO bajes opacidad del media
+  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
 
   // ✅ HERO IMAGES OPTIMIZADAS
   const heroDesktopDefault = hero?.desktopImage
@@ -184,7 +204,8 @@ const About: React.FC = () => {
       ].join(', ')
     : undefined;
 
-  const heroDesktopVideoUrl = hero?.desktopVideo?.asset?.url || '';
+  const heroDesktopVideoUrl = hero?.videoFile?.asset?.url || '';
+  const heroMobileVideoUrl = hero?.mobileVideoFile?.asset?.url || '';
 
   // ✅ OTRAS IMÁGENES (optimización suave)
   const whoSideImageUrl = who?.sideImage
@@ -226,8 +247,6 @@ const About: React.FC = () => {
         ),
         strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
         em: ({ children }: any) => <em className="italic">{children}</em>,
-
-        // ✅ NUEVO: color por selección desde Sanity (annotation textColor)
         textColor: ({ children, value }: any) => (
           <span style={{ color: value?.color || 'inherit' }}>{children}</span>
         ),
@@ -252,8 +271,6 @@ const About: React.FC = () => {
         ),
         strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
         em: ({ children }: any) => <em className="italic">{children}</em>,
-
-        // ✅ NUEVO
         textColor: ({ children, value }: any) => (
           <span style={{ color: value?.color || 'inherit' }}>{children}</span>
         ),
@@ -278,8 +295,6 @@ const About: React.FC = () => {
         ),
         strong: ({ children }: any) => <strong className="font-bold text-white">{children}</strong>,
         em: ({ children }: any) => <em className="italic">{children}</em>,
-
-        // ✅ NUEVO
         textColor: ({ children, value }: any) => (
           <span style={{ color: value?.color || 'inherit' }}>{children}</span>
         ),
@@ -291,70 +306,110 @@ const About: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* ✅ HERO: debajo del navbar en móvil */}
-      <div className="relative w-full overflow-hidden bg-mitica-black md:h-screen pt-24 md:pt-0">
-        <div className="relative w-full h-[calc(100svh-96px)] md:h-full">
-          {hero?.mediaType === 'video' && heroDesktopVideoUrl ? (
+      {/* ✅ HERO (igual estilo que Menu) + debajo del navbar en móvil */}
+      <div className="relative w-full overflow-hidden bg-mitica-black pt-24 md:pt-0 min-h-[100svh]">
+        <div className="relative w-full h-[calc(100svh-96px)] md:h-[100svh] bg-black overflow-hidden">
+          {hero?.mediaType === 'video' ? (
             isDesktop ? (
+              heroDesktopVideoUrl ? (
+                <video
+                  className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                >
+                  <source src={heroDesktopVideoUrl} type="video/mp4" />
+                </video>
+              ) : (
+                <img
+                  src={heroDesktopDefault}
+                  srcSet={heroDesktopSrcSet}
+                  sizes="100vw"
+                  alt={heroTitle || 'Nosotros'}
+                  className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              )
+            ) : heroMobileVideoUrl ? (
               <video
-                className="w-full h-full object-cover opacity-60"
+                className={`w-full h-full object-cover ${mediaOpacityClass}`}
                 autoPlay
                 muted
                 loop
                 playsInline
                 preload="metadata"
               >
-                <source src={heroDesktopVideoUrl} type="video/mp4" />
+                <source src={heroMobileVideoUrl} type="video/mp4" />
               </video>
             ) : (
               <img
                 src={heroMobileDefault}
                 srcSet={heroMobileSrcSet}
                 sizes="100vw"
-                alt="Nosotros Hero Mobile"
-                className="w-full h-full object-cover opacity-60"
+                alt={heroTitle || 'Nosotros'}
+                className={`w-full h-full object-cover ${mediaOpacityClass}`}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
               />
             )
           ) : (
-            <picture>
-              {/* Desktop */}
-              {heroDesktopSrcSet ? (
-                <source media="(min-width: 768px)" srcSet={heroDesktopSrcSet} sizes="100vw" />
-              ) : null}
-
-              {/* Mobile (fallback del <img>) */}
+            <>
+              {/* Desktop image */}
               <img
-                src={heroMobileDefault}
-                srcSet={heroMobileSrcSet}
+                src={heroDesktopDefault}
+                srcSet={heroDesktopSrcSet}
                 sizes="100vw"
-                alt="Nosotros Hero"
-                className="w-full h-full object-cover opacity-60"
+                alt={heroTitle || 'Nosotros'}
+                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
               />
-            </picture>
+              {/* Mobile image */}
+              <img
+                src={heroMobileDefault}
+                srcSet={heroMobileSrcSet}
+                sizes="100vw"
+                alt={heroTitle || 'Nosotros'}
+                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </>
           )}
 
-          {/* Overlay */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+          {/* ✅ Overlay OPCIONAL desde Sanity */}
+          {overlayEnabled && (
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+            />
+          )}
+
+          {/* Textos igual que Menu */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
             {heroTitle && (
               <Title
-                variant={TitleVariant.TEXTURED}
+                variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
                 text={heroTitle}
-                className="text-5xl md:text-8xl text-white leading-none"
+                className={`text-4xl md:text-7xl ${hero?.titleColor || 'text-white'} mb-7 md:mb-9`}
               />
             )}
 
             {heroSubtitle && (
-              <Title
-                variant={TitleVariant.REGULAR}
-                text={heroSubtitle}
-                className="text-3xl md:text-5xl text-mitica-yellow leading-none mt-3"
-              />
+              <p
+                className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${
+                  hero?.subtitleColor || 'text-white'
+                }`}
+              >
+                {heroSubtitle}
+              </p>
             )}
           </div>
         </div>
