@@ -233,8 +233,8 @@ const Menu: React.FC = () => {
             variant={TitleVariant.BORDERED}
             text="MENÚ"
             borderColor="#000"
-            className="text-6xl md:text-8xl font-nexa"
-          />
+            className="text-6xl md:text-8xl font-nexa max-w-xs mx-auto"
+            />
 
           <div className="w-full max-w-6xl mx-auto mt-8">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-3 font-nexa text-sm uppercase">

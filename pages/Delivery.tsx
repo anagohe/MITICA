@@ -104,11 +104,9 @@ const Delivery = () => {
 
   // ==== URLs con fallback ====
   const heroImageObj = data?.hero ? findFirstImage(data.hero) : null;
-  const heroImageUrl = heroImageObj
-    ? urlFor(heroImageObj)
-    : 'https://picsum.photos/1200/700?hero_fallback';
+  const heroImageUrl = heroImageObj ? urlFor(heroImageObj) : 'https://picsum.photos/1200/700?hero_fallback';
 
-  const appBannerImageUrl = data?.appBannerImage ? urlFor(data.appBannerImage) : heroImageUrl; // si no hay appBannerImage, usamos hero
+  const appBannerImageUrl = data?.appBannerImage ? urlFor(data.appBannerImage) : heroImageUrl;
   const choiceImageUrl = data?.choiceImage ? urlFor(data.choiceImage) : 'https://picsum.photos/800/800?box';
 
   const benefitsFromSanity = data?.benefits && data.benefits.length > 0;
@@ -125,11 +123,9 @@ const Delivery = () => {
 
   const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
 
-  // Video URLs
   const desktopVideoUrl = hero?.videoFile?.asset?.url;
   const mobileVideoUrl = hero?.mobileVideoFile?.asset?.url;
 
-  // Imágenes (si no hay, cae a banner fallback)
   const desktopImgUrl = hero?.desktopImage ? urlFor(hero.desktopImage) : topBannerUrl;
   const mobileImgUrl = hero?.mobileImage ? urlFor(hero.mobileImage) : topBannerUrl;
 
@@ -204,72 +200,69 @@ const Delivery = () => {
         </div>
       </div>
 
-      {/* Sección blanca: ¿TE LA LLEVAMOS O VIENES POR ELLA? */}
-      {/* ✅ Ajustes: título más chico, imagen izq más grande, título alineado a mitad-superior de la imagen */}
-      <div className="bg-white">
-        <div className="container mx-auto px-6 py-14 lg:py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-2 gap-8 lg:gap-6 items-start">
-            {/* FILA 1: IMAGEN (izq) + TÍTULO (der) */}
-            <div className="lg:col-span-4 lg:row-start-1 flex justify-center lg:justify-start">
-              <img
-                src={appBannerImageUrl}
-                alt="Imagen sección"
-                className="w-72 h-72 md:w-80 md:h-80 object-contain"
-              />
-            </div>
+      {/* ✅ SECCIÓN PRINCIPAL: TÚ ELIGES / ¿TE LA LLEVAMOS? (solo esta sección cambiada) */}
+      <section className="relative bg-white pt-10 pb-20 md:py-24">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-center lg:items-center justify-center gap-12 lg:gap-32">
+            {/* LADO IZQUIERDO: Imagen + Texto + Botones */}
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-xl">
+              <div className="w-full mb-12">
+                <img
+                  src={appBannerImageUrl}
+                  alt="Mítica Boxes"
+                  className="w-full max-w-[380px] h-auto object-contain mx-auto lg:mx-0"
+                />
+              </div>
 
-            <div className="lg:col-span-8 lg:row-start-1 text-center lg:text-left self-start lg:pt-6">
-              <h2 className="font-nexa uppercase text-3xl md:text-5xl lg:text-6xl leading-[0.92] tracking-tight text-black">
-                ¿TE LA LLEVAMOS O <br />
-                VIENES POR ELLA?
-              </h2>
-            </div>
+              <div className="space-y-6">
+                <h3 className="font-nexa text-4xl md:text-5xl text-zinc-900 tracking-wide uppercase">
+                  TÚ ELIGES
+                </h3>
 
-            {/* FILA 2: TEXTO (izq) + CELULAR (der) */}
-            <div className="lg:col-span-7 lg:row-start-2 text-center lg:text-left">
-              <h3 className="font-nexa uppercase text-2xl md:text-3xl text-black">
-                TÚ ELIGES
-              </h3>
+                <p className="font-rethink text-zinc-500 text-lg md:text-xl max-w-md leading-relaxed mx-auto lg:mx-0">
+                  Descarga nuestra App y vive la mejor experiencia. <br className="hidden md:block" />
+                  Si prefieres, ya puedes ordenar por WhatsApp.
+                </p>
 
-              <p className="font-rethink text-gray-600 text-lg md:text-xl mt-3 max-w-xl mx-auto lg:mx-0">
-                Descarga nuestra <span className="text-black font-semibold">app</span> y vive la mejor experiencia.
-                Si prefieres, ya puedes ordenar por WhatsApp.
-              </p>
+                {/* Action Buttons (manteniendo tus assets) */}
+                <div className="flex justify-center lg:justify-start gap-6 mt-10">
+                  <button className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-zinc-900 rounded-[2rem] shadow-xl hover:bg-black transition-all duration-300 transform hover:scale-105 active:scale-95">
+                    <img
+                      src="/images/brand/mascot.png"
+                      alt="Pedir en app"
+                      className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                    />
+                  </button>
 
-              <div className="flex justify-center lg:justify-start gap-8 mt-6">
-                <button className="group w-36 h-36 md:w-40 md:h-40 rounded-3xl bg-black shadow-[0_22px_50px_rgba(0,0,0,0.18)] overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition">
-                  <img
-                    src="/images/brand/mascot.png"
-                    alt="Pedir en app"
-                    className="w-full h-full object-contain p-4 md:p-5"
-                  />
-                </button>
-
-                <button className="group w-36 h-36 md:w-40 md:h-40 rounded-3xl bg-black text-white shadow-[0_22px_50px_rgba(0,0,0,0.18)] hover:scale-[1.02] active:scale-[0.99] transition">
-                  <div className="h-full w-full flex flex-col items-center justify-center">
-                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-zinc-900 flex items-center justify-center mb-4 group-hover:bg-zinc-800 transition">
-                      <MessageCircle size={26} />
-                    </div>
-                    <span className="font-nexa uppercase text-xs md:text-sm tracking-wide">
-                      WHATSAPP
-                    </span>
-                  </div>
-                </button>
+                  <button className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-zinc-900 rounded-[2rem] shadow-xl hover:bg-black transition-all duration-300 transform hover:scale-105 active:scale-95">
+                    <MessageCircle className="w-8 h-8 md:w-10 md:h-10 text-white group-hover:text-mitica-yellow transition-colors" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="lg:col-span-5 lg:row-start-2 flex justify-center lg:justify-end">
-              <div className="relative">
-                <img
-                  src={choiceImageUrl}
-                  alt="App preview"
-                  className="w-64 md:w-72 lg:w-[340px] h-auto rounded-[2.2rem] shadow-[0_35px_90px_rgba(0,0,0,0.22)]"
-                />
+            {/* LADO DERECHO: Título + Celular (más pequeño) */}
+            <div className="flex flex-col items-center max-w-[400px]">
+              <h2 className="font-nexa text-3xl md:text-4xl lg:text-5xl text-zinc-900 leading-[1] tracking-tight text-center mb-10 md:mb-14 uppercase">
+                ¿TE LA LLEVAMOS <br />
+                O VIENES POR <br />
+                ELLA?
+              </h2>
+
+              <div className="relative w-[180px] md:w-[220px] lg:w-[240px]">
+                <div className="relative z-10 border-[8px] border-zinc-900 rounded-[3rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.3)] bg-black aspect-[9/18.5]">
+                  <img
+                    src={choiceImageUrl}
+                    alt="Mítica App Preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="absolute -inset-2 border-2 border-blue-400/20 rounded-[3.2rem] -z-0"></div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* BENEFICIOS – conectados a Sanity (benefits[]) */}
       <div className="bg-gray-50 py-20">

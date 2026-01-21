@@ -262,8 +262,8 @@ const Ingredients: React.FC = () => {
               text={hero.title}
               align="center"
               borderColor="#FFF"
-              className={`text-4xl md:text-7xl ${titleColorClass} mb-7 md:mb-9`}
-            />
+              className={`text-4xl md:text-7xl ${titleColorClass} mb-7 md:mb-9 max-w-5xl mx-auto`}
+              />
           )}
 
           {hero?.subtitle && (
