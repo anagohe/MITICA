@@ -19,6 +19,90 @@ export const deliveryPage = defineType({
       type: 'image',
       title: 'Imagen Caja Delivery',
     }),
+
+    defineField({
+      name: 'chooseTitle',
+      type: 'string',
+      title: 'Sección: Título (TÚ ELIGES)',
+    }),
+    defineField({
+      name: 'chooseText',
+      type: 'text',
+      title: 'Sección: Texto (debajo del título)',
+      rows: 3,
+      description: 'Puedes usar saltos de línea (Enter) y se respetan en desktop.',
+    }),
+
+    // ✅ CTA APP con 2 links (modal)
+    defineField({
+      name: 'ctaApp',
+      title: 'Botón App (modal)',
+      type: 'object',
+      fields: [
+        defineField({ name: 'labelImage', type: 'image', title: 'Imagen del botón (icono)' }),
+
+        // legacy (si algún día quieres usar un solo link sin modal)
+        defineField({ name: 'url', type: 'url', title: 'URL (legacy / opcional)' }),
+        defineField({
+          name: 'type',
+          type: 'string',
+          title: 'Tipo (legacy)',
+          options: {
+            list: [
+              { title: 'Interno', value: 'internal' },
+              { title: 'Externo', value: 'external' },
+            ],
+            layout: 'radio',
+          },
+          initialValue: 'external',
+        }),
+
+        // ✅ textos del modal (opcionales)
+        defineField({ name: 'modalTitle', type: 'string', title: 'Modal: Título (opcional)' }),
+        defineField({
+          name: 'modalSubtitle',
+          type: 'string',
+          title: 'Modal: Subtítulo (opcional)',
+        }),
+
+        // ✅ links del modal
+        defineField({
+          name: 'appStoreUrl',
+          type: 'url',
+          title: 'Link App Store',
+        }),
+        defineField({
+          name: 'googlePlayUrl',
+          type: 'url',
+          title: 'Link Google Play',
+        }),
+      ],
+    }),
+
+    // ✅ Botón WhatsApp (link editable)
+    defineField({
+      name: 'ctaWhatsapp',
+      title: 'Botón WhatsApp (link)',
+      type: 'object',
+      fields: [
+        defineField({ name: 'labelImage', type: 'image', title: 'Imagen del botón' }),
+        defineField({ name: 'url', type: 'url', title: 'URL' }),
+        defineField({
+          name: 'type',
+          type: 'string',
+          title: 'Tipo',
+          options: {
+            list: [
+              { title: 'Interno', value: 'internal' },
+              { title: 'Externo', value: 'external' },
+            ],
+            layout: 'radio',
+          },
+          initialValue: 'external',
+        }),
+      ],
+    }),
+
     defineField({
       name: 'benefits',
       type: 'array',
