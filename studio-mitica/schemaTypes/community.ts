@@ -1,8 +1,6 @@
 // studio-mitica/schemaTypes/community.ts
-
 import { defineType, defineField } from 'sanity'
 
-// --- POST ---
 // --- POST ---
 export const post = defineType({
   name: 'post',
@@ -39,7 +37,6 @@ export const post = defineType({
   ],
 });
 
-
 // --- BLOG PAGE ---
 export const blogPage = defineType({
   name: 'blogPage',
@@ -47,9 +44,125 @@ export const blogPage = defineType({
   type: 'document',
   fields: [
     defineField({ name: 'hero', type: 'hero' }),
-    defineField({ name: 'showFooterBanner', type: 'boolean', initialValue: true })
-  ]
-})
+    defineField({ name: 'showFooterBanner', type: 'boolean', initialValue: true }),
+  ],
+});
+
+// ===============================
+// ✅ Formularios FIJOS (mismos campos en ambos)
+// ===============================
+export const fixedEventForm = defineType({
+  name: 'fixedEventForm',
+  title: 'Formulario Eventos (Fijo)',
+  type: 'object',
+  fields: [
+    // ✅ NUEVO: título del modal editable
+    defineField({
+      name: 'modalTitle',
+      title: 'Título del modal',
+      type: 'string',
+      initialValue: 'TE INTERESA COTIZAR?',
+    }),
+
+    defineField({ name: 'recipientEmail', title: 'Correo destino', type: 'string' }),
+    defineField({
+      name: 'introText',
+      title: 'Texto superior',
+      type: 'text',
+      rows: 3,
+      initialValue:
+        'Llena nuestro formulario y nos pondremos en contacto contigo lo antes posible para crear un menú a la medida de tu evento.',
+    }),
+    defineField({
+      name: 'requiredNote',
+      title: 'Nota obligatorios',
+      type: 'string',
+      initialValue: '*Todos los campos son obligatorios.*',
+    }),
+    defineField({
+      name: 'submitText',
+      title: 'Texto botón',
+      type: 'string',
+      initialValue: 'Enviar solicitud',
+    }),
+
+    // ✅ Labels (editables) — campos fijos
+    defineField({ name: 'fullNameLabel', title: 'Label: Nombre completo', type: 'string', initialValue: 'Nombre completo' }),
+    defineField({ name: 'phoneLabel', title: 'Label: Teléfono', type: 'string', initialValue: 'Teléfono' }),
+    defineField({ name: 'emailLabel', title: 'Label: Correo', type: 'string', initialValue: 'Correo' }),
+    defineField({ name: 'eventDateLabel', title: 'Label: Fecha del evento', type: 'string', initialValue: 'Fecha del evento' }),
+    defineField({ name: 'eventPlaceLabel', title: 'Label: Lugar', type: 'string', initialValue: 'Lugar:' }),
+    defineField({
+      name: 'peopleCountLabel',
+      title: 'Label: Personas',
+      type: 'string',
+      initialValue: '¿Cuántas personas asistirán a tu evento?',
+    }),
+    defineField({
+      name: 'detailsLabel',
+      title: 'Label: Detalles',
+      type: 'string',
+      initialValue: '¿Cuéntanos más de tu evento?',
+    }),
+  ],
+});
+
+// ✅ Patrocinios con EXACTAMENTE los mismos campos
+export const fixedSponsorForm = defineType({
+  name: 'fixedSponsorForm',
+  title: 'Formulario Patrocinios (Fijo)',
+  type: 'object',
+  fields: [
+    // ✅ NUEVO: título del modal editable (por si quieres también)
+    defineField({
+      name: 'modalTitle',
+      title: 'Título del modal',
+      type: 'string',
+      initialValue: 'PATROCINIOS',
+    }),
+
+    defineField({ name: 'recipientEmail', title: 'Correo destino', type: 'string' }),
+    defineField({
+      name: 'introText',
+      title: 'Texto superior',
+      type: 'text',
+      rows: 3,
+      initialValue:
+        'Llena nuestro formulario y nos pondremos en contacto contigo lo antes posible para crear un menú a la medida de tu evento.',
+    }),
+    defineField({
+      name: 'requiredNote',
+      title: 'Nota obligatorios',
+      type: 'string',
+      initialValue: '*Todos los campos son obligatorios.*',
+    }),
+    defineField({
+      name: 'submitText',
+      title: 'Texto botón',
+      type: 'string',
+      initialValue: 'Enviar solicitud',
+    }),
+
+    // ✅ Labels (editables) — mismos campos
+    defineField({ name: 'fullNameLabel', title: 'Label: Nombre completo', type: 'string', initialValue: 'Nombre completo' }),
+    defineField({ name: 'phoneLabel', title: 'Label: Teléfono', type: 'string', initialValue: 'Teléfono' }),
+    defineField({ name: 'emailLabel', title: 'Label: Correo', type: 'string', initialValue: 'Correo' }),
+    defineField({ name: 'eventDateLabel', title: 'Label: Fecha del evento', type: 'string', initialValue: 'Fecha del evento' }),
+    defineField({ name: 'eventPlaceLabel', title: 'Label: Lugar', type: 'string', initialValue: 'Lugar:' }),
+    defineField({
+      name: 'peopleCountLabel',
+      title: 'Label: Personas',
+      type: 'string',
+      initialValue: '¿Cuántas personas asistirán a tu evento?',
+    }),
+    defineField({
+      name: 'detailsLabel',
+      title: 'Label: Detalles',
+      type: 'string',
+      initialValue: '¿Cuéntanos más de tu evento?',
+    }),
+  ],
+});
 
 // --- EVENTS PAGE ---
 export const eventsPage = defineType({
@@ -69,26 +182,40 @@ export const eventsPage = defineType({
         defineField({ name: 'title', type: 'string' }),
         defineField({ name: 'text', type: 'blockContent' }),
         defineField({ name: 'images', type: 'array', of: [{ type: 'image' }] }),
-         defineField({ 
-            name: 'backgroundType', 
-            title: 'Fondo Sección',
-            type: 'string',
-            options: { list: [{title: 'Color Negro', value: 'color'}, {title: 'Imagen', value: 'image'}] }
+        defineField({
+          name: 'backgroundType',
+          title: 'Fondo Sección',
+          type: 'string',
+          options: { list: [{ title: 'Color Negro', value: 'color' }, { title: 'Imagen', value: 'image' }] },
         }),
-        defineField({ name: 'backgroundImage', type: 'image', hidden: ({parent}) => parent?.backgroundType !== 'image' })
-      ]
+        defineField({
+          name: 'backgroundImage',
+          type: 'image',
+          hidden: ({ parent }) => parent?.backgroundType !== 'image',
+        }),
+      ],
     }),
-    defineField({ name: 'showFooterBanner', type: 'boolean', initialValue: true })
-  ]
-})
+
+    // ✅ Forms fijos
+    defineField({
+      name: 'forms',
+      title: 'Formularios (Fijos)',
+      type: 'object',
+      fields: [
+        defineField({ name: 'event', title: 'Formulario Eventos', type: 'fixedEventForm' }),
+        defineField({ name: 'sponsor', title: 'Formulario Patrocinios', type: 'fixedSponsorForm' }),
+      ],
+    }),
+
+    defineField({ name: 'showFooterBanner', type: 'boolean', initialValue: true }),
+  ],
+});
 
 // --- CAREERS PAGE ---
 export const careersPage = defineType({
   name: 'careersPage',
   title: 'Página Bolsa de Trabajo',
   type: 'document',
-
-  // ✅ Secciones / apartados en el Studio
   fieldsets: [
     { name: 'heroSection', title: 'Hero', options: { collapsible: true, collapsed: false } },
     { name: 'contentSection', title: 'Contenido (izquierda)', options: { collapsible: true, collapsed: false } },
@@ -96,16 +223,8 @@ export const careersPage = defineType({
     { name: 'imageSection', title: 'Imagen (derecha)', options: { collapsible: true, collapsed: false } },
     { name: 'footerSection', title: 'Footer', options: { collapsible: true, collapsed: true } },
   ],
-
   fields: [
-    // ===== HERO =====
-    defineField({
-      name: 'hero',
-      type: 'hero',
-      fieldset: 'heroSection',
-    }),
-
-    // ===== CONTENIDO IZQUIERDA =====
+    defineField({ name: 'hero', type: 'hero', fieldset: 'heroSection' }),
     defineField({
       name: 'title',
       title: 'Título amarillo (¡ÚNETE AL EQUIPO MÍTICA!)',
@@ -122,9 +241,6 @@ export const careersPage = defineType({
       initialValue:
         'En MÍTICA, buscamos talento para formar parte de nuestra leyenda. Si lo tuyo es el servicio al cliente, te destacas por tu rapidez y precisión, y amas interactuar con la gente, ¡Te necesitamos en nuestro equipo! Únete a nuestra plantilla de trabajo enviando tu CV y datos de contacto.',
     }),
-
-    // ===== CTA (DEJAR NO EDITABLE EN FRONT) =====
-    // ✅ Los guardamos por si luego quieres editarlos, pero tu front puede IGNORARLOS
     defineField({
       name: 'ctaTitle',
       title: 'Título CTA (opcional)',
@@ -145,10 +261,8 @@ export const careersPage = defineType({
       type: 'string',
       fieldset: 'ctaSection',
       initialValue: 'ENVÍA TU SOLICITUD',
-      readOnly: true, // ✅ para que quede “no editable” si quieres
+      readOnly: true,
     }),
-
-    // ===== IMAGEN DERECHA =====
     defineField({
       name: 'image',
       title: 'Imagen derecha',
@@ -156,8 +270,6 @@ export const careersPage = defineType({
       options: { hotspot: true },
       fieldset: 'imageSection',
     }),
-
-    // ===== FOOTER =====
     defineField({
       name: 'showFooterBanner',
       type: 'boolean',
@@ -166,10 +278,9 @@ export const careersPage = defineType({
       fieldset: 'footerSection',
     }),
   ],
-
   preview: {
     prepare() {
-      return { title: 'Bolsa de trabajo' }
+      return { title: 'Bolsa de trabajo' };
     },
   },
-})
+});

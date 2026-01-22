@@ -72,18 +72,27 @@ const Ingredients: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // ✅ Solo fuentes de Typography (CSS vars)
+  const FONT_TITLE_MAIN = 'var(--font-title-main)';
+  const FONT_BODY = 'var(--font-body)';
+
   // ✅ PortableText components: negritas + color
   const portableTextDefault = useMemo(
     () => ({
       block: {
         normal: ({ children }: any) => (
-          <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-600 text-justify">
+          <p
+            className="m-0 text-base md:text-lg leading-relaxed text-gray-600 text-justify"
+            style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
+          >
             {children}
           </p>
         ),
       },
       marks: {
-        strong: ({ children }: any) => <strong className="font-bold">{children}</strong>,
+        strong: ({ children }: any) => (
+          <strong style={{ fontFamily: FONT_BODY, fontWeight: 800 }}>{children}</strong>
+        ),
         textColor: ({ children, value }: any) => (
           <span style={{ color: value?.color || 'inherit' }}>{children}</span>
         ),
@@ -98,13 +107,18 @@ const Ingredients: React.FC = () => {
     () => ({
       block: {
         normal: ({ children }: any) => (
-          <p className="m-0 font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center">
+          <p
+            className="m-0 text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center"
+            style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
+          >
             {children}
           </p>
         ),
       },
       marks: {
-        strong: ({ children }: any) => <strong className="font-bold">{children}</strong>,
+        strong: ({ children }: any) => (
+          <strong style={{ fontFamily: FONT_BODY, fontWeight: 800 }}>{children}</strong>
+        ),
         textColor: ({ children, value }: any) => (
           <span style={{ color: value?.color || 'inherit' }}>{children}</span>
         ),
@@ -133,7 +147,9 @@ const Ingredients: React.FC = () => {
   if (loading) {
     return (
       <div className="w-full bg-white min-h-screen flex items-center justify-center">
-        <p className="text-gray-700">Cargando ingredientes...</p>
+        <p className="text-gray-700" style={{ fontFamily: FONT_BODY, fontWeight: 400 }}>
+          Cargando ingredientes...
+        </p>
       </div>
     );
   }
@@ -141,7 +157,10 @@ const Ingredients: React.FC = () => {
   if (!page) {
     return (
       <div className="w-full bg-white min-h-screen flex items-center justify-center px-4">
-        <p className="text-red-600 text-center">
+        <p
+          className="text-red-600 text-center"
+          style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
+        >
           {errorMsg || 'No se pudo cargar la página de ingredientes desde Sanity.'}
         </p>
       </div>
@@ -263,12 +282,13 @@ const Ingredients: React.FC = () => {
               align="center"
               borderColor="#FFF"
               className={`text-4xl md:text-7xl ${titleColorClass} mb-7 md:mb-9 max-w-5xl mx-auto`}
-              />
+            />
           )}
 
           {hero?.subtitle && (
             <p
-              className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${subtitleColorClass}`}
+              className={`text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${subtitleColorClass}`}
+              style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
             >
               {hero.subtitle}
             </p>
@@ -314,7 +334,7 @@ const Ingredients: React.FC = () => {
                   )}
 
                   {section.content && (
-                    <div className="space-y-4 text-gray-600 font-rethink text-justify">
+                    <div className="space-y-4 text-gray-600 text-justify">
                       <PortableText value={section.content} components={portableTextDefault} />
                     </div>
                   )}
@@ -357,7 +377,10 @@ const Ingredients: React.FC = () => {
                     <PortableText value={saucesIntro} components={portableTextCentered} />
                   </div>
                 ) : (
-                  <p className="font-rethink text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center whitespace-pre-line">
+                  <p
+                    className="text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center whitespace-pre-line"
+                    style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
+                  >
                     {
                       'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'
                     }
@@ -379,7 +402,12 @@ const Ingredients: React.FC = () => {
                           />
                         )}
                       </div>
-                      <span className="font-nexa text-xs uppercase text-center">{sauce.name}</span>
+                      <span
+                        className="text-xs uppercase text-center"
+                        style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
+                      >
+                        {sauce.name}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -392,7 +420,10 @@ const Ingredients: React.FC = () => {
             <div className="mt-16 pt-8 border-t border-gray-200">
               <div className="pl-4 md:pl-6 border-l-4 md:border-l-[6px] border-mitica-yellow">
                 {/* ✅ Título editable desde Sanity */}
-                <h3 className="font-nexa text-xl mb-3 uppercase">
+                <h3
+                  className="text-xl mb-3 uppercase"
+                  style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
+                >
                   {nutritionTitle || 'NUTRICIÓN Y ALÉRGENOS'}
                 </h3>
 
