@@ -129,7 +129,7 @@ const Careers = () => {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="ÚNETE AL EQUIPO">
-        <ContactForm type="job" />
+        <ContactForm type="event" />
       </Modal>
     </div>
   )

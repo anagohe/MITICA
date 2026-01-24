@@ -194,7 +194,7 @@ const Ingredients: React.FC = () => {
   const titleColorClass = hero?.titleColor || hero?.textColor || 'text-white';
   const subtitleColorClass = hero?.subtitleColor || hero?.textColor || 'text-[#F6BA27]';
 
-  // ✅ TEXTURED: usamos TEXTURED_BORDERED (que es el que ya sabes que funciona en tu Typography)
+  // ✅ TEXTURED: usamos TEXTURED_BORDERED
   const heroTitleVariant =
     hero?.titleVariant === 'textured'
       ? TitleVariant.TEXTURED_BORDERED
@@ -371,7 +371,7 @@ const Ingredients: React.FC = () => {
                   className="text-4xl md:text-5xl mb-8"
                 />
 
-                {/* ✅ CAMBIO: saucesIntro ahora es blockContent */}
+                {/* ✅ saucesIntro ahora es blockContent */}
                 {Array.isArray(saucesIntro) && saucesIntro.length > 0 ? (
                   <div className="space-y-4">
                     <PortableText value={saucesIntro} components={portableTextCentered} />
@@ -427,7 +427,7 @@ const Ingredients: React.FC = () => {
                   {nutritionTitle || 'NUTRICIÓN Y ALÉRGENOS'}
                 </h3>
 
-                {/* ✅ CAMBIO: nutritionText ahora es blockContent */}
+                {/* ✅ nutritionText ahora es blockContent */}
                 {Array.isArray(nutritionText) && nutritionText.length > 0 ? (
                   <div className="space-y-3">
                     <PortableText value={nutritionText} components={portableTextDefault} />

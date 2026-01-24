@@ -17,8 +17,13 @@ const CATEGORIES = [
 
 // ===== Sanity helpers =====
 const builder = imageUrlBuilder(client);
-function urlFor(source: any) {
-  return builder.image(source).url();
+
+// ✅ Imagen optimizada (evita .url() original gigante)
+function urlFor(source: any, w: number = 1200, h?: number, q: number = 80) {
+  let img = builder.image(source).width(w).quality(q).auto('format');
+  if (h) img = img.height(h).fit('crop');
+  else img = img.fit('max');
+  return img.url();
 }
 
 function findFirstImage(obj: any): any | null {
@@ -130,7 +135,8 @@ const Blog = () => {
           slug: p.slug || p._id,
           title: p.title || '',
           category: p.category || '',
-          img: p.mainImage ? urlFor(p.mainImage) : '',
+          // ✅ card image optimizada (no original)
+          img: p.mainImage ? urlFor(p.mainImage, 900, 560, 80) : '',
           date: formatDate(p.publishedAt),
           excerpt: p.excerpt || '',
         }));
@@ -170,16 +176,44 @@ const Blog = () => {
   const legacyHeroImage = hero ? findFirstImage(hero) : null;
 
   const desktopImgUrl = hero?.desktopImage
-    ? builder.image(hero.desktopImage).width(1920).height(1080).url()
+    ? urlFor(hero.desktopImage, 1600, 900, 80)
     : legacyHeroImage
-      ? urlFor(legacyHeroImage)
+      ? urlFor(legacyHeroImage, 1600, 900, 80)
       : '';
 
-  const mobileImgUrl = hero?.mobileImage
-    ? builder.image(hero.mobileImage).width(1080).height(1920).url()
+  const desktopImgSrcSet = hero?.desktopImage
+    ? [
+        `${urlFor(hero.desktopImage, 960, 540, 80)} 960w`,
+        `${urlFor(hero.desktopImage, 1280, 720, 80)} 1280w`,
+        `${urlFor(hero.desktopImage, 1600, 900, 80)} 1600w`,
+      ].join(', ')
     : legacyHeroImage
-      ? urlFor(legacyHeroImage)
+      ? [
+          `${urlFor(legacyHeroImage, 960, 540, 80)} 960w`,
+          `${urlFor(legacyHeroImage, 1280, 720, 80)} 1280w`,
+          `${urlFor(legacyHeroImage, 1600, 900, 80)} 1600w`,
+        ].join(', ')
+      : undefined;
+
+  const mobileImgUrl = hero?.mobileImage
+    ? urlFor(hero.mobileImage, 900, 1200, 80)
+    : legacyHeroImage
+      ? urlFor(legacyHeroImage, 900, 1200, 80)
       : '';
+
+  const mobileImgSrcSet = hero?.mobileImage
+    ? [
+        `${urlFor(hero.mobileImage, 480, 640, 80)} 480w`,
+        `${urlFor(hero.mobileImage, 720, 960, 80)} 720w`,
+        `${urlFor(hero.mobileImage, 900, 1200, 80)} 900w`,
+      ].join(', ')
+    : legacyHeroImage
+      ? [
+          `${urlFor(legacyHeroImage, 480, 640, 80)} 480w`,
+          `${urlFor(legacyHeroImage, 720, 960, 80)} 720w`,
+          `${urlFor(legacyHeroImage, 900, 1200, 80)} 900w`,
+        ].join(', ')
+      : undefined;
 
   return (
     <div className="w-full">
@@ -194,6 +228,7 @@ const Blog = () => {
               muted
               loop
               playsInline
+              preload="metadata"
               src={desktopVideoUrl || mobileVideoUrl}
             />
 
@@ -204,6 +239,7 @@ const Blog = () => {
               muted
               loop
               playsInline
+              preload="metadata"
               src={mobileVideoUrl || desktopVideoUrl}
             />
           </>
@@ -212,16 +248,26 @@ const Blog = () => {
             {desktopImgUrl ? (
               <img
                 src={desktopImgUrl}
+                srcSet={desktopImgSrcSet}
+                sizes="100vw"
                 className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
                 alt="Hero Blog"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
               />
             ) : null}
 
             {mobileImgUrl ? (
               <img
                 src={mobileImgUrl}
+                srcSet={mobileImgSrcSet}
+                sizes="100vw"
                 className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
                 alt="Hero Blog"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
               />
             ) : null}
           </>
@@ -311,6 +357,8 @@ const Blog = () => {
                       src={post.img}
                       alt={post.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-200" />

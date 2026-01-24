@@ -61,10 +61,26 @@ const Menu: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('');
 
   useEffect(() => {
+    let mounted = true;
+
     client
       .fetch<MenuQueryResult>(MENU_PAGE_QUERY)
-      .then((res) => setData(res))
-      .finally(() => setLoading(false));
+      .then((res) => {
+        if (!mounted) return;
+        setData(res);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setData(null);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const legacyItems = data?.items || [];
@@ -87,7 +103,10 @@ const Menu: React.FC = () => {
   // ✅ Categorías SIN "Todos"
   const categories = useMemo(() => {
     if (hasSections) {
-      const ordered = sections.map((s) => (s?.title || '').trim()).filter(Boolean);
+      const ordered = sections
+        .map((s) => (s?.title || '').trim())
+        .filter(Boolean);
+
       const seen = new Set<string>();
       return ordered.filter((c) => (seen.has(c) ? false : (seen.add(c), true)));
     }
@@ -189,6 +208,8 @@ const Menu: React.FC = () => {
                 src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
                 className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
                 alt={hero?.title || 'Menú'}
+                loading="eager"
+                decoding="async"
               />
             )}
             {hero?.mobileImage && (
@@ -196,6 +217,8 @@ const Menu: React.FC = () => {
                 src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
                 className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
                 alt={hero?.title || 'Menú'}
+                loading="eager"
+                decoding="async"
               />
             )}
           </>
@@ -203,10 +226,7 @@ const Menu: React.FC = () => {
 
         {/* ✅ Overlay OPCIONAL desde Sanity */}
         {overlayEnabled && (
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
-          />
+          <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
         )}
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
@@ -234,7 +254,7 @@ const Menu: React.FC = () => {
             text="MENÚ"
             borderColor="#000"
             className="text-6xl md:text-8xl font-nexa max-w-xs mx-auto"
-            />
+          />
 
           <div className="w-full max-w-6xl mx-auto mt-8">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-3 font-nexa text-sm uppercase">
@@ -266,10 +286,7 @@ const Menu: React.FC = () => {
               {/* ✅ Mobile */}
               <div className="grid grid-cols-1 gap-y-8 md:hidden">
                 {filteredItems.map((item) => (
-                  <div
-                    key={item._id}
-                    className="group transform transition-all duration-500 hover:-translate-y-2"
-                  >
+                  <div key={item._id} className="group transform transition-all duration-500 hover:-translate-y-2">
                     <div className="bg-[#F9F9F9] rounded-xl transition-shadow border-2 border-[#F6BA27]/70 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
                       <div className="-mx-4 -mt-4 w-[calc(100%+2rem)] overflow-hidden mb-6 relative aspect-[1510/1080] rounded-t-xl">
                         {item.image && (
@@ -277,6 +294,8 @@ const Menu: React.FC = () => {
                             src={urlFor(item.image).width(1510).height(1080).url()}
                             alt={item.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            loading="lazy"
+                            decoding="async"
                           />
                         )}
                       </div>
@@ -305,6 +324,8 @@ const Menu: React.FC = () => {
                                       src={urlFor(iconImg).width(180).height(180).url()}
                                       alt={ic.title || 'icon'}
                                       className="w-full h-full object-contain"
+                                      loading="lazy"
+                                      decoding="async"
                                     />
                                   )}
                                 </div>
@@ -328,10 +349,7 @@ const Menu: React.FC = () => {
               <div className="hidden md:grid md:grid-cols-2 gap-x-6">
                 <div className="flex flex-col gap-y-8">
                   {leftItems.map((item) => (
-                    <div
-                      key={item._id}
-                      className="group transform transition-all duration-500 hover:-translate-y-2"
-                    >
+                    <div key={item._id} className="group transform transition-all duration-500 hover:-translate-y-2">
                       <div className="bg-[#F9F9F9] rounded-xl transition-shadow border-2 border-[#F6BA27]/70 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
                         <div className="-mx-4 -mt-4 w-[calc(100%+2rem)] overflow-hidden mb-6 relative aspect-[1510/1080] rounded-t-xl">
                           {item.image && (
@@ -339,6 +357,8 @@ const Menu: React.FC = () => {
                               src={urlFor(item.image).width(1510).height(1080).url()}
                               alt={item.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                              loading="lazy"
+                              decoding="async"
                             />
                           )}
                         </div>
@@ -367,6 +387,8 @@ const Menu: React.FC = () => {
                                         src={urlFor(iconImg).width(180).height(180).url()}
                                         alt={ic.title || 'icon'}
                                         className="w-full h-full object-contain"
+                                        loading="lazy"
+                                        decoding="async"
                                       />
                                     )}
                                   </div>
@@ -388,10 +410,7 @@ const Menu: React.FC = () => {
 
                 <div className="flex flex-col gap-y-8">
                   {rightItems.map((item) => (
-                    <div
-                      key={item._id}
-                      className="group transform transition-all duration-500 hover:-translate-y-2"
-                    >
+                    <div key={item._id} className="group transform transition-all duration-500 hover:-translate-y-2">
                       <div className="bg-[#F9F9F9] rounded-xl transition-shadow border-2 border-[#F6BA27]/70 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
                         <div className="-mx-4 -mt-4 w-[calc(100%+2rem)] overflow-hidden mb-6 relative aspect-[1510/1080] md:aspect-[1510/980] rounded-t-xl">
                           {item.image && (
@@ -399,6 +418,8 @@ const Menu: React.FC = () => {
                               src={urlFor(item.image).width(1510).height(1080).url()}
                               alt={item.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                              loading="lazy"
+                              decoding="async"
                             />
                           )}
                         </div>
@@ -427,6 +448,8 @@ const Menu: React.FC = () => {
                                         src={urlFor(iconImg).width(180).height(180).url()}
                                         alt={ic.title || 'icon'}
                                         className="w-full h-full object-contain"
+                                        loading="lazy"
+                                        decoding="async"
                                       />
                                     )}
                                   </div>

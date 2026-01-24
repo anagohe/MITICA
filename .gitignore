@@ -26,3 +26,9 @@ dist-ssr
 .env.*
 .vercel
 .env*.local
+
+# Sanity exports / backups (MUY PESADOS)
+studio-mitica/*.tar.gz
+studio-mitica/*.tgz
+studio-mitica/backup-*.tar.gz
+studio-mitica/backup-*.tgz

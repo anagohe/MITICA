@@ -8,7 +8,7 @@ export default defineConfig({
   name: 'mitica-studio',
   title: 'Mítica CMS',
 
-  projectId: 'ofzit8al',
+  projectId: 'cdstv0qp',
   dataset: 'production',
 
   plugins: [

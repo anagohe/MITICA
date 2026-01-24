@@ -180,6 +180,30 @@ const Events = () => {
   const desktopVideoUrl = getFileUrl(hero?.videoFile);
   const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile);
 
+  const desktopHeroUrl = hero?.desktopImage
+    ? urlFor(hero.desktopImage).width(1600).height(900).auto('format').quality(80).url()
+    : undefined;
+
+  const desktopHeroSrcSet = hero?.desktopImage
+    ? [
+        `${urlFor(hero.desktopImage).width(960).height(540).auto('format').quality(80).url()} 960w`,
+        `${urlFor(hero.desktopImage).width(1280).height(720).auto('format').quality(80).url()} 1280w`,
+        `${urlFor(hero.desktopImage).width(1600).height(900).auto('format').quality(80).url()} 1600w`,
+      ].join(', ')
+    : undefined;
+
+  const mobileHeroUrl = hero?.mobileImage
+    ? urlFor(hero.mobileImage).width(900).height(1200).auto('format').quality(80).url()
+    : undefined;
+
+  const mobileHeroSrcSet = hero?.mobileImage
+    ? [
+        `${urlFor(hero.mobileImage).width(480).height(640).auto('format').quality(80).url()} 480w`,
+        `${urlFor(hero.mobileImage).width(720).height(960).auto('format').quality(80).url()} 720w`,
+        `${urlFor(hero.mobileImage).width(900).height(1200).auto('format').quality(80).url()} 900w`,
+      ].join(', ')
+    : undefined;
+
   const eventFormConfig = page?.forms?.event;
   const sponsorFormConfig = page?.forms?.sponsor;
 
@@ -216,6 +240,7 @@ const Events = () => {
                 muted
                 loop
                 playsInline
+                preload="metadata"
                 src={desktopVideoUrl || mobileVideoUrl}
               />
               <video
@@ -224,30 +249,44 @@ const Events = () => {
                 muted
                 loop
                 playsInline
+                preload="metadata"
                 src={mobileVideoUrl || desktopVideoUrl}
               />
             </>
           ) : (
             <>
-              {hero?.desktopImage && (
+              {desktopHeroUrl && (
                 <img
-                  src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
+                  src={desktopHeroUrl}
+                  srcSet={desktopHeroSrcSet}
+                  sizes="100vw"
                   className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
                   alt={hero?.title || 'Eventos Hero'}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                 />
               )}
-              {hero?.mobileImage && (
+              {mobileHeroUrl && (
                 <img
-                  src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
+                  src={mobileHeroUrl}
+                  srcSet={mobileHeroSrcSet}
+                  sizes="100vw"
                   className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
                   alt={hero?.title || 'Eventos Hero'}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                 />
               )}
             </>
           )}
 
           {overlayEnabled && (
-            <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+            />
           )}
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
@@ -311,9 +350,17 @@ const Events = () => {
                   className="flex-shrink-0 w-[220px] md:w-[320px] aspect-[4/3] overflow-hidden"
                 >
                   <img
-                    src={urlFor(img).width(900).height(675).auto('format').url()}
+                    src={urlFor(img).width(900).height(675).auto('format').quality(80).url()}
+                    srcSet={[
+                      `${urlFor(img).width(520).height(390).auto('format').quality(80).url()} 520w`,
+                      `${urlFor(img).width(720).height(540).auto('format').quality(80).url()} 720w`,
+                      `${urlFor(img).width(900).height(675).auto('format').quality(80).url()} 900w`,
+                    ].join(', ')}
+                    sizes="(min-width: 768px) 320px, 220px"
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                     alt={`Evento ${index + 1}`}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               ))}
@@ -323,10 +370,16 @@ const Events = () => {
 
         <div className="container mx-auto max-w-5xl text-center px-4">
           <div className="mb-8">
-            <h3 className="text-3xl md:text-4xl mb-4 tracking-tight" style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}>
+            <h3
+              className="text-3xl md:text-4xl mb-4 tracking-tight"
+              style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
+            >
               ¿TE INTERESA COTIZAR?
             </h3>
-            <p className="text-sm md:text-base text-gray-800 max-w-2xl mx-auto" style={{ fontFamily: FONT_BODY, fontWeight: 600 }}>
+            <p
+              className="text-sm md:text-base text-gray-800 max-w-2xl mx-auto"
+              style={{ fontFamily: FONT_BODY, fontWeight: 600 }}
+            >
               Llena nuestro formulario y nos pondremos en contacto contigo.
             </p>
           </div>
@@ -361,15 +414,25 @@ const Events = () => {
               alt="Mascot Mítica"
               className="hidden md:block w-28 h-28 object-contain opacity-90"
               draggable={false}
+              loading="lazy"
+              decoding="async"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-8 mb-12 text-white/90">
-            <div className="space-y-6 text-sm md:text-base leading-relaxed max-w-3xl" style={{ fontFamily: FONT_BODY, fontWeight: 400 }}>
+            <div
+              className="space-y-6 text-sm md:text-base leading-relaxed max-w-3xl"
+              style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
+            >
               <p>
-                En <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>MÍTICA</strong> nos encanta ser parte
-                de historias emocionantes. Si estás organizando un evento, tienes un equipo deportivo, lideras una iniciativa comunitaria
-                o buscas un partner para cualquier proyecto que comparta nuestro espíritu #Legendario, ¡Queremos saber de ti!
+                En{' '}
+                <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>
+                  MÍTICA
+                </strong>{' '}
+                nos encanta ser parte de historias emocionantes. Si estás organizando un evento,
+                tienes un equipo deportivo, lideras una iniciativa comunitaria o buscas un partner
+                para cualquier proyecto que comparta nuestro espíritu #Legendario, ¡Queremos saber
+                de ti!
               </p>
               <p>Déjanos tus datos de contacto y cuéntanos más sobre tu proyecto en el formulario.</p>
             </div>
@@ -378,11 +441,22 @@ const Events = () => {
           {sponsorImages.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 md:gap-8 mb-16">
               {sponsorImages.slice(0, 2).map((img: any, idx: number) => (
-                <div key={`${img?._key ?? 'sponsor'}-${idx}`} className="overflow-hidden shadow-2xl border border-white/10 group aspect-square md:aspect-[4/3]">
+                <div
+                  key={`${img?._key ?? 'sponsor'}-${idx}`}
+                  className="overflow-hidden shadow-2xl border border-white/10 group aspect-square md:aspect-[4/3]"
+                >
                   <img
-                    src={urlFor(img).width(1200).height(900).auto('format').url()}
+                    src={urlFor(img).width(1200).height(900).auto('format').quality(80).url()}
+                    srcSet={[
+                      `${urlFor(img).width(640).height(480).auto('format').quality(80).url()} 640w`,
+                      `${urlFor(img).width(960).height(720).auto('format').quality(80).url()} 960w`,
+                      `${urlFor(img).width(1200).height(900).auto('format').quality(80).url()} 1200w`,
+                    ].join(', ')}
+                    sizes="(min-width: 768px) 50vw, 100vw"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     alt={`Sponsorship ${idx + 1}`}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               ))}
@@ -402,11 +476,7 @@ const Events = () => {
       </section>
 
       {/* ================= MODAL ================= */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={modalTitle}
-      >
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle}>
         <ContactForm
           type={formType === 'event' ? 'event' : 'sponsor'}
           config={formType === 'event' ? eventFormConfig : sponsorFormConfig}

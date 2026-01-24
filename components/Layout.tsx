@@ -39,7 +39,7 @@ const Navbar = () => {
   const circleY = useTransform(scrollY, (v) => {
     const yClamped = Math.max(0, Math.min(v ?? 0, SWITCH_AT));
     return OPTICAL_DOWN - yClamped + 4;
-    });
+  });
 
   // ✅ Logo 2: ancho (aparece)
   const wideOpacity = p; // misma animación
@@ -48,7 +48,9 @@ const Navbar = () => {
   // ✅ (Opcional) scrolled por si luego lo usas
   const [scrolled, setScrolled] = useState(false);
   useMotionValueEvent(scrollY, 'change', (v) => {
-    setScrolled((v ?? 0) > 50);
+    const next = (v ?? 0) > 50;
+    // ✅ OPT: evita renders si no cambió el valor
+    setScrolled((prev) => (prev === next ? prev : next));
   });
 
   useEffect(() => {
@@ -117,7 +119,7 @@ const Navbar = () => {
             <div className="relative ml-4">
               {/* Wrapper ABSOLUTO fijo */}
               <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-[260px] h-[96px] -ml-16">
-              {/* Logo 1: círculo */}
+                {/* Logo 1: círculo */}
                 {!isOpen && (
                   <motion.div
                     className="absolute inset-0 flex items-center justify-center"
@@ -135,6 +137,8 @@ const Navbar = () => {
                         src="/images/brand/logo-icono.png"
                         alt="Mítica icono circular"
                         className="h-16 w-16 object-contain"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   </motion.div>
@@ -156,6 +160,8 @@ const Navbar = () => {
                     alt="MÍTICA"
                     className="w-auto object-contain"
                     style={{ height: 26, width: 'auto' }}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </motion.div>
               </div>
@@ -174,6 +180,8 @@ const Navbar = () => {
               src="/images/brand/logo.png"
               alt="MÍTICA"
               className="h-4 w-auto object-contain"
+              loading="lazy"
+              decoding="async"
             />
           </Link>
         </div>
@@ -285,6 +293,8 @@ const Navbar = () => {
                 src="/images/brand/logo.png"
                 alt="MÍTICA"
                 className="h-10 w-auto object-contain"
+                loading="lazy"
+                decoding="async"
               />
 
               <button
@@ -432,6 +442,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                     height={260}
                     className="max-h-full w-auto object-contain"
                     loading="eager"
+                    decoding="async"
                   />
                 </div>
               </div>
@@ -462,6 +473,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                       height={b.h}
                       className="object-contain w-[160px] md:w-[150px] lg:w-[160px]"
                       loading="lazy"
+                      decoding="async"
                     />
                   </a>
                 ))}
@@ -479,6 +491,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
               alt="Mítica Burgers"
               className="h-28 md:h-32 lg:h-36 w-auto max-w-[220px] object-contain mb-6"
               loading="lazy"
+              decoding="async"
             />
 
             <p className="text-gray-500 text-xs font-rethink">

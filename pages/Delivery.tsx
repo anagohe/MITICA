@@ -1,5 +1,5 @@
 // src/pages/Delivery.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Title, TitleVariant } from '../components/Typography';
 import { MessageCircle, Apple, Play, ChevronRight, X } from 'lucide-react';
 import { client } from '../sanity/client';
@@ -7,8 +7,13 @@ import imageUrlBuilder from '@sanity/image-url';
 
 // ==== Sanity image builder ====
 const builder = imageUrlBuilder(client);
-function urlFor(source: any) {
-  return builder.image(source).url();
+
+// ✅ Optimización: urlFor con width/height/quality + auto(format)
+function urlFor(source: any, w: number = 1400, h?: number, q: number = 80) {
+  let img = builder.image(source).width(w).quality(q).auto('format');
+  if (h) img = img.height(h).fit('crop');
+  else img = img.fit('max');
+  return img.url();
 }
 
 // ==== Tipo de deliveryPage en Sanity ====
@@ -121,8 +126,15 @@ const Delivery = () => {
   // ==== URLs SIN fallbacks ====
   const hero = data?.hero;
 
-  const appBannerImageUrl = data?.appBannerImage ? urlFor(data.appBannerImage) : undefined;
-  const choiceImageUrl = data?.choiceImage ? urlFor(data.choiceImage) : undefined;
+  const appBannerImageUrl = useMemo(
+    () => (data?.appBannerImage ? urlFor(data.appBannerImage, 900, undefined, 80) : undefined),
+    [data?.appBannerImage]
+  );
+
+  const choiceImageUrl = useMemo(
+    () => (data?.choiceImage ? urlFor(data.choiceImage, 900, undefined, 85) : undefined),
+    [data?.choiceImage]
+  );
 
   const benefitsFromSanity = !!(data?.benefits && data.benefits.length > 0);
 
@@ -136,8 +148,35 @@ const Delivery = () => {
   const desktopVideoUrl = hero?.videoFile?.asset?.url;
   const mobileVideoUrl = hero?.mobileVideoFile?.asset?.url;
 
-  const desktopImgUrl = hero?.desktopImage ? urlFor(hero.desktopImage) : undefined;
-  const mobileImgUrl = hero?.mobileImage ? urlFor(hero.mobileImage) : undefined;
+  const desktopImgUrl = useMemo(
+    () => (hero?.desktopImage ? urlFor(hero.desktopImage, 1600, 900, 80) : undefined),
+    [hero?.desktopImage]
+  );
+  const desktopImgSrcSet = useMemo(() => {
+    const s = hero?.desktopImage;
+    return s
+      ? [
+          `${urlFor(s, 960, 540, 80)} 960w`,
+          `${urlFor(s, 1280, 720, 80)} 1280w`,
+          `${urlFor(s, 1600, 900, 80)} 1600w`,
+        ].join(', ')
+      : undefined;
+  }, [hero?.desktopImage]);
+
+  const mobileImgUrl = useMemo(
+    () => (hero?.mobileImage ? urlFor(hero.mobileImage, 900, 1200, 80) : undefined),
+    [hero?.mobileImage]
+  );
+  const mobileImgSrcSet = useMemo(() => {
+    const s = hero?.mobileImage;
+    return s
+      ? [
+          `${urlFor(s, 480, 640, 80)} 480w`,
+          `${urlFor(s, 720, 960, 80)} 720w`,
+          `${urlFor(s, 900, 1200, 80)} 900w`,
+        ].join(', ')
+      : undefined;
+  }, [hero?.mobileImage]);
 
   const hasAnyHeroMedia =
     (hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl)) ||
@@ -158,8 +197,15 @@ const Delivery = () => {
   const appIsExternal = ctaApp?.type !== 'internal';
   const whatsappIsExternal = ctaWhatsapp?.type !== 'internal';
 
-  const appLabelImgUrl = ctaApp?.labelImage ? urlFor(ctaApp.labelImage) : undefined;
-  const whatsappLabelImgUrl = ctaWhatsapp?.labelImage ? urlFor(ctaWhatsapp.labelImage) : undefined;
+  const appLabelImgUrl = useMemo(
+    () => (ctaApp?.labelImage ? urlFor(ctaApp.labelImage, 256, 256, 85) : undefined),
+    [ctaApp?.labelImage]
+  );
+
+  const whatsappLabelImgUrl = useMemo(
+    () => (ctaWhatsapp?.labelImage ? urlFor(ctaWhatsapp.labelImage, 256, 256, 85) : undefined),
+    [ctaWhatsapp?.labelImage]
+  );
 
   // ✅ Modal links (Sanity)
   const modalTitle = ctaApp?.modalTitle || 'DESCARGA LA APP';
@@ -191,6 +237,7 @@ const Delivery = () => {
               muted
               loop
               playsInline
+              preload="metadata"
               src={desktopVideoUrl || mobileVideoUrl}
             />
 
@@ -201,6 +248,7 @@ const Delivery = () => {
               muted
               loop
               playsInline
+              preload="metadata"
               src={mobileVideoUrl || desktopVideoUrl}
             />
           </>
@@ -210,8 +258,13 @@ const Delivery = () => {
             {desktopImgUrl && (
               <img
                 src={desktopImgUrl}
+                srcSet={desktopImgSrcSet}
+                sizes="100vw"
                 alt={hero?.title || 'Delivery'}
                 className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
               />
             )}
 
@@ -219,8 +272,13 @@ const Delivery = () => {
             {mobileImgUrl && (
               <img
                 src={mobileImgUrl}
+                srcSet={mobileImgSrcSet}
+                sizes="100vw"
                 alt={hero?.title || 'Delivery'}
                 className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
               />
             )}
 
@@ -275,6 +333,8 @@ const Delivery = () => {
                     src={appBannerImageUrl}
                     alt="Mítica Boxes"
                     className="w-full max-w-[380px] h-auto object-contain mx-auto lg:mx-0"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               )}
@@ -312,6 +372,8 @@ const Delivery = () => {
                         src={appLabelImgUrl || '/images/brand/mascot.png'}
                         alt="Pedir en app"
                         className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </button>
                   ) : appHref ? (
@@ -326,6 +388,8 @@ const Delivery = () => {
                         src={appLabelImgUrl || '/images/brand/mascot.png'}
                         alt="Pedir en app"
                         className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </a>
                   ) : (
@@ -334,6 +398,8 @@ const Delivery = () => {
                         src="/images/brand/mascot.png"
                         alt="Pedir en app"
                         className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </button>
                   )}
@@ -352,6 +418,8 @@ const Delivery = () => {
                           src={whatsappLabelImgUrl}
                           alt="Ordenar por WhatsApp"
                           className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <MessageCircle className="w-8 h-8 md:w-10 md:h-10 text-white group-hover:text-mitica-yellow transition-colors" />
@@ -381,6 +449,8 @@ const Delivery = () => {
                       src={choiceImageUrl}
                       alt="Mítica App Preview"
                       className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
                   <div className="absolute -inset-2 border-2 border-blue-400/20 rounded-[3.2rem] -z-0"></div>
@@ -486,9 +556,11 @@ const Delivery = () => {
                   <div className="w-24 h-24 md:w-28 md:h-28 bg-black rounded-full flex items-center justify-center shadow-2xl mb-8">
                     {benefit.icon ? (
                       <img
-                        src={urlFor(benefit.icon)}
+                        src={urlFor(benefit.icon, 256, 256, 85)}
                         alt={benefit.title || `Beneficio ${idx + 1}`}
                         className="w-14 h-14 md:w-16 md:h-16 object-contain"
+                        loading="lazy"
+                        decoding="async"
                         style={{
                           filter:
                             'brightness(0) saturate(100%) invert(83%) sepia(71%) saturate(900%) hue-rotate(2deg) brightness(105%) contrast(103%)',

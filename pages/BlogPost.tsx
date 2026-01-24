@@ -8,8 +8,13 @@ import { PortableText } from '@portabletext/react';
 
 // ===== Sanity helpers =====
 const builder = imageUrlBuilder(client);
-function urlFor(source: any) {
-  return builder.image(source).url();
+
+// ✅ Imagen optimizada (evita .url() original gigante)
+function urlFor(source: any, w: number = 1400, h?: number, q: number = 80) {
+  let img = builder.image(source).width(w).quality(q).auto('format');
+  if (h) img = img.height(h).fit('crop');
+  else img = img.fit('max');
+  return img.url();
 }
 
 function formatDate(iso?: string | null): string {
@@ -88,9 +93,19 @@ const BlogPost: React.FC = () => {
 
   const metaDate = formatDate(post?.publishedAt);
   const metaCategory = post?.category?.toUpperCase() || 'NOTICIAS';
+
+  // ✅ hero optimizado (no original)
   const heroImageUrl = post?.mainImage
-    ? urlFor(post.mainImage)
+    ? urlFor(post.mainImage, 1400, 900, 82)
     : 'https://picsum.photos/1200/800?burgerdetail';
+
+  const heroSrcSet = post?.mainImage
+    ? [
+        `${urlFor(post.mainImage, 800, 520, 82)} 800w`,
+        `${urlFor(post.mainImage, 1200, 780, 82)} 1200w`,
+        `${urlFor(post.mainImage, 1400, 900, 82)} 1400w`,
+      ].join(', ')
+    : undefined;
 
   // Ahora acepta hasta 6 fotos en la galería
   const galleryImages = (post?.gallery || []).slice(0, 6);
@@ -113,8 +128,13 @@ const BlogPost: React.FC = () => {
         <div className="w-full h-96 rounded-2xl overflow-hidden mb-12">
           <img
             src={heroImageUrl}
+            srcSet={heroSrcSet}
+            sizes="(min-width: 768px) 768px, 100vw"
             className="w-full h-full object-cover"
             alt={post?.title || 'Detalle del blog'}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
           />
         </div>
 
@@ -143,9 +163,17 @@ const BlogPost: React.FC = () => {
               {galleryImages.map((img: any, idx: number) => (
                 <div key={idx} className="w-full h-48 md:h-56 overflow-hidden rounded-lg">
                   <img
-                    src={urlFor(img)}
+                    src={urlFor(img, 800, 600, 80)}
+                    srcSet={[
+                      `${urlFor(img, 480, 360, 80)} 480w`,
+                      `${urlFor(img, 640, 480, 80)} 640w`,
+                      `${urlFor(img, 800, 600, 80)} 800w`,
+                    ].join(', ')}
+                    sizes="(min-width: 768px) 50vw, 100vw"
                     className="w-full h-full object-cover"
                     alt={`Imagen ${idx + 1}`}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               ))}

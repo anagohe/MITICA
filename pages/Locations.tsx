@@ -1,21 +1,10 @@
 // pages/Locations.tsx
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useRef,
-  useCallback,
-} from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Title, TitleVariant, BodyText } from '../components/Typography';
 import { Link } from 'react-router-dom';
 import { client } from '../sanity/client';
 import imageUrlBuilder from '@sanity/image-url';
-import {
-  GoogleMap,
-  Marker,
-  MarkerClusterer,
-  useJsApiLoader, // ✅ CAMBIO
-} from '@react-google-maps/api';
+import { GoogleMap, Marker, MarkerClusterer, useJsApiLoader } from '@react-google-maps/api';
 
 // ================= Sanity image builder =================
 const builder = imageUrlBuilder(client);
@@ -25,8 +14,7 @@ function urlFor(source: any) {
 
 // ================= Google Maps Config =================
 // ✅ KEY desde .env (Vite)
-const GOOGLE_MAPS_API_KEY = import.meta.env
-  .VITE_GOOGLE_MAPS_API_KEY as string;
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 
 if (!GOOGLE_MAPS_API_KEY) {
   console.error('Missing VITE_GOOGLE_MAPS_API_KEY');
@@ -180,26 +168,19 @@ const LocationsPage: React.FC = () => {
 
   const [pageTitle, setPageTitle] = useState('Encuentra tu Restaurante');
   const [pageSubtitle, setPageSubtitle] = useState<string>('');
-  const [searchPlaceholder, setSearchPlaceholder] = useState(
-    'Escribe al menos 3 caracteres'
-  );
-  const [filterButtonLabel, setFilterButtonLabel] =
-    useState('Mostrar filtros');
+  const [searchPlaceholder, setSearchPlaceholder] = useState('Escribe al menos 3 caracteres');
+  const [filterButtonLabel, setFilterButtonLabel] = useState('Mostrar filtros');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  const [activeLocationId, setActiveLocationId] = useState<string | null>(
-    null
-  );
+  const [activeLocationId, setActiveLocationId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const [placeDetails, setPlaceDetails] = useState<
-    Record<string, GooglePlaceDetails>
-  >({});
+  const [placeDetails, setPlaceDetails] = useState<Record<string, GooglePlaceDetails>>({});
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
 
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -213,24 +194,21 @@ const LocationsPage: React.FC = () => {
 
   // ============= Fetch =============
   useEffect(() => {
+    let mounted = true;
+
     const fetchLocationsPage = async () => {
       try {
         const data = await client.fetch<LocationsPageSanity>(LOCATIONS_QUERY);
+        if (!mounted) return;
 
         if (data?.title) setPageTitle(data.title);
         if (data?.subtitle) setPageSubtitle(data.subtitle);
-        if (data?.searchPlaceholder)
-          setSearchPlaceholder(data.searchPlaceholder);
-        if (data?.filterButtonLabel)
-          setFilterButtonLabel(data.filterButtonLabel);
+        if (data?.searchPlaceholder) setSearchPlaceholder(data.searchPlaceholder);
+        if (data?.filterButtonLabel) setFilterButtonLabel(data.filterButtonLabel);
 
         const mappedLocations: RestaurantLocation[] =
           data?.locations
-            ?.filter(
-              (l) =>
-                typeof l.latitude === 'number' &&
-                typeof l.longitude === 'number'
-            )
+            ?.filter((l) => typeof l.latitude === 'number' && typeof l.longitude === 'number')
             .map((loc) => ({
               id: loc._key,
               name: loc.name ?? 'Restaurante Mítica',
@@ -259,28 +237,31 @@ const LocationsPage: React.FC = () => {
         console.error('Error fetching locationsPage from Sanity', error);
       }
     };
+
     fetchLocationsPage();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // ============= Helpers & Handlers =============
   const cities = useMemo(() => {
-    const set = new Set(
-      locations
-        .map((loc) => loc.city.trim())
-        .filter((c) => c.length > 0)
-    );
+    const set = new Set(locations.map((loc) => loc.city.trim()).filter((c) => c.length > 0));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [locations]);
 
   const filteredLocations = useMemo(() => {
     let list = locations;
+
     if (selectedCity) {
-      list = list.filter(
-        (loc) => loc.city.toLowerCase() === selectedCity.toLowerCase()
-      );
+      const cityLower = selectedCity.toLowerCase();
+      list = list.filter((loc) => loc.city.toLowerCase() === cityLower);
     }
-    if (searchTerm.trim().length >= 3) {
-      const term = searchTerm.toLowerCase();
+
+    const trimmed = searchTerm.trim();
+    if (trimmed.length >= 3) {
+      const term = trimmed.toLowerCase();
       list = list.filter(
         (loc) =>
           loc.name.toLowerCase().includes(term) ||
@@ -289,6 +270,7 @@ const LocationsPage: React.FC = () => {
           loc.address.toLowerCase().includes(term)
       );
     }
+
     return list;
   }, [locations, searchTerm, selectedCity]);
 
@@ -301,121 +283,124 @@ const LocationsPage: React.FC = () => {
     mapRef.current = map;
   }, []);
 
-  const handleDirectionsClick = (location: RestaurantLocation) => {
+  const handleDirectionsClick = useCallback((location: RestaurantLocation) => {
     if (mapRef.current) {
-      mapRef.current.panTo({
-        lat: location.latitude,
-        lng: location.longitude,
-      });
+      mapRef.current.panTo({ lat: location.latitude, lng: location.longitude });
       mapRef.current.setZoom(17);
     }
     const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
     window.open(url, '_blank');
-  };
-
-  // =========== Google Places: detalles ===========
-  const fetchPlaceDetails = useCallback((loc: RestaurantLocation) => {
-    if (!mapRef.current) return;
-
-    const service = new google.maps.places.PlacesService(mapRef.current);
-    setIsDetailsLoading(true);
-
-    const query = `${loc.name} ${loc.city} ${loc.address}`;
-
-    const findRequest: google.maps.places.FindPlaceFromQueryRequest = {
-      query,
-      fields: ['place_id'],
-    };
-
-    service.findPlaceFromQuery(findRequest, (results, status) => {
-      if (
-        status !== google.maps.places.PlacesServiceStatus.OK ||
-        !results ||
-        !results[0].place_id
-      ) {
-        setIsDetailsLoading(false);
-        return;
-      }
-
-      const placeId = results[0].place_id;
-
-      const detailsRequest: google.maps.places.PlaceDetailsRequest = {
-        placeId,
-        fields: [
-          'name',
-          'rating',
-          'user_ratings_total',
-          'formatted_phone_number',
-          'opening_hours',
-          'photos',
-        ],
-      };
-
-      service.getDetails(detailsRequest, (place, status2) => {
-        setIsDetailsLoading(false);
-        if (
-          status2 !== google.maps.places.PlacesServiceStatus.OK ||
-          !place
-        )
-          return;
-
-        const photoUrl =
-          place.photos && place.photos.length > 0
-            ? place.photos[0].getUrl({ maxWidth: 800, maxHeight: 400 })
-            : undefined;
-
-        setPlaceDetails((prev) => ({
-          ...prev,
-          [loc.id]: {
-            name: place.name ?? loc.name,
-            rating: place.rating ?? undefined,
-            userRatingsTotal: place.user_ratings_total ?? undefined,
-            phoneNumber: place.formatted_phone_number ?? loc.phone,
-            weekdayText: place.opening_hours?.weekday_text ?? undefined,
-            photoUrl,
-          },
-        }));
-      });
-    });
   }, []);
 
-  const handleMarkerClick = (location: RestaurantLocation) => {
-    setActiveLocationId(location.id);
-    setViewMode('detail');
-    setIsSidebarOpen(true);
+  // =========== Google Places: detalles ===========
+  const fetchPlaceDetails = useCallback(
+    (loc: RestaurantLocation) => {
+      if (!mapRef.current) return;
 
-    if (mapRef.current) {
-      mapRef.current.panTo({
-        lat: location.latitude,
-        lng: location.longitude,
+      // ✅ Optimización: si ya tenemos detalles, no vuelvas a pedirlos
+      if (placeDetails[loc.id]) return;
+
+      const service = new google.maps.places.PlacesService(mapRef.current);
+      setIsDetailsLoading(true);
+
+      const query = `${loc.name} ${loc.city} ${loc.address}`;
+
+      const findRequest: google.maps.places.FindPlaceFromQueryRequest = {
+        query,
+        fields: ['place_id'],
+      };
+
+      service.findPlaceFromQuery(findRequest, (results, status) => {
+        if (
+          status !== google.maps.places.PlacesServiceStatus.OK ||
+          !results ||
+          !results[0].place_id
+        ) {
+          setIsDetailsLoading(false);
+          return;
+        }
+
+        const placeId = results[0].place_id;
+
+        const detailsRequest: google.maps.places.PlaceDetailsRequest = {
+          placeId,
+          fields: [
+            'name',
+            'rating',
+            'user_ratings_total',
+            'formatted_phone_number',
+            'opening_hours',
+            'photos',
+          ],
+        };
+
+        service.getDetails(detailsRequest, (place, status2) => {
+          setIsDetailsLoading(false);
+          if (status2 !== google.maps.places.PlacesServiceStatus.OK || !place) return;
+
+          const photoUrl =
+            place.photos && place.photos.length > 0
+              ? place.photos[0].getUrl({ maxWidth: 800, maxHeight: 400 })
+              : undefined;
+
+          setPlaceDetails((prev) => ({
+            ...prev,
+            [loc.id]: {
+              name: place.name ?? loc.name,
+              rating: place.rating ?? undefined,
+              userRatingsTotal: place.user_ratings_total ?? undefined,
+              phoneNumber: place.formatted_phone_number ?? loc.phone,
+              weekdayText: place.opening_hours?.weekday_text ?? undefined,
+              photoUrl,
+            },
+          }));
+        });
       });
-      mapRef.current.setZoom(16);
-    }
+    },
+    [placeDetails]
+  );
 
-    fetchPlaceDetails(location);
-  };
+  const handleMarkerClick = useCallback(
+    (location: RestaurantLocation) => {
+      setActiveLocationId(location.id);
+      setViewMode('detail');
+      setIsSidebarOpen(true);
 
-  const handleListSelect = (location: RestaurantLocation) => {
-    handleMarkerClick(location);
-  };
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat: location.latitude, lng: location.longitude });
+        mapRef.current.setZoom(16);
+      }
 
-  const handleMoreInfo = (location: RestaurantLocation) => {
-    handleMarkerClick(location);
-  };
+      fetchPlaceDetails(location);
+    },
+    [fetchPlaceDetails]
+  );
 
-  const handleBackToList = () => {
+  const handleListSelect = useCallback(
+    (location: RestaurantLocation) => {
+      handleMarkerClick(location);
+    },
+    [handleMarkerClick]
+  );
+
+  const handleMoreInfo = useCallback(
+    (location: RestaurantLocation) => {
+      handleMarkerClick(location);
+    },
+    [handleMarkerClick]
+  );
+
+  const handleBackToList = useCallback(() => {
     setViewMode('list');
     setActiveLocationId(null);
     if (mapRef.current) {
       mapRef.current.setZoom(5);
       mapRef.current.panTo(DEFAULT_CENTER);
     }
-  };
+  }, []);
 
   const details =
-    activeLocation && placeDetails[activeLocation.id]
-      ? placeDetails[activeLocation.id]
-      : undefined;
+    activeLocation && placeDetails[activeLocation.id] ? placeDetails[activeLocation.id] : undefined;
 
   return (
     <div className="w-full bg-[#F5F7FB]">
@@ -459,9 +444,7 @@ const LocationsPage: React.FC = () => {
                   options={{
                     disableDefaultUI: true,
                     zoomControl: true,
-                    styles: [
-                      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-                    ],
+                    styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
                   }}
                 >
                   <MarkerClusterer
@@ -503,9 +486,7 @@ const LocationsPage: React.FC = () => {
                   <div
                     className={
                       'bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl w-full flex flex-col pointer-events-auto overflow-hidden border border-slate-100 ' +
-                      (viewMode === 'list' && !showFilters
-                        ? 'h-auto max-h-[260px]'
-                        : 'h-full')
+                      (viewMode === 'list' && !showFilters ? 'h-auto max-h-[260px]' : 'h-full')
                     }
                   >
                     {/* VISTA 1: LISTA */}
@@ -597,9 +578,7 @@ const LocationsPage: React.FC = () => {
                                 {cities.map((c) => (
                                   <button
                                     key={c}
-                                    onClick={() =>
-                                      setSelectedCity(c === selectedCity ? null : c)
-                                    }
+                                    onClick={() => setSelectedCity(c === selectedCity ? null : c)}
                                     className={`text-[10px] px-2 py-1 rounded border ${
                                       selectedCity === c
                                         ? 'bg-[#F6BA27] text-white border-[#F6BA27]'
@@ -693,9 +672,7 @@ const LocationsPage: React.FC = () => {
                             onClick={handleBackToList}
                             className="flex items-center gap-2 text-slate-500 hover:text-blue-900 transition-colors text-sm font-rethink-bold"
                           >
-                            <span className="bg-slate-100 p-1.5 rounded-full">
-                              ←
-                            </span>
+                            <span className="bg-slate-100 p-1.5 rounded-full">←</span>
                             Volver
                           </button>
 
@@ -748,9 +725,7 @@ const LocationsPage: React.FC = () => {
                                 <div className="flex text-yellow-400 text-xs">
                                   {'★★★★★'.split('').map((_, idx) => (
                                     <span key={idx}>
-                                      {details.rating && idx < Math.round(details.rating)
-                                        ? '★'
-                                        : '☆'}
+                                      {details.rating && idx < Math.round(details.rating) ? '★' : '☆'}
                                     </span>
                                   ))}
                                 </div>
@@ -903,10 +878,7 @@ const LocationsPage: React.FC = () => {
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-16">
               {ctaCards.map((card) => (
-                <div
-                  key={card.id}
-                  className="flex flex-col items-center text-center group cursor-pointer"
-                >
+                <div key={card.id} className="flex flex-col items-center text-center group cursor-pointer">
                   {card.iconUrl && (
                     <img
                       src={card.iconUrl}
@@ -918,10 +890,7 @@ const LocationsPage: React.FC = () => {
                     {card.title}
                   </h3>
                   {card.description && (
-                    <BodyText
-                      text={card.description}
-                      className="text-sm text-slate-600 mb-3"
-                    />
+                    <BodyText text={card.description} className="text-sm text-slate-600 mb-3" />
                   )}
                   {card.linkText && (
                     <Link

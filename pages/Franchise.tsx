@@ -118,12 +118,6 @@ type FranchiseData = {
 const Franchise = () => {
   const [data, setData] = useState<FranchiseData | null>(null)
 
-  // ✅ Detectar desktop (igual que About)
-  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true
-    return window.matchMedia('(min-width: 768px)').matches
-  })
-
   // ✅ Form state (funcional)
   const [form, setForm] = useState({
     name: '',
@@ -134,22 +128,6 @@ const Franchise = () => {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(min-width: 768px)')
-    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
-
-    if (mq.addEventListener) mq.addEventListener('change', onChange)
-    else mq.addListener(onChange)
-
-    setIsDesktop(mq.matches)
-
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', onChange)
-      else mq.removeListener(onChange)
-    }
-  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -221,7 +199,8 @@ const Franchise = () => {
       ].join(', ')
     : undefined
 
-  const hasHeroMedia = !!heroDesktopVideoUrl || !!heroMobileVideoUrl || !!heroDesktopDefault || !!heroMobileDefault
+  const hasHeroMedia =
+    !!heroDesktopVideoUrl || !!heroMobileVideoUrl || !!heroDesktopDefault || !!heroMobileDefault
 
   // ===== CONTENIDO =====
   const pageTitle = data?.pageTitle || ''
@@ -375,7 +354,9 @@ const Franchise = () => {
             ) : null}
 
             {heroSubtitle ? (
-              <p className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${heroSubtitleColor}`}>
+              <p
+                className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${heroSubtitleColor}`}
+              >
                 {heroSubtitle}
               </p>
             ) : null}
@@ -508,9 +489,7 @@ const Franchise = () => {
                 </div>
 
                 {error ? <p className="text-red-300 text-sm text-center">{error}</p> : null}
-                {sent ? (
-                  <p className="text-green-300 text-sm text-center">¡Listo! Te contactaremos pronto.</p>
-                ) : null}
+                {sent ? <p className="text-green-300 text-sm text-center">¡Listo! Te contactaremos pronto.</p> : null}
 
                 <button
                   type="submit"
@@ -520,9 +499,6 @@ const Franchise = () => {
                   {sending ? 'Enviando...' : formButtonText}
                 </button>
               </form>
-
-              {/* Nota opcional (debug): si quieres ver si falta el correo en sanity */}
-              {/* {!recipientEmail ? <p className="text-yellow-200 text-xs mt-4 text-center">Configura recipientEmail en Sanity</p> : null} */}
             </div>
           </div>
         </div>

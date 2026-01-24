@@ -179,14 +179,15 @@ const About: React.FC = () => {
 
   // ✅ HERO IMAGES OPTIMIZADAS
   const heroDesktopDefault = hero?.desktopImage
-    ? imgUrl(hero.desktopImage, 2200, undefined, 80)
+    ? imgUrl(hero.desktopImage, 2000, undefined, 80)
     : FALLBACK_HERO_DESKTOP;
 
   const heroDesktopSrcSet = hero?.desktopImage
     ? [
+        `${imgUrl(hero.desktopImage, 960, undefined, 80)} 960w`,
         `${imgUrl(hero.desktopImage, 1280, undefined, 80)} 1280w`,
-        `${imgUrl(hero.desktopImage, 1920, undefined, 80)} 1920w`,
-        `${imgUrl(hero.desktopImage, 2560, undefined, 80)} 2560w`,
+        `${imgUrl(hero.desktopImage, 1600, undefined, 80)} 1600w`,
+        `${imgUrl(hero.desktopImage, 2000, undefined, 80)} 2000w`,
       ].join(', ')
     : undefined;
 
@@ -196,11 +197,11 @@ const About: React.FC = () => {
 
   const heroMobileSrcSet = hero?.mobileImage
     ? [
+        `${imgUrlContain(hero.mobileImage, 360, 80)} 360w`,
         `${imgUrlContain(hero.mobileImage, 480, 80)} 480w`,
         `${imgUrlContain(hero.mobileImage, 640, 80)} 640w`,
         `${imgUrlContain(hero.mobileImage, 750, 80)} 750w`,
         `${imgUrlContain(hero.mobileImage, 900, 80)} 900w`,
-        `${imgUrlContain(hero.mobileImage, 1080, 80)} 1080w`,
       ].join(', ')
     : undefined;
 
@@ -209,11 +210,28 @@ const About: React.FC = () => {
 
   // ✅ OTRAS IMÁGENES (optimización suave)
   const whoSideImageUrl = who?.sideImage
-    ? imgUrl(who.sideImage, 1400, undefined, 80)
+    ? imgUrl(who.sideImage, 1200, undefined, 80)
     : FALLBACK_WHO_SIDE;
+
+  const whoSideSrcSet = who?.sideImage
+    ? [
+        `${imgUrl(who.sideImage, 640, undefined, 80)} 640w`,
+        `${imgUrl(who.sideImage, 960, undefined, 80)} 960w`,
+        `${imgUrl(who.sideImage, 1200, undefined, 80)} 1200w`,
+      ].join(', ')
+    : undefined;
+
   const centerImageUrl = vm?.centerImage
     ? imgUrlContain(vm.centerImage, 900, 85)
     : FALLBACK_CENTER;
+
+  const centerSrcSet = vm?.centerImage
+    ? [
+        `${imgUrlContain(vm.centerImage, 480, 85)} 480w`,
+        `${imgUrlContain(vm.centerImage, 720, 85)} 720w`,
+        `${imgUrlContain(vm.centerImage, 900, 85)} 900w`,
+      ].join(', ')
+    : undefined;
 
   const values =
     data?.values && data.values.length > 0
@@ -228,8 +246,17 @@ const About: React.FC = () => {
 
   const manifestoBgImageUrl =
     manifestoHasImageBg && manifesto?.backgroundImage
-      ? imgUrl(manifesto.backgroundImage, 2400, undefined, 70)
+      ? imgUrl(manifesto.backgroundImage, 2000, undefined, 70)
       : null;
+
+  const manifestoBgSrcSet =
+    manifestoHasImageBg && manifesto?.backgroundImage
+      ? [
+          `${imgUrl(manifesto.backgroundImage, 960, undefined, 70)} 960w`,
+          `${imgUrl(manifesto.backgroundImage, 1400, undefined, 70)} 1400w`,
+          `${imgUrl(manifesto.backgroundImage, 2000, undefined, 70)} 2000w`,
+        ].join(', ')
+      : undefined;
 
   // ===== PortableText components =====
   const portableLight = useMemo(
@@ -445,6 +472,8 @@ const About: React.FC = () => {
               <div className="w-full aspect-[4/3] overflow-hidden">
                 <img
                   src={whoSideImageUrl}
+                  srcSet={whoSideSrcSet}
+                  sizes="(min-width: 768px) 50vw, 100vw"
                   alt="Quiénes somos"
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -495,6 +524,8 @@ const About: React.FC = () => {
           <div className="w-72 md:w-80 lg:w-96 flex-shrink-0 mx-1 h-64 md:h-72 flex items-end justify-center overflow-hidden">
             <img
               src={centerImageUrl}
+              srcSet={centerSrcSet}
+              sizes="(min-width: 1024px) 384px, 320px"
               alt="Visión y misión"
               className="w-full object-contain transform transition-transform duration-300 hover:scale-110 hover:-translate-y-1"
               style={{ transformOrigin: 'center bottom' }}
@@ -559,6 +590,8 @@ const About: React.FC = () => {
             <div className="absolute inset-0 opacity-25">
               <img
                 src={manifestoBgImageUrl}
+                srcSet={manifestoBgSrcSet}
+                sizes="100vw"
                 className="w-full h-full object-cover"
                 alt="Fondo manifiesto"
                 loading="lazy"
