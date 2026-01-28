@@ -17,17 +17,14 @@ type HeroType = {
   title?: string;
   subtitle?: string;
 
-  // ✅ nuevo
   titleVariant?: 'regular' | 'textured';
-  titleColor?: string; // tailwind class: text-white | text-[#F6BA27] | text-[#1D1D1B]
-  subtitleColor?: string; // tailwind class
+  titleColor?: string;
+  subtitleColor?: string;
 
-  // ✅ legacy
-  textColor?: string; // text-white | text-black | text-mitica-yellow
+  textColor?: string;
 
-  // ✅ overlay opcional (desde Sanity)
   overlayEnabled?: boolean;
-  overlayOpacity?: number; // 0-80
+  overlayOpacity?: number;
 };
 
 type Section = {
@@ -45,19 +42,15 @@ type Sauce = {
 type IngredientsPageDoc = {
   hero?: HeroType;
 
-  // ✅ nuevos
   sectionsTitle?: string;
   saucesTitle?: string;
   nutritionTitle?: string;
 
   sections?: Section[];
 
-  // ✅ CAMBIO: ahora blockContent
   saucesIntro?: any[];
-
   sauces?: Sauce[];
 
-  // ✅ CAMBIO: ahora blockContent
   nutritionText?: any[];
 
   showFooterBanner?: boolean;
@@ -65,6 +58,17 @@ type IngredientsPageDoc = {
 
 function getFileUrl(file: any): string | undefined {
   return file?.asset?.url || file?.url || undefined;
+}
+
+// ===== Imagen helpers (evita originales) =====
+function imgCrop(source: any, w: number, h: number, q = 75) {
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).url();
+}
+function imgMax(source: any, w: number, q = 75) {
+  return urlFor(source).width(w).fit('max').quality(q).url();
+}
+function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 75) {
+  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ');
 }
 
 const Ingredients: React.FC = () => {
@@ -157,10 +161,7 @@ const Ingredients: React.FC = () => {
   if (!page) {
     return (
       <div className="w-full bg-white min-h-screen flex items-center justify-center px-4">
-        <p
-          className="text-red-600 text-center"
-          style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
-        >
+        <p className="text-red-600 text-center" style={{ fontFamily: FONT_BODY, fontWeight: 400 }}>
           {errorMsg || 'No se pudo cargar la página de ingredientes desde Sanity.'}
         </p>
       </div>
@@ -176,7 +177,6 @@ const Ingredients: React.FC = () => {
   const saucesTitle = page.saucesTitle;
   const nutritionTitle = page.nutritionTitle;
 
-  // ✅ CAMBIO: ahora blockContent
   const saucesIntro = page.saucesIntro;
 
   const desktopVideoUrl = getFileUrl(hero?.videoFile);
@@ -196,81 +196,116 @@ const Ingredients: React.FC = () => {
 
   // ✅ TEXTURED: usamos TEXTURED_BORDERED
   const heroTitleVariant =
-    hero?.titleVariant === 'textured'
-      ? TitleVariant.TEXTURED_BORDERED
-      : TitleVariant.REGULAR;
+    hero?.titleVariant === 'textured' ? TitleVariant.TEXTURED_BORDERED : TitleVariant.REGULAR;
+
+  // ✅ Hero imágenes optimizadas + srcSet
+  const desktopHero =
+    hero?.desktopImage
+      ? {
+          src: imgCrop(hero.desktopImage, 1600, 900, 75),
+          srcSet: srcSetCrop(
+            hero.desktopImage,
+            [
+              [960, 540],
+              [1280, 720],
+              [1600, 900],
+            ],
+            75
+          ),
+        }
+      : null;
+
+  const mobileHero =
+    hero?.mobileImage
+      ? {
+          src: imgCrop(hero.mobileImage, 900, 1200, 75),
+          srcSet: srcSetCrop(
+            hero.mobileImage,
+            [
+              [480, 640],
+              [720, 960],
+              [900, 1200],
+            ],
+            75
+          ),
+        }
+      : desktopHero
+      ? { src: desktopHero.src, srcSet: desktopHero.srcSet }
+      : null;
 
   return (
     <div className="w-full">
       {/* === HERO DESDE SANITY === */}
       <div className="relative h-screen w-full bg-mitica-black overflow-hidden">
-        {hero?.mediaType === 'video' ? (
+        {hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl) ? (
           <>
             {/* Desktop video */}
-            {desktopVideoUrl && (
-              <video
-                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-                autoPlay
-                muted
-                loop
-                playsInline
-                src={desktopVideoUrl}
-              />
-            )}
+            <video
+              className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              src={desktopVideoUrl || mobileVideoUrl}
+            />
 
             {/* Mobile video */}
-            {mobileVideoUrl && (
-              <video
-                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-                autoPlay
-                muted
-                loop
-                playsInline
-                src={mobileVideoUrl}
-              />
-            )}
+            <video
+              className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              src={mobileVideoUrl || desktopVideoUrl}
+            />
 
-            {/* Fallbacks por si falta video */}
-            {!desktopVideoUrl && hero?.desktopImage && (
-              <img
-                src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
-                alt={hero?.title || 'Ingredientes'}
-                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-              />
-            )}
-            {!mobileVideoUrl && hero?.mobileImage && (
-              <img
-                src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
-                alt={hero?.title || 'Ingredientes'}
-                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-              />
-            )}
+            {/* Fallback: si falta video, usa imagen optimizada (SOLO una con picture) */}
+            {!desktopVideoUrl && !mobileVideoUrl && (desktopHero || mobileHero) ? (
+              <picture className="absolute inset-0 block w-full h-full">
+                {desktopHero ? (
+                  <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
+                ) : null}
+                <img
+                  src={mobileHero?.src || desktopHero?.src || ''}
+                  srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
+                  sizes="100vw"
+                  alt={hero?.title || 'Ingredientes'}
+                  className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </picture>
+            ) : null}
           </>
         ) : (
           <>
-            {hero?.desktopImage && (
-              <img
-                src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
-                alt={hero?.title || 'Ingredientes'}
-                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-              />
-            )}
-            {hero?.mobileImage && (
-              <img
-                src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
-                alt={hero?.title || 'Ingredientes'}
-                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-              />
-            )}
+            {desktopHero || mobileHero ? (
+              <picture className="block w-full h-full">
+                {desktopHero ? (
+                  <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
+                ) : null}
+
+                <img
+                  src={mobileHero?.src || desktopHero?.src || ''}
+                  srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
+                  sizes="100vw"
+                  alt={hero?.title || 'Ingredientes'}
+                  className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </picture>
+            ) : null}
           </>
         )}
 
         {/* ✅ Overlay OPCIONAL desde Sanity */}
         {overlayEnabled && (
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
-          />
+          <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
         )}
 
         {/* ✅ Text sizes iguales a Menu/About */}
@@ -299,15 +334,10 @@ const Ingredients: React.FC = () => {
       {/* === CONTENIDO PRINCIPAL === */}
       <div className="w-full py-20 bg-white">
         <div className="container mx-auto px-6">
-          {/* ✅ TÍTULO ARRIBA DE SECCIONES (más grande) */}
+          {/* ✅ TÍTULO ARRIBA DE SECCIONES */}
           {sectionsTitle && (
             <div className="text-center mb-14">
-              <Title
-                variant={TitleVariant.REGULAR}
-                text={sectionsTitle}
-                align="center"
-                className="text-5xl md:text-6xl"
-              />
+              <Title variant={TitleVariant.REGULAR} text={sectionsTitle} align="center" className="text-5xl md:text-6xl" />
             </div>
           )}
 
@@ -316,14 +346,9 @@ const Ingredients: React.FC = () => {
             const isTextLeft = section.layout === 'text-left' || !section.layout;
 
             return (
-              <div
-                key={idx}
-                className="flex flex-col md:flex-row items-center md:items-stretch gap-16 mb-24"
-              >
+              <div key={idx} className="flex flex-col md:flex-row items-center md:items-stretch gap-16 mb-24">
                 {/* Texto */}
-                <div
-                  className={`w-full md:w-[38%] ${isTextLeft ? 'order-1' : 'order-2'} text-left`}
-                >
+                <div className={`w-full md:w-[38%] ${isTextLeft ? 'order-1' : 'order-2'} text-left`}>
                   {section.title && (
                     <Title
                       variant={TitleVariant.REGULAR}
@@ -348,9 +373,21 @@ const Ingredients: React.FC = () => {
                     } h-[340px] md:h-auto overflow-hidden relative group`}
                   >
                     <img
-                      src={urlFor(section.image).width(1200).height(900).url()}
+                      src={imgCrop(section.image, 1200, 900, 75)}
+                      srcSet={srcSetCrop(
+                        section.image,
+                        [
+                          [720, 540],
+                          [960, 720],
+                          [1200, 900],
+                        ],
+                        75
+                      )}
+                      sizes="(min-width: 768px) 62vw, 100vw"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       alt={section.title || 'Ingredientes Mítica'}
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
                   </div>
@@ -362,7 +399,6 @@ const Ingredients: React.FC = () => {
           {/* ADEREZOS CON IMAGEN */}
           {sauces.length > 0 && (
             <>
-              {/* ✅ Título editable desde Sanity */}
               <div className="text-center mb-10">
                 <Title
                   variant={TitleVariant.REGULAR}
@@ -371,7 +407,6 @@ const Ingredients: React.FC = () => {
                   className="text-4xl md:text-5xl mb-8"
                 />
 
-                {/* ✅ saucesIntro ahora es blockContent */}
                 {Array.isArray(saucesIntro) && saucesIntro.length > 0 ? (
                   <div className="space-y-4">
                     <PortableText value={saucesIntro} components={portableTextCentered} />
@@ -388,7 +423,6 @@ const Ingredients: React.FC = () => {
                 )}
               </div>
 
-              {/* Carrusel a ancho completo */}
               <div className="relative w-screen left-1/2 -translate-x-1/2 overflow-hidden py-10 bg-white group">
                 <div className="flex w-max animate-scroll group-hover:paused">
                   {[...sauces, ...sauces, ...sauces].map((sauce, idx) => (
@@ -396,16 +430,15 @@ const Ingredients: React.FC = () => {
                       <div className="w-24 h-24 rounded-full shadow-lg mb-4 border-4 border-white overflow-hidden transition-transform hover:scale-110 bg-gray-100">
                         {sauce.image && (
                           <img
-                            src={urlFor(sauce.image).width(200).height(200).url()}
+                            src={imgCrop(sauce.image, 200, 200, 80)}
                             alt={sauce.name || 'Aderezo Mítica'}
                             className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         )}
                       </div>
-                      <span
-                        className="text-xs uppercase text-center"
-                        style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
-                      >
+                      <span className="text-xs uppercase text-center" style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}>
                         {sauce.name}
                       </span>
                     </div>
@@ -419,15 +452,10 @@ const Ingredients: React.FC = () => {
           {nutritionText && (
             <div className="mt-16 pt-8 border-t border-gray-200">
               <div className="pl-4 md:pl-6 border-l-4 md:border-l-[6px] border-mitica-yellow">
-                {/* ✅ Título editable desde Sanity */}
-                <h3
-                  className="text-xl mb-3 uppercase"
-                  style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
-                >
+                <h3 className="text-xl mb-3 uppercase" style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}>
                   {nutritionTitle || 'NUTRICIÓN Y ALÉRGENOS'}
                 </h3>
 
-                {/* ✅ nutritionText ahora es blockContent */}
                 {Array.isArray(nutritionText) && nutritionText.length > 0 ? (
                   <div className="space-y-3">
                     <PortableText value={nutritionText} components={portableTextDefault} />
@@ -438,18 +466,10 @@ const Ingredients: React.FC = () => {
           )}
         </div>
 
-        {/* Animación scroll aderezos */}
         <style>{`
-          .animate-scroll {
-            animation: scroll 30s linear infinite;
-          }
-          .group-hover\\:paused:hover {
-            animation-play-state: paused;
-          }
-          @keyframes scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
+          .animate-scroll { animation: scroll 30s linear infinite; }
+          .group-hover\\:paused:hover { animation-play-state: paused; }
+          @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         `}</style>
       </div>
     </div>

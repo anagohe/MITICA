@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Title, TitleVariant } from '../components/Typography';
 import { client } from '../sanity/client';
-import { MENU_PAGE_QUERY } from '../sanity/queries';
 import { urlFor } from '../sanity/image';
 
 type HeroType = {
@@ -14,11 +13,10 @@ type HeroType = {
 
   title?: string;
   subtitle?: string;
-  textColor?: string; // ej: "text-white"
+  textColor?: string;
 
-  // ✅ overlay opcional (desde Sanity)
   overlayEnabled?: boolean;
-  overlayOpacity?: number; // 0-80
+  overlayOpacity?: number;
 };
 
 type MenuIcon = {
@@ -45,15 +43,84 @@ type MenuSection = {
   items?: MenuItem[];
 };
 
-type MenuQueryResult = {
-  page?: {
-    hero?: HeroType;
-    showFooterBanner?: boolean;
-    menuCategories?: string[]; // legacy
-    menuSections?: MenuSection[]; // ✅ categorías + artículos ordenables
-  };
-  items: MenuItem[]; // fallback legacy
+type MenuPageDoc = {
+  hero?: HeroType;
+  showFooterBanner?: boolean;
+  menuCategories?: string[];
+  menuSections?: MenuSection[];
 };
+
+type MenuQueryResult = {
+  page?: MenuPageDoc;
+  items?: MenuItem[]; // legacy
+};
+
+// ✅ Query ligero (sin duplicar items)
+const MENU_PAGE_ONLY_QUERY = `
+{
+  "page": *[_type == "menuPage"][0]{
+    hero{
+      mediaType,
+      title,
+      subtitle,
+      textColor,
+      titleVariant,
+      titleColor,
+      subtitleColor,
+      overlayEnabled,
+      overlayOpacity,
+      desktopImage,
+      mobileImage,
+      videoFile{asset->{url}},
+      mobileVideoFile{asset->{url}}
+    },
+    showFooterBanner,
+    menuCategories,
+    menuSections[]{
+      _key,
+      title,
+      items[]->{
+        _id,
+        name,
+        description,
+        image,
+        category,
+        price,
+        kcalText,
+        icons[]->{
+          _id,
+          title,
+          iconImage,
+          image
+        }
+      }
+    }
+  }
+}
+`;
+
+// ✅ Legacy items (solo si no hay secciones)
+const MENU_ITEMS_LEGACY_QUERY = `
+*[_type == "menuItem"]{
+  _id,
+  name,
+  description,
+  image,
+  category,
+  price,
+  kcalText,
+  icons[]->{
+    _id,
+    title,
+    iconImage,
+    image
+  }
+}
+`;
+
+function imgCrop(source: any, w: number, h: number, q = 75) {
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).url();
+}
 
 const Menu: React.FC = () => {
   const [data, setData] = useState<MenuQueryResult | null>(null);
@@ -63,20 +130,36 @@ const Menu: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
-    client
-      .fetch<MenuQueryResult>(MENU_PAGE_QUERY)
-      .then((res) => {
+    const run = async () => {
+      try {
+        const res = await client.fetch<MenuQueryResult>(MENU_PAGE_ONLY_QUERY);
+
         if (!mounted) return;
-        setData(res);
-      })
-      .catch(() => {
+
+        // si hay secciones, NO traemos legacy
+        const sections = Array.isArray(res?.page?.menuSections) ? res.page!.menuSections! : [];
+        const hasSections = sections.length > 0;
+
+        if (hasSections) {
+          setData({ page: res.page, items: [] });
+          return;
+        }
+
+        // legacy fallback: solo si NO hay secciones
+        const items = await client.fetch<MenuItem[]>(MENU_ITEMS_LEGACY_QUERY);
+        if (!mounted) return;
+
+        setData({ page: res.page, items: items || [] });
+      } catch (e) {
         if (!mounted) return;
         setData(null);
-      })
-      .finally(() => {
+      } finally {
         if (!mounted) return;
         setLoading(false);
-      });
+      }
+    };
+
+    run();
 
     return () => {
       mounted = false;
@@ -100,20 +183,15 @@ const Menu: React.FC = () => {
     });
   }, [hasSections, sections, legacyItems]);
 
-  // ✅ Categorías SIN "Todos"
   const categories = useMemo(() => {
     if (hasSections) {
-      const ordered = sections
-        .map((s) => (s?.title || '').trim())
-        .filter(Boolean);
-
+      const ordered = sections.map((s) => (s?.title || '').trim()).filter(Boolean);
       const seen = new Set<string>();
       return ordered.filter((c) => (seen.has(c) ? false : (seen.add(c), true)));
     }
 
     const sanityCatsRaw = Array.isArray(data?.page?.menuCategories) ? data?.page?.menuCategories : [];
     const sanityCats = sanityCatsRaw.map((c) => (c || '').trim()).filter(Boolean);
-
     if (sanityCats.length > 0) {
       const seen = new Set<string>();
       return sanityCats.filter((c) => (seen.has(c) ? false : (seen.add(c), true)));
@@ -128,14 +206,12 @@ const Menu: React.FC = () => {
     return Array.from(set);
   }, [hasSections, sections, data?.page?.menuCategories, legacyItems]);
 
-  // ✅ Por default: primera categoría disponible
   useEffect(() => {
     if (!activeCategory && categories.length > 0) {
       setActiveCategory(categories[0]);
     }
   }, [categories, activeCategory]);
 
-  // ✅ Mantener categoría válida si cambian categorías
   useEffect(() => {
     if (activeCategory && !categories.includes(activeCategory)) {
       setActiveCategory(categories[0] || '');
@@ -168,13 +244,48 @@ const Menu: React.FC = () => {
 
   const hero = data.page?.hero;
 
-  // ✅ Overlay opcional desde Sanity (defaults: ON y 40)
   const overlayEnabled = hero?.overlayEnabled ?? true;
   const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
   const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
 
-  // ✅ CLAVE: si overlay está OFF, NO bajes opacidad del media
   const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
+
+  const desktopHero =
+    hero?.desktopImage
+      ? {
+          src: imgCrop(hero.desktopImage, 1600, 900, 75),
+          srcSet: [
+            `${imgCrop(hero.desktopImage, 960, 540, 75)} 960w`,
+            `${imgCrop(hero.desktopImage, 1280, 720, 75)} 1280w`,
+            `${imgCrop(hero.desktopImage, 1600, 900, 75)} 1600w`,
+          ].join(', '),
+        }
+      : null;
+
+  const mobileHero =
+    hero?.mobileImage
+      ? {
+          src: imgCrop(hero.mobileImage, 900, 1200, 75),
+          srcSet: [
+            `${imgCrop(hero.mobileImage, 480, 640, 75)} 480w`,
+            `${imgCrop(hero.mobileImage, 720, 960, 75)} 720w`,
+            `${imgCrop(hero.mobileImage, 900, 1200, 75)} 900w`,
+          ].join(', '),
+        }
+      : desktopHero
+      ? { src: desktopHero.src, srcSet: desktopHero.srcSet }
+      : null;
+
+  // ✅ más razonable para cards (antes 1510x1080)
+  const cardSrc = (img: any) => imgCrop(img, 1200, 860, 75);
+  const cardSrcSet = (img: any) =>
+    [
+      `${imgCrop(img, 640, 460, 75)} 640w`,
+      `${imgCrop(img, 900, 645, 75)} 900w`,
+      `${imgCrop(img, 1200, 860, 75)} 1200w`,
+    ].join(', ');
+
+  const iconSrc = (img: any) => imgCrop(img, 160, 160, 80);
 
   return (
     <div className="w-full bg-white">
@@ -182,49 +293,48 @@ const Menu: React.FC = () => {
       <div className="relative h-screen w-full bg-black overflow-hidden mb-12">
         {hero?.mediaType === 'video' && (hero.videoFile || hero.mobileVideoFile) ? (
           <>
-            {/* Desktop video */}
             <video
               className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
               autoPlay
               muted
               loop
               playsInline
+              preload="metadata"
               src={(hero.videoFile || hero.mobileVideoFile)?.asset?.url}
             />
-            {/* Mobile video */}
             <video
               className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
               autoPlay
               muted
               loop
               playsInline
+              preload="metadata"
               src={(hero.mobileVideoFile || hero.videoFile)?.asset?.url}
             />
           </>
         ) : (
           <>
-            {hero?.desktopImage && (
-              <img
-                src={urlFor(hero.desktopImage).width(1920).height(1080).url()}
-                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-                alt={hero?.title || 'Menú'}
-                loading="eager"
-                decoding="async"
-              />
-            )}
-            {hero?.mobileImage && (
-              <img
-                src={urlFor(hero.mobileImage).width(1080).height(1920).url()}
-                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-                alt={hero?.title || 'Menú'}
-                loading="eager"
-                decoding="async"
-              />
-            )}
+            {desktopHero || mobileHero ? (
+              <picture className="block w-full h-full">
+                {desktopHero ? (
+                  <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
+                ) : null}
+
+                <img
+                  src={mobileHero?.src || desktopHero?.src || ''}
+                  srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
+                  sizes="100vw"
+                  className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                  alt={hero?.title || 'Menú'}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </picture>
+            ) : null}
           </>
         )}
 
-        {/* ✅ Overlay OPCIONAL desde Sanity */}
         {overlayEnabled && (
           <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
         )}
@@ -263,9 +373,7 @@ const Menu: React.FC = () => {
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   className={`px-4 py-2 rounded-full transition-colors ${
-                    activeCategory === cat
-                      ? 'bg-mitica-yellow text-black'
-                      : 'hover:bg-mitica-yellow hover:text-black'
+                    activeCategory === cat ? 'bg-mitica-yellow text-black' : 'hover:bg-mitica-yellow hover:text-black'
                   }`}
                 >
                   {cat}
@@ -291,7 +399,9 @@ const Menu: React.FC = () => {
                       <div className="-mx-4 -mt-4 w-[calc(100%+2rem)] overflow-hidden mb-6 relative aspect-[1510/1080] rounded-t-xl">
                         {item.image && (
                           <img
-                            src={urlFor(item.image).width(1510).height(1080).url()}
+                            src={cardSrc(item.image)}
+                            srcSet={cardSrcSet(item.image)}
+                            sizes="100vw"
                             alt={item.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                             loading="lazy"
@@ -303,9 +413,7 @@ const Menu: React.FC = () => {
                       <h3 className="font-nexa text-xl mb-2 uppercase tracking-wide">{item.name}</h3>
 
                       {item.category && (
-                        <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-                          {item.category}
-                        </p>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">{item.category}</p>
                       )}
 
                       <p className="font-rethink text-gray-500 text-sm mb-4 leading-relaxed text-justify">
@@ -321,7 +429,7 @@ const Menu: React.FC = () => {
                                 <div key={ic._id} className="w-11 h-11 md:w-12 md:h-12">
                                   {iconImg && (
                                     <img
-                                      src={urlFor(iconImg).width(180).height(180).url()}
+                                      src={iconSrc(iconImg)}
                                       alt={ic.title || 'icon'}
                                       className="w-full h-full object-contain"
                                       loading="lazy"
@@ -334,9 +442,7 @@ const Menu: React.FC = () => {
                           </div>
 
                           {item.kcalText && (
-                            <p className="font-rethink text-xs text-[#B5B5BB] whitespace-nowrap">
-                              {item.kcalText}
-                            </p>
+                            <p className="font-rethink text-xs text-[#B5B5BB] whitespace-nowrap">{item.kcalText}</p>
                           )}
                         </div>
                       ) : null}
@@ -354,7 +460,9 @@ const Menu: React.FC = () => {
                         <div className="-mx-4 -mt-4 w-[calc(100%+2rem)] overflow-hidden mb-6 relative aspect-[1510/1080] rounded-t-xl">
                           {item.image && (
                             <img
-                              src={urlFor(item.image).width(1510).height(1080).url()}
+                              src={cardSrc(item.image)}
+                              srcSet={cardSrcSet(item.image)}
+                              sizes="(min-width: 768px) 50vw, 100vw"
                               alt={item.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                               loading="lazy"
@@ -366,9 +474,7 @@ const Menu: React.FC = () => {
                         <h3 className="font-nexa text-xl mb-2 uppercase tracking-wide">{item.name}</h3>
 
                         {item.category && (
-                          <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-                            {item.category}
-                          </p>
+                          <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">{item.category}</p>
                         )}
 
                         <p className="font-rethink text-gray-500 text-sm mb-4 leading-relaxed text-justify">
@@ -384,7 +490,7 @@ const Menu: React.FC = () => {
                                   <div key={ic._id} className="w-11 h-11 md:w-12 md:h-12">
                                     {iconImg && (
                                       <img
-                                        src={urlFor(iconImg).width(180).height(180).url()}
+                                        src={iconSrc(iconImg)}
                                         alt={ic.title || 'icon'}
                                         className="w-full h-full object-contain"
                                         loading="lazy"
@@ -397,9 +503,7 @@ const Menu: React.FC = () => {
                             </div>
 
                             {item.kcalText && (
-                              <p className="font-rethink text-xs text-[#B5B5BB] whitespace-nowrap">
-                                {item.kcalText}
-                              </p>
+                              <p className="font-rethink text-xs text-[#B5B5BB] whitespace-nowrap">{item.kcalText}</p>
                             )}
                           </div>
                         ) : null}
@@ -415,7 +519,9 @@ const Menu: React.FC = () => {
                         <div className="-mx-4 -mt-4 w-[calc(100%+2rem)] overflow-hidden mb-6 relative aspect-[1510/1080] md:aspect-[1510/980] rounded-t-xl">
                           {item.image && (
                             <img
-                              src={urlFor(item.image).width(1510).height(1080).url()}
+                              src={cardSrc(item.image)}
+                              srcSet={cardSrcSet(item.image)}
+                              sizes="(min-width: 768px) 50vw, 100vw"
                               alt={item.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                               loading="lazy"
@@ -427,9 +533,7 @@ const Menu: React.FC = () => {
                         <h3 className="font-nexa text-xl mb-2 uppercase tracking-wide">{item.name}</h3>
 
                         {item.category && (
-                          <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-                            {item.category}
-                          </p>
+                          <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">{item.category}</p>
                         )}
 
                         <p className="font-rethink text-gray-500 text-sm mb-4 leading-relaxed text-justify">
@@ -445,7 +549,7 @@ const Menu: React.FC = () => {
                                   <div key={ic._id} className="w-11 h-11 md:w-12 md:h-12">
                                     {iconImg && (
                                       <img
-                                        src={urlFor(iconImg).width(180).height(180).url()}
+                                        src={iconSrc(iconImg)}
                                         alt={ic.title || 'icon'}
                                         className="w-full h-full object-contain"
                                         loading="lazy"
@@ -458,9 +562,7 @@ const Menu: React.FC = () => {
                             </div>
 
                             {item.kcalText && (
-                              <p className="font-rethink text-xs text-[#B5B5BB] whitespace-nowrap">
-                                {item.kcalText}
-                              </p>
+                              <p className="font-rethink text-xs text-[#B5B5BB] whitespace-nowrap">{item.kcalText}</p>
                             )}
                           </div>
                         ) : null}

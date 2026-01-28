@@ -1,18 +1,12 @@
-// pages/Home.tsx
-import React, { useState, useEffect } from 'react';
+// src/pages/Home.tsx
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Title, TitleVariant, BodyText } from '../components/Typography';
 import { Link } from 'react-router-dom';
 import { HeroSlide } from '../types';
 import { client } from '../sanity/client';
-import imageUrlBuilder from '@sanity/image-url';
+import { urlFor } from '../sanity/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-// ========= Sanity image builder =========
-const builder = imageUrlBuilder(client);
-function urlFor(source: any) {
-  return builder.image(source).url();
-}
 
 // ========= Tipos de Sanity =========
 type HeroSlideSanity = {
@@ -47,7 +41,6 @@ type LegendSectionSanity = {
   image?: any;
 };
 
-// ✅ Post de Blog (Promoción)
 type PromotionPostSanity = {
   _id: string;
   title?: string;
@@ -90,6 +83,16 @@ type PromoCard = {
   desc: string;
   imageUrl: string;
   slug: string;
+};
+
+type SlideImg = {
+  desktop: { src: string; srcSet: string };
+  mobile: { src: string; srcSet: string };
+};
+
+type SlideMapped = HeroSlide & {
+  heroLink?: string;
+  imgs?: SlideImg;
 };
 
 // ========= GROQ =========
@@ -153,13 +156,23 @@ coalesce(
 }
 `;
 
+// ========= Helpers de imagen (evita original) =========
+function imgCrop(source: any, w: number, h: number, q = 75) {
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).url();
+}
+function imgMax(source: any, w: number, q = 75) {
+  return urlFor(source).width(w).fit('max').quality(q).url();
+}
+function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 75) {
+  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ');
+}
+
 const Home: React.FC = () => {
-  const [heroSlides, setHeroSlides] = useState<(HeroSlide & { heroLink?: string })[]>([]);
+  const [heroSlides, setHeroSlides] = useState<SlideMapped[]>([]);
   const [introSection, setIntroSection] = useState<IntroSection | null>(null);
   const [legendSections, setLegendSections] = useState<LegendSection[]>([]);
   const [promos, setPromos] = useState<PromoCard[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
-
   const [promotionsTitle, setPromotionsTitle] = useState('PROMOCIONES');
 
   const nextSlide = () => {
@@ -177,26 +190,65 @@ const Home: React.FC = () => {
     const fetchHome = async () => {
       try {
         const data = await client.fetch<HomePageSanity>(HOME_QUERY);
-        console.log('SANITY homePage:', data);
 
-        const mappedHeroSlides: (HeroSlide & { heroLink?: string })[] =
+        const mappedHeroSlides: SlideMapped[] =
           data?.heroSlides?.map((slide, index) => {
             const heroData = slide.hero || {};
 
-            const desktopUrl = heroData.desktopImage ? urlFor(heroData.desktopImage) : '';
-            const mobileUrl = heroData.mobileImage ? urlFor(heroData.mobileImage) : desktopUrl;
+            const hasDesktop = !!heroData.desktopImage;
+            const hasMobile = !!heroData.mobileImage;
+
+            const desktop = hasDesktop
+              ? {
+                  src: imgCrop(heroData.desktopImage, 1600, 900, 75),
+                  srcSet: srcSetCrop(
+                    heroData.desktopImage,
+                    [
+                      [960, 540],
+                      [1280, 720],
+                      [1600, 900],
+                    ],
+                    75
+                  ),
+                }
+              : { src: '', srcSet: '' };
+
+            const mobile = hasMobile
+              ? {
+                  src: imgCrop(heroData.mobileImage, 900, 1200, 75),
+                  srcSet: srcSetCrop(
+                    heroData.mobileImage,
+                    [
+                      [480, 640],
+                      [720, 960],
+                      [900, 1200],
+                    ],
+                    75
+                  ),
+                }
+              : hasDesktop
+              ? {
+                  // si no hay mobile, reusa desktop para no romper UI (pero igual optimizado)
+                  src: desktop.src,
+                  srcSet: desktop.srcSet,
+                }
+              : { src: '', srcSet: '' };
+
+            const imgs: SlideImg | undefined =
+              desktop.src || mobile.src ? { desktop, mobile } : undefined;
 
             return {
               id: index + 1,
               type: 'image',
-              srcDesktop: desktopUrl,
-              srcMobile: mobileUrl,
+              srcDesktop: desktop.src,
+              srcMobile: mobile.src,
               title: heroData.title ?? '',
               subtitle: heroData.subtitle ?? '',
               ctaText: slide.ctaText ?? '',
               ctaLink: slide.ctaLink ?? '/menu',
               align: slide.align ?? 'center',
               heroLink: (slide.heroLink || '').trim(),
+              imgs,
             };
           }) ?? [];
 
@@ -204,8 +256,10 @@ const Home: React.FC = () => {
           ? {
               titleType: data.introSection.titleType ?? 'text',
               titleText: data.introSection.titleText ?? '',
-              titleImageUrl: data.introSection.titleImage ? urlFor(data.introSection.titleImage) : '',
-              imageUrl: data.introSection.image ? urlFor(data.introSection.image) : '',
+              // título-imagen suele ser “logo/título”: no necesita crop
+              titleImageUrl: data.introSection.titleImage ? imgMax(data.introSection.titleImage, 900, 80) : '',
+              // imagen principal: grande pero optimizada
+              imageUrl: data.introSection.image ? imgMax(data.introSection.image, 1400, 75) : '',
             }
           : null;
 
@@ -216,7 +270,7 @@ const Home: React.FC = () => {
             text: s.text ?? '',
             buttonText: s.buttonText ?? '',
             buttonLink: s.buttonLink ?? '#',
-            imageUrl: s.image ? urlFor(s.image) : '',
+            imageUrl: s.image ? imgCrop(s.image, 1200, 900, 75) : '',
             imagePosition: s.imagePosition ?? 'right',
           })) ?? [];
 
@@ -228,7 +282,7 @@ const Home: React.FC = () => {
               id: p._id,
               title: p.title ?? 'Promoción',
               desc: p.excerpt ?? '',
-              imageUrl: p.mainImage ? urlFor(p.mainImage) : '',
+              imageUrl: p.mainImage ? imgCrop(p.mainImage, 900, 650, 75) : '',
               slug: p.slug ?? p._id,
             })) ?? [];
 
@@ -246,7 +300,7 @@ const Home: React.FC = () => {
     fetchHome();
   }, []);
 
-  // ===== Auto–slide (8s y se reinicia al cambiar slide, incluso con flechas/dots) =====
+  // ===== Auto–slide (8s) =====
   useEffect(() => {
     if (heroSlides.length <= 1) return;
 
@@ -257,86 +311,99 @@ const Home: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [heroSlides.length, currentSlide]);
 
+  const current = useMemo(() => heroSlides[currentSlide], [heroSlides, currentSlide]);
+
   return (
     <div className="w-full">
       {/* HERO */}
       <div className="relative h-screen w-full overflow-hidden bg-black">
         <AnimatePresence mode="wait">
-          {heroSlides.map((slide, index) =>
-            index === currentSlide ? (
-              <motion.div
-                key={slide.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35 }}
-                className="absolute inset-0 w-full h-full"
-              >
-                {!slide.ctaText && slide.heroLink ? (
-                  <Link to={slide.heroLink} className="absolute inset-0 z-20" aria-label="Ir al enlace del hero" />
-                ) : null}
+          {current ? (
+            <motion.div
+              key={current.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              className="absolute inset-0 w-full h-full"
+            >
+              {!current.ctaText && current.heroLink ? (
+                <Link to={current.heroLink} className="absolute inset-0 z-20" aria-label="Ir al enlace del hero" />
+              ) : null}
 
-                <div className="w-full h-full relative">
-                  <div className="hidden md:block w-full h-full">
-                    {slide.srcDesktop ? (
-                      <img src={slide.srcDesktop} alt={slide.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white font-nexa text-2xl">
-                        HERO SIN IMAGEN
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="md:hidden w-full h-full">
-                    {slide.srcMobile ? (
-                      <img src={slide.srcMobile} alt={slide.title} className="w-full h-full object-cover" />
+              <div className="w-full h-full relative">
+                {current.imgs?.desktop?.src || current.imgs?.mobile?.src ? (
+                  <picture className="block w-full h-full">
+                    {/* Desktop */}
+                    {current.imgs?.desktop?.src ? (
+                      <source
+                        media="(min-width: 768px)"
+                        srcSet={current.imgs.desktop.srcSet || current.imgs.desktop.src}
+                        sizes="100vw"
+                      />
                     ) : null}
-                  </div>
 
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" />
-                </div>
-
-                <div
-                  className={`absolute inset-0 flex flex-col justify-center px-8 md:px-24 container mx-auto ${
-                    slide.align === 'left'
-                      ? 'items-start text-left'
-                      : slide.align === 'right'
-                      ? 'items-end text-right'
-                      : 'items-center text-center'
-                  }`}
-                >
-                  <motion.div
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5, duration: 0.8 }}
-                    className="relative z-20"
-                  >
-                    <Title
-                      variant={TitleVariant.REGULAR}
-                      text={slide.title || ''}
-                      className="text-5xl md:text-8xl text-white mb-4 drop-shadow-lg"
-                      align={slide.align || 'center'}
+                    {/* Mobile (fallback) */}
+                    <img
+                      src={current.imgs?.mobile?.src || current.imgs?.desktop?.src || ''}
+                      srcSet={current.imgs?.mobile?.srcSet || current.imgs?.mobile?.src || undefined}
+                      sizes="100vw"
+                      alt={current.title || 'Hero'}
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
                     />
+                  </picture>
+                ) : (
+                  <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white font-nexa text-2xl">
+                    HERO SIN IMAGEN
+                  </div>
+                )}
 
-                    {slide.subtitle && (
-                      <h3 className="font-nexa text-mitica-yellow text-xl md:text-3xl mb-8 tracking-widest shadow-black drop-shadow-md">
-                        {slide.subtitle}
-                      </h3>
-                    )}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" />
+              </div>
 
-                    {slide.ctaText && (
-                      <Link
-                        to={slide.ctaLink || '/'}
-                        className="relative z-30 bg-mitica-yellow text-black font-nexa uppercase px-10 py-4 rounded-full hover:bg-white hover:scale-105 transition-all shadow-lg text-lg inline-block"
-                      >
-                        {slide.ctaText}
-                      </Link>
-                    )}
-                  </motion.div>
-                </div>
-              </motion.div>
-            ) : null
-          )}
+              <div
+                className={`absolute inset-0 flex flex-col justify-center px-8 md:px-24 container mx-auto ${
+                  current.align === 'left'
+                    ? 'items-start text-left'
+                    : current.align === 'right'
+                    ? 'items-end text-right'
+                    : 'items-center text-center'
+                }`}
+              >
+                <motion.div
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.8 }}
+                  className="relative z-20"
+                >
+                  <Title
+                    variant={TitleVariant.REGULAR}
+                    text={current.title || ''}
+                    className="text-5xl md:text-8xl text-white mb-4 drop-shadow-lg"
+                    align={current.align || 'center'}
+                  />
+
+                  {current.subtitle && (
+                    <h3 className="font-nexa text-mitica-yellow text-xl md:text-3xl mb-8 tracking-widest shadow-black drop-shadow-md">
+                      {current.subtitle}
+                    </h3>
+                  )}
+
+                  {current.ctaText && (
+                    <Link
+                      to={current.ctaLink || '/'}
+                      className="relative z-30 bg-mitica-yellow text-black font-nexa uppercase px-10 py-4 rounded-full hover:bg-white hover:scale-105 transition-all shadow-lg text-lg inline-block"
+                    >
+                      {current.ctaText}
+                    </Link>
+                  )}
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : null}
         </AnimatePresence>
 
         {heroSlides.length > 1 && (
@@ -388,6 +455,8 @@ const Home: React.FC = () => {
                   src={introSection.imageUrl}
                   alt="Intro"
                   className="w-full max-w-2xl md:max-w-3xl mx-auto drop-shadow-2xl md:scale-110 lg:scale-125 hover:scale-110 transition-transform duration-500 object-contain"
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <div className="w-full max-w-2xl md:max-w-3xl mx-auto aspect-[4/3] bg-gray-100 rounded-xl" />
@@ -396,7 +465,13 @@ const Home: React.FC = () => {
 
             <div className="flex-1 text-center md:text-left">
               {introSection.titleType === 'image' && introSection.titleImageUrl ? (
-                <img src={introSection.titleImageUrl} alt="Título" className="mb-6 max-w-full h-auto" />
+                <img
+                  src={introSection.titleImageUrl}
+                  alt="Título"
+                  className="mb-6 max-w-full h-auto"
+                  loading="lazy"
+                  decoding="async"
+                />
               ) : (
                 <Title
                   variant={TitleVariant.REGULAR}
@@ -436,14 +511,19 @@ const Home: React.FC = () => {
                         }`}
                       />
                       {section.imageUrl ? (
-                        <img src={section.imageUrl} alt={section.title} className="w-full h-full object-cover shadow-xl" />
+                        <img
+                          src={section.imageUrl}
+                          alt={section.title}
+                          className="w-full h-full object-cover shadow-xl"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : (
                         <div className="w-full h-full bg-gray-100 shadow-xl" />
                       )}
                     </div>
                   </div>
 
-                  {/* ✅ ÚNICO CAMBIO: ahora solo aplica en XL+ */}
                   <div
                     className={`md:basis-5/12 lg:basis-4/12 md:flex md:flex-col md:justify-center xl:transform ${
                       imageOnRight ? 'xl:translate-x-16' : 'xl:-translate-x-16'
@@ -494,6 +574,8 @@ const Home: React.FC = () => {
                           src={promo.imageUrl}
                           alt={promo.title}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-100" />

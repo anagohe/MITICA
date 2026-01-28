@@ -32,3 +32,6 @@ studio-mitica/*.tar.gz
 studio-mitica/*.tgz
 studio-mitica/backup-*.tar.gz
 studio-mitica/backup-*.tgz
+
+# Reportes de análisis
+reporte-enero.md

@@ -198,6 +198,7 @@ const homePage = defineType({
       ],
     }),
 
+    // ✅ NUEVO: Título editable de la sección Promociones
     defineField({
       name: 'promotionsTitle',
       title: 'Título de Promociones',
@@ -205,20 +206,23 @@ const homePage = defineType({
       initialValue: 'PROMOCIONES',
     }),
 
-    // ✅ Ahora acepta POSTS de cualquier categoría
+    // ✅ Promociones conectadas al Blog (solo posts con categoría "Promociones")
     defineField({
       name: 'promotionsPosts',
       title: 'Promociones (desde Blog)',
       description:
-        'Selecciona hasta 3 artículos del Blog (de cualquier categoría) para mostrarlos en el Home.',
+        'Selecciona hasta 3 artículos del Blog con categoría "Promociones" para mostrarlos en el Home.',
       type: 'array',
       validation: (Rule) => Rule.max(3),
       of: [
         defineField({
           name: 'promotionPost',
-          title: 'Artículo',
+          title: 'Artículo promocional',
           type: 'reference',
           to: [{ type: 'post' }],
+          options: {
+            filter: '_type == "post" && category == "Promociones"',
+          },
         }),
       ],
     }),

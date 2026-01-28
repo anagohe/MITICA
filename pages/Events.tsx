@@ -134,6 +134,14 @@ function getFileUrl(file: any): string | undefined {
   return file?.asset?.url || file?.url || undefined;
 }
 
+// ===== Imagen helpers (evita originales + reduce duplicación) =====
+function imgCrop(source: any, w: number, h: number, q = 75) {
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).url();
+}
+function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 75) {
+  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ');
+}
+
 const Events = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formType, setFormType] = useState<'event' | 'sponsor'>('event');
@@ -180,37 +188,48 @@ const Events = () => {
   const desktopVideoUrl = getFileUrl(hero?.videoFile);
   const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile);
 
-  const desktopHeroUrl = hero?.desktopImage
-    ? urlFor(hero.desktopImage).width(1600).height(900).auto('format').quality(80).url()
-    : undefined;
+  // ✅ Hero imágenes optimizadas + picture (evita descargar hidden)
+  const desktopHero =
+    hero?.desktopImage
+      ? {
+          src: imgCrop(hero.desktopImage, 1600, 900, 75),
+          srcSet: srcSetCrop(
+            hero.desktopImage,
+            [
+              [960, 540],
+              [1280, 720],
+              [1600, 900],
+            ],
+            75
+          ),
+        }
+      : null;
 
-  const desktopHeroSrcSet = hero?.desktopImage
-    ? [
-        `${urlFor(hero.desktopImage).width(960).height(540).auto('format').quality(80).url()} 960w`,
-        `${urlFor(hero.desktopImage).width(1280).height(720).auto('format').quality(80).url()} 1280w`,
-        `${urlFor(hero.desktopImage).width(1600).height(900).auto('format').quality(80).url()} 1600w`,
-      ].join(', ')
-    : undefined;
-
-  const mobileHeroUrl = hero?.mobileImage
-    ? urlFor(hero.mobileImage).width(900).height(1200).auto('format').quality(80).url()
-    : undefined;
-
-  const mobileHeroSrcSet = hero?.mobileImage
-    ? [
-        `${urlFor(hero.mobileImage).width(480).height(640).auto('format').quality(80).url()} 480w`,
-        `${urlFor(hero.mobileImage).width(720).height(960).auto('format').quality(80).url()} 720w`,
-        `${urlFor(hero.mobileImage).width(900).height(1200).auto('format').quality(80).url()} 900w`,
-      ].join(', ')
-    : undefined;
+  const mobileHero =
+    hero?.mobileImage
+      ? {
+          src: imgCrop(hero.mobileImage, 900, 1200, 75),
+          srcSet: srcSetCrop(
+            hero.mobileImage,
+            [
+              [480, 640],
+              [720, 960],
+              [900, 1200],
+            ],
+            75
+          ),
+        }
+      : desktopHero
+      ? { src: desktopHero.src, srcSet: desktopHero.srcSet }
+      : null;
 
   const eventFormConfig = page?.forms?.event;
   const sponsorFormConfig = page?.forms?.sponsor;
 
   const modalTitle =
     formType === 'event'
-      ? (eventFormConfig?.modalTitle || 'TE INTERESA COTIZAR?')
-      : (sponsorFormConfig?.modalTitle || 'PATROCINIOS');
+      ? eventFormConfig?.modalTitle || 'TE INTERESA COTIZAR?'
+      : sponsorFormConfig?.modalTitle || 'PATROCINIOS';
 
   return (
     <div className="w-full bg-white">
@@ -253,40 +272,26 @@ const Events = () => {
                 src={mobileVideoUrl || desktopVideoUrl}
               />
             </>
-          ) : (
-            <>
-              {desktopHeroUrl && (
-                <img
-                  src={desktopHeroUrl}
-                  srcSet={desktopHeroSrcSet}
-                  sizes="100vw"
-                  className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-                  alt={hero?.title || 'Eventos Hero'}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-              )}
-              {mobileHeroUrl && (
-                <img
-                  src={mobileHeroUrl}
-                  srcSet={mobileHeroSrcSet}
-                  sizes="100vw"
-                  className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-                  alt={hero?.title || 'Eventos Hero'}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-              )}
-            </>
-          )}
+          ) : desktopHero || mobileHero ? (
+            <picture className="block w-full h-full">
+              {desktopHero ? (
+                <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
+              ) : null}
+              <img
+                src={mobileHero?.src || desktopHero?.src || ''}
+                srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
+                sizes="100vw"
+                className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                alt={hero?.title || 'Eventos Hero'}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
+          ) : null}
 
           {overlayEnabled && (
-            <div
-              className="absolute inset-0"
-              style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
-            />
+            <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
           )}
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
@@ -314,29 +319,23 @@ const Events = () => {
       {/* ================= EVENTOS ================= */}
       <section className="py-20 overflow-hidden">
         <div className="container mx-auto max-w-5xl text-center px-4 mb-12">
-          <Title
-            variant={TitleVariant.REGULAR}
-            text="EVENTOS"
-            className="text-6xl md:text-7xl mb-12"
-            align="center"
-          />
+          <Title variant={TitleVariant.REGULAR} text="EVENTOS" className="text-6xl md:text-7xl mb-12" align="center" />
 
           <div className="mb-10">
             <p
               className="text-sm md:text-base tracking-widest text-black uppercase mb-6"
               style={{ fontFamily: FONT_BODY, fontWeight: 800 }}
             >
-              ¡CONVIERTE TU CELEBRACIÓN EN UN{' '}
-              <span className="text-[#F6BA27]">#MOMENTOLEGENDARIO</span> CON MÍTICA!
+              ¡CONVIERTE TU CELEBRACIÓN EN UN <span className="text-[#F6BA27]">#MOMENTOLEGENDARIO</span> CON MÍTICA!
             </p>
 
             <p
               className="text-gray-700 text-sm md:text-base leading-relaxed max-w-4xl mx-auto"
               style={{ fontFamily: FONT_BODY, fontWeight: 500 }}
             >
-              Llevamos la experiencia y el sabor de nuestras hamburguesas a tu evento con nuestro
-              servicio de Foodtruck, disponible en Mérida y San Luis Potosí. Nos encargamos de todo
-              para que tú y tus invitados disfruten de nuestro menú.
+              Llevamos la experiencia y el sabor de nuestras hamburguesas a tu evento con nuestro servicio de Foodtruck,
+              disponible en Mérida y San Luis Potosí. Nos encargamos de todo para que tú y tus invitados disfruten de nuestro
+              menú.
             </p>
           </div>
         </div>
@@ -350,12 +349,16 @@ const Events = () => {
                   className="flex-shrink-0 w-[220px] md:w-[320px] aspect-[4/3] overflow-hidden"
                 >
                   <img
-                    src={urlFor(img).width(900).height(675).auto('format').quality(80).url()}
-                    srcSet={[
-                      `${urlFor(img).width(520).height(390).auto('format').quality(80).url()} 520w`,
-                      `${urlFor(img).width(720).height(540).auto('format').quality(80).url()} 720w`,
-                      `${urlFor(img).width(900).height(675).auto('format').quality(80).url()} 900w`,
-                    ].join(', ')}
+                    src={imgCrop(img, 900, 675, 75)}
+                    srcSet={srcSetCrop(
+                      img,
+                      [
+                        [520, 390],
+                        [720, 540],
+                        [900, 675],
+                      ],
+                      75
+                    )}
                     sizes="(min-width: 768px) 320px, 220px"
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                     alt={`Evento ${index + 1}`}
@@ -370,16 +373,10 @@ const Events = () => {
 
         <div className="container mx-auto max-w-5xl text-center px-4">
           <div className="mb-8">
-            <h3
-              className="text-3xl md:text-4xl mb-4 tracking-tight"
-              style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
-            >
+            <h3 className="text-3xl md:text-4xl mb-4 tracking-tight" style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}>
               ¿TE INTERESA COTIZAR?
             </h3>
-            <p
-              className="text-sm md:text-base text-gray-800 max-w-2xl mx-auto"
-              style={{ fontFamily: FONT_BODY, fontWeight: 600 }}
-            >
+            <p className="text-sm md:text-base text-gray-800 max-w-2xl mx-auto" style={{ fontFamily: FONT_BODY, fontWeight: 600 }}>
               Llena nuestro formulario y nos pondremos en contacto contigo.
             </p>
           </div>
@@ -420,19 +417,13 @@ const Events = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-8 mb-12 text-white/90">
-            <div
-              className="space-y-6 text-sm md:text-base leading-relaxed max-w-3xl"
-              style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
-            >
+            <div className="space-y-6 text-sm md:text-base leading-relaxed max-w-3xl" style={{ fontFamily: FONT_BODY, fontWeight: 400 }}>
               <p>
                 En{' '}
-                <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>
-                  MÍTICA
-                </strong>{' '}
-                nos encanta ser parte de historias emocionantes. Si estás organizando un evento,
-                tienes un equipo deportivo, lideras una iniciativa comunitaria o buscas un partner
-                para cualquier proyecto que comparta nuestro espíritu #Legendario, ¡Queremos saber
-                de ti!
+                <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>MÍTICA</strong> nos encanta ser
+                parte de historias emocionantes. Si estás organizando un evento, tienes un equipo deportivo, lideras una
+                iniciativa comunitaria o buscas un partner para cualquier proyecto que comparta nuestro espíritu #Legendario,
+                ¡Queremos saber de ti!
               </p>
               <p>Déjanos tus datos de contacto y cuéntanos más sobre tu proyecto en el formulario.</p>
             </div>
@@ -446,12 +437,16 @@ const Events = () => {
                   className="overflow-hidden shadow-2xl border border-white/10 group aspect-square md:aspect-[4/3]"
                 >
                   <img
-                    src={urlFor(img).width(1200).height(900).auto('format').quality(80).url()}
-                    srcSet={[
-                      `${urlFor(img).width(640).height(480).auto('format').quality(80).url()} 640w`,
-                      `${urlFor(img).width(960).height(720).auto('format').quality(80).url()} 960w`,
-                      `${urlFor(img).width(1200).height(900).auto('format').quality(80).url()} 1200w`,
-                    ].join(', ')}
+                    src={imgCrop(img, 1200, 900, 75)}
+                    srcSet={srcSetCrop(
+                      img,
+                      [
+                        [640, 480],
+                        [960, 720],
+                        [1200, 900],
+                      ],
+                      75
+                    )}
                     sizes="(min-width: 768px) 50vw, 100vw"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     alt={`Sponsorship ${idx + 1}`}
@@ -477,10 +472,7 @@ const Events = () => {
 
       {/* ================= MODAL ================= */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle}>
-        <ContactForm
-          type={formType === 'event' ? 'event' : 'sponsor'}
-          config={formType === 'event' ? eventFormConfig : sponsorFormConfig}
-        />
+        <ContactForm type={formType === 'event' ? 'event' : 'sponsor'} config={formType === 'event' ? eventFormConfig : sponsorFormConfig} />
       </Modal>
     </div>
   );
