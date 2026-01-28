@@ -45,10 +45,10 @@ export const deskStructure = (S: StructureBuilder) =>
               singletonItem(S, 'Delivery', 'deliveryPage'),
               singletonItem(S, 'Ubicaciones', 'locationsPage'),
               singletonItem(S, 'Franquicias', 'franchisePage'),
-              singletonItem(S, 'Blog – configuración', 'blogPage'),
-              singletonItem(S, 'Eventos – configuración', 'eventsPage'),
+              singletonItem(S, 'Blog  configuración', 'blogPage'),
+              singletonItem(S, 'Eventos y Patrocinios', 'eventsPage'),
               singletonItem(S, 'Bolsa de trabajo', 'careersPage'),
-              singletonItem(S, 'FAQ – configuración', 'faqPage'),
+              singletonItem(S, 'FAQ', 'faqPage'),
               singletonItem(S, 'Navbar & Footer', 'navbarFooter'),
             ])
         ),

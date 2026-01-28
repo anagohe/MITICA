@@ -163,7 +163,7 @@ const Blog = () => {
 
   const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
 
-  const heroTitle = hero?.title || 'COMUNIDAD MÍTICA';
+  const heroTitle = (hero?.title || 'COMUNIDAD MÍTICA').trim();
   const heroSubtitle = (hero?.subtitle || '').trim();
 
   const heroTitleColorClass = hero?.titleColor || hero?.textColor || 'text-white';
@@ -215,6 +215,9 @@ const Blog = () => {
         ].join(', ')
       : undefined;
 
+  const heroTitleVariant =
+    hero?.titleVariant === 'textured' ? TitleVariant.TEXTURED : TitleVariant.REGULAR;
+
   return (
     <div className="w-full">
       {/* ✅ Hero (mismo que Menu/About) */}
@@ -251,7 +254,7 @@ const Blog = () => {
                 srcSet={desktopImgSrcSet}
                 sizes="100vw"
                 className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-                alt="Hero Blog"
+                alt={heroTitle || 'Hero Blog'}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
@@ -264,7 +267,7 @@ const Blog = () => {
                 srcSet={mobileImgSrcSet}
                 sizes="100vw"
                 className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-                alt="Hero Blog"
+                alt={heroTitle || 'Hero Blog'}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
@@ -285,9 +288,10 @@ const Blog = () => {
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
           {heroTitle ? (
             <Title
-              variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
+              variant={heroTitleVariant}
               text={heroTitle}
               className={`text-4xl md:text-7xl ${heroTitleColorClass} mb-7 md:mb-9`}
+              align="center"
             />
           ) : null}
 

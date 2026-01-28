@@ -4,7 +4,7 @@ import { defineType, defineField } from 'sanity'
 // --- MENU ICON (nuevo) ---
 export const menuIcon = defineType({
   name: 'menuIcon',
-  title: 'Ícono de Menú',
+  title: 'Alérgenos del Menú',
   type: 'document',
   fields: [
     defineField({
