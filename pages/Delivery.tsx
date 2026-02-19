@@ -359,38 +359,64 @@ const Delivery = () => {
                       - Si hay appStoreUrl/googlePlayUrl => abre modal
                       - Si no hay, pero hay url legacy => link normal
                       - Si no hay nada => botón como antes
+
+                      ✅ CAMBIO: si viene labelImage desde Sanity, esa imagen es EL BOTÓN COMPLETO (sin fondo negro automático)
                   */}
                   {hasStoreLinks ? (
                     <button
                       type="button"
                       onClick={() => setIsAppModalOpen(true)}
-                      className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-zinc-900 rounded-[2rem] shadow-xl hover:bg-black transition-all duration-300 transform hover:scale-105 active:scale-95"
+                      className={`group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-[2rem] shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                        appLabelImgUrl ? 'overflow-hidden p-0' : 'bg-zinc-900 hover:bg-black'
+                      }`}
                       aria-label="Pedir en app"
                       title="Pedir en app"
                     >
-                      <img
-                        src={appLabelImgUrl || '/images/brand/mascot.png'}
-                        alt="Pedir en app"
-                        className="w-9 h-9 md:w-11 md:h-11 object-contain"
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      {appLabelImgUrl ? (
+                        <img
+                          src={appLabelImgUrl}
+                          alt="Pedir en app"
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <img
+                          src="/images/brand/mascot.png"
+                          alt="Pedir en app"
+                          className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
                     </button>
                   ) : appHref ? (
                     <a
                       href={appHref}
                       {...(appIsExternal ? { target: '_blank', rel: 'noreferrer' } : {})}
-                      className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-zinc-900 rounded-[2rem] shadow-xl hover:bg-black transition-all duration-300 transform hover:scale-105 active:scale-95"
+                      className={`group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-[2rem] shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                        appLabelImgUrl ? 'overflow-hidden p-0' : 'bg-zinc-900 hover:bg-black'
+                      }`}
                       aria-label="Pedir en app"
                       title="Pedir en app"
                     >
-                      <img
-                        src={appLabelImgUrl || '/images/brand/mascot.png'}
-                        alt="Pedir en app"
-                        className="w-9 h-9 md:w-11 md:h-11 object-contain"
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      {appLabelImgUrl ? (
+                        <img
+                          src={appLabelImgUrl}
+                          alt="Pedir en app"
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <img
+                          src="/images/brand/mascot.png"
+                          alt="Pedir en app"
+                          className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
                     </a>
                   ) : (
                     <button className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-zinc-900 rounded-[2rem] shadow-xl hover:bg-black transition-all duration-300 transform hover:scale-105 active:scale-95">
@@ -404,12 +430,16 @@ const Delivery = () => {
                     </button>
                   )}
 
-                  {/* CTA WHATSAPP: si hay link en sanity, úsalo; si no, deja button como antes */}
+                  {/* CTA WHATSAPP: si hay link en sanity, úsalo; si no, deja button como antes
+                      ✅ CAMBIO: si viene labelImage desde Sanity, esa imagen es EL BOTÓN COMPLETO (sin fondo negro automático)
+                  */}
                   {whatsappHref ? (
                     <a
                       href={whatsappHref}
                       {...(whatsappIsExternal ? { target: '_blank', rel: 'noreferrer' } : {})}
-                      className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-zinc-900 rounded-[2rem] shadow-xl hover:bg-black transition-all duration-300 transform hover:scale-105 active:scale-95"
+                      className={`group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-[2rem] shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                        whatsappLabelImgUrl ? 'overflow-hidden p-0' : 'bg-zinc-900 hover:bg-black'
+                      }`}
                       aria-label="Ordenar por WhatsApp"
                       title="Ordenar por WhatsApp"
                     >
@@ -417,7 +447,7 @@ const Delivery = () => {
                         <img
                           src={whatsappLabelImgUrl}
                           alt="Ordenar por WhatsApp"
-                          className="w-9 h-9 md:w-11 md:h-11 object-contain"
+                          className="w-full h-full object-contain"
                           loading="lazy"
                           decoding="async"
                         />
@@ -489,9 +519,7 @@ const Delivery = () => {
             <h3 className="font-nexa text-2xl md:text-3xl text-zinc-900 uppercase tracking-wide">
               {modalTitle}
             </h3>
-            <p className="font-rethink text-zinc-500 text-sm md:text-base mt-2">
-              {modalSubtitle}
-            </p>
+            <p className="font-rethink text-zinc-500 text-sm md:text-base mt-2">{modalSubtitle}</p>
 
             <div className="mt-8 space-y-5">
               {appStoreUrl && (

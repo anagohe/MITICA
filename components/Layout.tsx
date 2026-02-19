@@ -1,7 +1,7 @@
 // Layout.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, Instagram, Facebook } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import {
   motion,
   AnimatePresence,
@@ -9,6 +9,16 @@ import {
   useTransform,
   useMotionValueEvent,
 } from 'framer-motion';
+
+// ✅ Iconos mejores (React Icons - FontAwesome 6)
+import {
+  FaInstagram,
+  FaFacebookF,
+  FaTiktok,
+  FaXTwitter,
+  FaApple,
+  FaGooglePlay,
+} from 'react-icons/fa6';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -406,14 +416,14 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
   const storeBadges = [
     {
       label: 'App Store',
-      href: 'https://apple.com',
+      href: 'https://apps.apple.com/mx/app/mitica-burger/id1591940572',
       img: '/images/footer/badge-appstore.png',
       w: 160,
       h: 50,
     },
     {
       label: 'Google Play',
-      href: 'https://play.google.com',
+      href: 'https://play.google.com/store/apps/details?id=creaworlds.mitica&hl=es_MX',
       img: '/images/footer/badge-googleplay.png',
       w: 160,
       h: 50,
@@ -504,25 +514,61 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
               SÍGUENOS EN REDES
             </h4>
 
+            {/* ✅ Redes con links reales + iconos mejores */}
             <div className="flex gap-4 mb-8">
-              <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer">
-                <Instagram size={20} />
-              </div>
-              <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer">
-                <Facebook size={20} />
-              </div>
-              <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer">
-                <span className="font-bold text-xs">Tk</span>
-              </div>
+              <a
+                href="https://www.instagram.com/miticaburgers/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram"
+                title="Instagram"
+                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer"
+              >
+                <FaInstagram size={20} />
+              </a>
+
+              <a
+                href="https://www.facebook.com/miticaburgers"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Facebook"
+                title="Facebook"
+                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer"
+              >
+                <FaFacebookF size={20} />
+              </a>
+
+              <a
+                href="https://www.tiktok.com/@miticaburgers?lang=es-419"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="TikTok"
+                title="TikTok"
+                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer"
+              >
+                <FaTiktok size={20} />
+              </a>
+
+              <a
+                href="https://x.com/MiticaBurgers"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="X"
+                title="X"
+                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-mitica-yellow hover:text-black transition-colors cursor-pointer"
+              >
+                <FaXTwitter size={20} />
+              </a>
             </div>
 
             <h4 className="font-nexa text-mitica-yellow text-lg mb-4">
               DESCARGA NUESTRA APP
             </h4>
 
+            {/* ✅ App Store / Play Store con iconos mejores + links directos */}
             <div className="flex gap-3">
               <a
-                href="https://apple.com"
+                href="https://apps.apple.com/mx/app/mitica-burger/id1591940572"
                 target="_blank"
                 rel="noreferrer"
                 className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center
@@ -530,22 +576,11 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                 aria-label="App Store"
                 title="App Store"
               >
-                <svg
-                  className="w-5 h-5 text-white group-hover:text-black transition-colors"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M16 13c0 3-2 7-4 7s-4-4-4-7 2-5 4-5 4 2 4 5z" />
-                  <path d="M14.5 5.5c-.8 1.2-2 2-3.5 2 .2-1.5 1.2-3 3.5-3 0 0 .2.3 0 1z" />
-                </svg>
+                <FaApple className="w-5 h-5 text-white group-hover:text-black transition-colors" />
               </a>
 
               <a
-                href="https://play.google.com"
+                href="https://play.google.com/store/apps/details?id=creaworlds.mitica&hl=es_MX"
                 target="_blank"
                 rel="noreferrer"
                 className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center
@@ -553,22 +588,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                 aria-label="Google Play"
                 title="Google Play"
               >
-                <svg
-                  className="w-5 h-5 text-white group-hover:text-black transition-colors"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M8 9l-1.5-2" />
-                  <path d="M16 9l1.5-2" />
-                  <path d="M7 10h10a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z" />
-                  <path d="M9 14h0" />
-                  <path d="M15 14h0" />
-                  <path d="M10 10a2 2 0 0 1 4 0" />
-                </svg>
+                <FaGooglePlay className="w-5 h-5 text-white group-hover:text-black transition-colors" />
               </a>
             </div>
           </div>

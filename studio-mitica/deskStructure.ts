@@ -57,16 +57,12 @@ export const deskStructure = (S: StructureBuilder) =>
 
       // ===== CONTENIDO =====
       S.listItem()
-        .title('Menú')
-        .child(S.documentTypeList('menuItem').title('Platillos del Menú')),
+        .title('Artículos del Menú')
+        .child(S.documentTypeList('menuItem').title('Menú')),
 
       S.listItem()
-        .title('Blog')
-        .child(S.documentTypeList('post').title('Artículos de Blog')),
-
-      S.listItem()
-        .title('Sucursales')
-        .child(S.documentTypeList('location').title('Sucursales')),
+        .title('Artículos del Blog')
+        .child(S.documentTypeList('post').title('Artículos')),
 
       S.listItem()
         .title('Preguntas frecuentes')

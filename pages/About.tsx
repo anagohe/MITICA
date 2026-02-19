@@ -564,13 +564,10 @@ const About: React.FC = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-10 md:gap-x-16 max-w-5xl mx-auto">
             {values.map((val, idx) => {
-              const isYellow = idx % 2 === 0;
               return (
                 <h4
                   key={val}
-                  className={`font-nexa uppercase text-lg md:text-xl tracking-tight ${
-                    isYellow ? 'text-mitica-yellow' : 'text-black'
-                  }`}
+                  className="font-nexa uppercase text-lg md:text-xl tracking-tight text-black"
                 >
                   {val}
                 </h4>

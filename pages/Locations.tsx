@@ -82,6 +82,13 @@ type LocationSanity = {
   isComingSoon?: boolean;
 };
 
+type DeliveryButtonSanity = {
+  _key: string;
+  title?: string;
+  linkUrl?: string;
+  image?: any;
+};
+
 type CtaCardSanity = {
   _key: string;
   title?: string;
@@ -97,6 +104,7 @@ type LocationsPageSanity = {
   searchPlaceholder?: string;
   filterButtonLabel?: string;
   locations?: LocationSanity[];
+  deliveryButtons?: DeliveryButtonSanity[];
   ctaCards?: CtaCardSanity[];
 };
 
@@ -110,6 +118,13 @@ type RestaurantLocation = {
   longitude: number;
   phone: string;
   isComingSoon: boolean;
+};
+
+type DeliveryButton = {
+  id: string;
+  title: string;
+  linkUrl: string;
+  imageUrl?: string;
 };
 
 type CtaCard = {
@@ -151,6 +166,12 @@ coalesce(
     phone,
     isComingSoon
   },
+  deliveryButtons[]{
+    _key,
+    title,
+    linkUrl,
+    image
+  },
   ctaCards[]{
     _key,
     title,
@@ -164,6 +185,7 @@ coalesce(
 
 const LocationsPage: React.FC = () => {
   const [locations, setLocations] = useState<RestaurantLocation[]>([]);
+  const [deliveryButtons, setDeliveryButtons] = useState<DeliveryButton[]>([]);
   const [ctaCards, setCtaCards] = useState<CtaCard[]>([]);
 
   const [pageTitle, setPageTitle] = useState('Encuentra tu Restaurante');
@@ -173,7 +195,7 @@ const LocationsPage: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true); // ✅ CAMBIO: siempre desplegado
 
   const [activeLocationId, setActiveLocationId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
@@ -221,6 +243,14 @@ const LocationsPage: React.FC = () => {
               isComingSoon: !!loc.isComingSoon,
             })) ?? [];
 
+        const mappedDeliveryButtons: DeliveryButton[] =
+          data?.deliveryButtons?.map((b) => ({
+            id: b._key,
+            title: b.title ?? '',
+            linkUrl: b.linkUrl ?? '#',
+            imageUrl: b.image ? urlFor(b.image) : undefined,
+          })) ?? [];
+
         const mappedCtaCards: CtaCard[] =
           data?.ctaCards?.map((card) => ({
             id: card._key,
@@ -232,6 +262,7 @@ const LocationsPage: React.FC = () => {
           })) ?? [];
 
         setLocations(mappedLocations);
+        setDeliveryButtons(mappedDeliveryButtons);
         setCtaCards(mappedCtaCards);
       } catch (error) {
         console.error('Error fetching locationsPage from Sanity', error);
@@ -289,6 +320,27 @@ const LocationsPage: React.FC = () => {
       mapRef.current.setZoom(17);
     }
     const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
+    window.open(url, '_blank');
+  }, []);
+
+  const sanitizePhone = (phone: string) => phone.replace(/[^\d+]/g, '');
+
+  const handlePhoneClick = useCallback((phoneRaw: string) => {
+    const phone = sanitizePhone(phoneRaw);
+    if (!phone) return;
+    window.location.href = `tel:${phone}`;
+  }, []);
+
+  const handleAppClick = useCallback(() => {
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      // iPadOS 13+ puede reportar "MacIntel" con touch
+      ((navigator.platform as any) === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
+
+    const url = isIOS
+      ? 'https://apps.apple.com/mx/app/mitica-burger/id1591940572'
+      : 'https://play.google.com/store/apps/details?id=creaworlds.mitica&hl=es_MX';
+
     window.open(url, '_blank');
   }, []);
 
@@ -518,7 +570,7 @@ const LocationsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* BUSCADOR + BOTÓN FILTROS */}
+                        {/* BUSCADOR */}
                         <div className="space-y-3 mb-4">
                           <div className="relative">
                             <input
@@ -532,34 +584,9 @@ const LocationsPage: React.FC = () => {
                               ⌖
                             </span>
                           </div>
-
-                          <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-rethink-bold text-slate-700 hover:bg-slate-50"
-                          >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <line x1="4" y1="21" x2="4" y2="14" />
-                              <line x1="4" y1="10" x2="4" y2="3" />
-                              <line x1="12" y1="21" x2="12" y2="12" />
-                              <line x1="12" y1="8" x2="12" y2="3" />
-                              <line x1="20" y1="21" x2="20" y2="16" />
-                              <line x1="20" y1="12" x2="20" y2="3" />
-                              <line x1="1" y1="14" x2="7" y2="14" />
-                              <line x1="9" y1="8" x2="15" y2="8" />
-                              <line x1="17" y1="16" x2="23" y2="16" />
-                            </svg>
-                            {filterButtonLabel}
-                          </button>
                         </div>
 
-                        {/* FILTROS + LISTA (solo si showFilters) */}
+                        {/* FILTROS + LISTA (siempre visible) */}
                         {showFilters && (
                           <>
                             {cities.length > 0 && (
@@ -781,7 +808,13 @@ const LocationsPage: React.FC = () => {
                               </p>
 
                               <div className="space-y-3">
-                                <div className="flex items-center gap-3">
+                                {/* TELÉFONO (click -> tel:) */}
+                                <button
+                                  type="button"
+                                  onClick={() => handlePhoneClick(details?.phoneNumber ?? activeLocation.phone)}
+                                  className="w-full flex items-center gap-3 text-left"
+                                  disabled={!(details?.phoneNumber ?? activeLocation.phone)}
+                                >
                                   <div className="w-11 h-11 rounded-xl bg-[#F6BA27] flex items-center justify-center shadow-sm">
                                     <svg
                                       width="20"
@@ -810,9 +843,14 @@ const LocationsPage: React.FC = () => {
                                       </p>
                                     )}
                                   </div>
-                                </div>
+                                </button>
 
-                                <div className="flex items-center gap-3">
+                                {/* MÍTICA APP (detecta iOS/Android y abre store) */}
+                                <button
+                                  type="button"
+                                  onClick={handleAppClick}
+                                  className="w-full flex items-center gap-3 text-left"
+                                >
                                   <div className="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm overflow-hidden">
                                     <img
                                       src="/images/brand/Mitica-Logo-fondoNegro.png"
@@ -823,20 +861,33 @@ const LocationsPage: React.FC = () => {
                                   <p className="text-[12px] font-rethink-bold text-slate-900">
                                     MÍTICA APP
                                   </p>
-                                </div>
+                                </button>
 
-                                <div className="flex items-center gap-3">
-                                  <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm overflow-hidden">
-                                    <img
-                                      src="/images/brand/logo-Rappi.jpg"
-                                      alt="Rappi"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                  <p className="text-[12px] font-rethink-bold text-slate-900">
-                                    Rappi
-                                  </p>
-                                </div>
+                                {/* BOTONES DELIVERY DESDE SANITY (ej. Rappi) */}
+                                {deliveryButtons.map((b) => (
+                                  <a
+                                    key={b.id}
+                                    href={b.linkUrl || '#'}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-full flex items-center gap-3"
+                                  >
+                                    <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm overflow-hidden">
+                                      {b.imageUrl ? (
+                                        <img
+                                          src={b.imageUrl}
+                                          alt={b.title}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full" />
+                                      )}
+                                    </div>
+                                    <p className="text-[12px] font-rethink-bold text-slate-900">
+                                      {b.title}
+                                    </p>
+                                  </a>
+                                ))}
                               </div>
                             </div>
                           </div>

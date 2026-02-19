@@ -107,6 +107,55 @@ const locationsPage = defineType({
       ],
     }),
 
+    // ================= BOTONES DELIVERY =================
+    defineField({
+      name: 'deliveryButtons',
+      title: 'Botones delivery',
+      description: 'Botones para Delivery & Pickup (ej. Mítica App, Rappi).',
+      type: 'array',
+      of: [
+        defineField({
+          name: 'deliveryButton',
+          title: 'Botón',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'title',
+              title: 'Título',
+              type: 'string',
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'image',
+              title: 'Imagen del botón',
+              type: 'image',
+              options: { hotspot: true },
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'linkUrl',
+              title: 'Link directo',
+              type: 'string',
+              description: 'URL completa (https://...) o deep link.',
+              validation: (Rule) => Rule.required(),
+            }),
+          ],
+          preview: {
+            select: {
+              title: 'title',
+              media: 'image',
+            },
+            prepare({ title, media }) {
+              return {
+                title: title || 'Botón delivery',
+                media,
+              };
+            },
+          },
+        }),
+      ],
+    }),
+
     // ================= CTA CARDS INFERIORES =================
     defineField({
       name: 'ctaCards',

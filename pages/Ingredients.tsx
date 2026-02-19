@@ -239,7 +239,6 @@ const Ingredients: React.FC = () => {
       <div className="relative h-screen w-full bg-mitica-black overflow-hidden">
         {hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl) ? (
           <>
-            {/* Desktop video */}
             <video
               className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
               autoPlay
@@ -250,7 +249,6 @@ const Ingredients: React.FC = () => {
               src={desktopVideoUrl || mobileVideoUrl}
             />
 
-            {/* Mobile video */}
             <video
               className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
               autoPlay
@@ -261,7 +259,6 @@ const Ingredients: React.FC = () => {
               src={mobileVideoUrl || desktopVideoUrl}
             />
 
-            {/* Fallback: si falta video, usa imagen optimizada (SOLO una con picture) */}
             {!desktopVideoUrl && !mobileVideoUrl && (desktopHero || mobileHero) ? (
               <picture className="absolute inset-0 block w-full h-full">
                 {desktopHero ? (
@@ -303,12 +300,10 @@ const Ingredients: React.FC = () => {
           </>
         )}
 
-        {/* ✅ Overlay OPCIONAL desde Sanity */}
         {overlayEnabled && (
           <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
         )}
 
-        {/* ✅ Text sizes iguales a Menu/About */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
           {hero?.title && (
             <Title
@@ -334,21 +329,26 @@ const Ingredients: React.FC = () => {
       {/* === CONTENIDO PRINCIPAL === */}
       <div className="w-full py-20 bg-white">
         <div className="container mx-auto px-6">
-          {/* ✅ TÍTULO ARRIBA DE SECCIONES */}
           {sectionsTitle && (
             <div className="text-center mb-14">
               <Title variant={TitleVariant.REGULAR} text={sectionsTitle} align="center" className="text-5xl md:text-6xl" />
             </div>
           )}
 
-          {/* SECCIONES DINÁMICAS */}
           {sections.map((section, idx) => {
             const isTextLeft = section.layout === 'text-left' || !section.layout;
 
             return (
-              <div key={idx} className="flex flex-col md:flex-row items-center md:items-stretch gap-16 mb-24">
-                {/* Texto */}
-                <div className={`w-full md:w-[38%] ${isTextLeft ? 'order-1' : 'order-2'} text-left`}>
+              <div
+                key={idx}
+                className="flex flex-col lg:flex-row items-center lg:items-stretch gap-10 lg:gap-16 mb-24"
+              >
+                {/* Texto (centrado vertical + justificado) */}
+                <div
+                  className={`w-full lg:w-[48%] flex flex-col justify-center text-left ${
+                    isTextLeft ? 'order-1 lg:order-1' : 'order-1 lg:order-2'
+                  }`}
+                >
                   {section.title && (
                     <Title
                       variant={TitleVariant.REGULAR}
@@ -365,12 +365,12 @@ const Ingredients: React.FC = () => {
                   )}
                 </div>
 
-                {/* Imagen */}
+                {/* Imagen (más chica para que quepa más texto) */}
                 {section.image && (
                   <div
-                    className={`w-full md:w-[62%] ${
-                      isTextLeft ? 'order-3 md:order-2' : 'order-3 md:order-1'
-                    } h-[340px] md:h-auto overflow-hidden relative group`}
+                    className={`w-full lg:w-[52%] overflow-hidden relative group h-[320px] sm:h-[360px] lg:h-[440px] xl:h-[480px] 2xl:h-[520px] ${
+                      isTextLeft ? 'order-2 lg:order-2' : 'order-2 lg:order-1'
+                    }`}
                   >
                     <img
                       src={imgCrop(section.image, 1200, 900, 75)}
@@ -383,7 +383,7 @@ const Ingredients: React.FC = () => {
                         ],
                         75
                       )}
-                      sizes="(min-width: 768px) 62vw, 100vw"
+                      sizes="(min-width: 1024px) 52vw, 100vw"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       alt={section.title || 'Ingredientes Mítica'}
                       loading="lazy"
