@@ -1,5 +1,4 @@
 // studio-mitica/schemaTypes/general.ts
-
 import { defineType, defineField } from 'sanity'
 
 // --- DELIVERY PAGE ---
@@ -41,7 +40,6 @@ export const deliveryPage = defineType({
       fields: [
         defineField({ name: 'labelImage', type: 'image', title: 'Imagen del botón (icono)' }),
 
-        // legacy (si algún día quieres usar un solo link sin modal)
         defineField({ name: 'url', type: 'url', title: 'URL (legacy / opcional)' }),
         defineField({
           name: 'type',
@@ -57,7 +55,6 @@ export const deliveryPage = defineType({
           initialValue: 'external',
         }),
 
-        // ✅ textos del modal (opcionales)
         defineField({ name: 'modalTitle', type: 'string', title: 'Modal: Título (opcional)' }),
         defineField({
           name: 'modalSubtitle',
@@ -65,7 +62,6 @@ export const deliveryPage = defineType({
           title: 'Modal: Subtítulo (opcional)',
         }),
 
-        // ✅ links del modal
         defineField({
           name: 'appStoreUrl',
           type: 'url',
@@ -79,7 +75,6 @@ export const deliveryPage = defineType({
       ],
     }),
 
-    // ✅ Botón WhatsApp (link editable)
     defineField({
       name: 'ctaWhatsapp',
       title: 'Botón WhatsApp (link)',
@@ -147,7 +142,6 @@ export const location = defineType({
       title: 'Teléfono',
     }),
 
-    // Coordenadas reales para Google Maps
     defineField({
       name: 'latitude',
       type: 'number',
@@ -159,7 +153,6 @@ export const location = defineType({
       title: 'Longitud (Google Maps)',
     }),
 
-    // Posición del pin sobre imagen de mapa (si la llegas a usar)
     defineField({
       name: 'mapX',
       type: 'number',
@@ -192,7 +185,6 @@ export const franchisePage = defineType({
   ],
 
   fields: [
-    // ✅ HERO (Opcional)
     defineField({
       name: 'showHero',
       type: 'boolean',
@@ -207,7 +199,6 @@ export const franchisePage = defineType({
       fieldset: 'hero',
     }),
 
-    // ✅ INTRO
     defineField({
       name: 'pageTitle',
       type: 'string',
@@ -234,7 +225,6 @@ export const franchisePage = defineType({
       fieldset: 'intro',
     }),
 
-    // ✅ SPECIAL (3 iconos)
     defineField({
       name: 'specialTitle',
       type: 'string',
@@ -260,7 +250,6 @@ export const franchisePage = defineType({
       validation: (Rule) => Rule.max(3),
     }),
 
-    // ✅ BENEFICIOS
     defineField({
       name: 'benefitsTitle',
       type: 'string',
@@ -294,7 +283,6 @@ export const franchisePage = defineType({
       fieldset: 'benefits',
     }),
 
-    // ✅ FORM (todo en el mismo apartado)
     defineField({
       name: 'formTitle',
       type: 'string',
@@ -346,7 +334,6 @@ export const franchisePage = defineType({
       fieldset: 'form',
     }),
 
-    // ✅ NUEVO: correo editable desde Sanity
     defineField({
       name: 'recipientEmail',
       type: 'string',
@@ -375,24 +362,66 @@ export const franchisePage = defineType({
   ],
 })
 
-// --- FAQ (preguntas individuales) ---
-export const faq = defineType({
-  name: 'faq',
-  title: 'Pregunta Frecuente',
-  type: 'document',
-  fields: [
-    defineField({ name: 'question', type: 'string', title: 'Pregunta' }),
-    defineField({ name: 'answer', type: 'text', title: 'Respuesta' }),
-  ],
-})
-
-// --- FAQ PAGE ---
+// --- FAQ PAGE (TODO aquí: hero + título arriba + categorías + preguntas) ---
 export const faqPage = defineType({
   name: 'faqPage',
   title: 'Página FAQ',
   type: 'document',
   fields: [
     defineField({ name: 'hero', type: 'hero' }),
+
+    // ✅ título arriba de los iconos (SIN default)
+    defineField({
+      name: 'topTitle',
+      type: 'string',
+      title: 'Título arriba de categorías',
+    }),
+
+    defineField({
+      name: 'categories',
+      title: 'Categorías',
+      type: 'array',
+      of: [
+        {
+          type: 'object',
+          fields: [
+            defineField({ name: 'title', type: 'string', title: 'Título' }),
+            defineField({
+              name: 'icon',
+              type: 'image',
+              title: 'Icono (círculo)',
+            }),
+            defineField({
+              name: 'order',
+              type: 'number',
+              title: 'Orden',
+              initialValue: 1,
+            }),
+            defineField({
+              name: 'faqs',
+              title: 'Preguntas',
+              type: 'array',
+              of: [
+                {
+                  type: 'object',
+                  fields: [
+                    defineField({
+                      name: 'order',
+                      type: 'number',
+                      title: 'Orden',
+                      initialValue: 1,
+                    }),
+                    defineField({ name: 'question', type: 'string', title: 'Pregunta' }),
+                    defineField({ name: 'answer', type: 'text', title: 'Respuesta' }),
+                  ],
+                },
+              ],
+            }),
+          ],
+        },
+      ],
+    }),
+
     defineField({
       name: 'showFooterBanner',
       type: 'boolean',

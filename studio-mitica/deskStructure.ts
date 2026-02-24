@@ -14,7 +14,7 @@ const singletonTypes = [
   'franchisePage',
   'faqPage',
   'siteSettings',
-  'navbarFooter',   // ✅ nuevo
+  'navbarFooter', // ✅ nuevo
 ]
 
 // helper para singletons (una sola instancia por tipo)
@@ -56,17 +56,12 @@ export const deskStructure = (S: StructureBuilder) =>
       S.divider(),
 
       // ===== CONTENIDO =====
-      S.listItem()
-        .title('Artículos del Menú')
-        .child(S.documentTypeList('menuItem').title('Menú')),
+      S.listItem().title('Artículos del Menú').child(S.documentTypeList('menuItem').title('Menú')),
 
-      S.listItem()
-        .title('Artículos del Blog')
-        .child(S.documentTypeList('post').title('Artículos')),
+      S.listItem().title('Artículos del Blog').child(S.documentTypeList('post').title('Artículos')),
 
-      S.listItem()
-        .title('Preguntas frecuentes')
-        .child(S.documentTypeList('faq').title('Preguntas frecuentes')),
+      // ✅ QUITADO: "Preguntas frecuentes" como documentTypeList('faq')
+      // porque ya NO existe el schema type "faq" y eso crashea el Studio.
 
       S.divider(),
 
@@ -83,7 +78,7 @@ export const deskStructure = (S: StructureBuilder) =>
           'menuItem',
           'post',
           'location',
-          'faq',
+          // ✅ quitado 'faq' porque ya no existe
         ]
         return id ? !hidden.includes(id) : true
       }),

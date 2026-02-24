@@ -1,15 +1,16 @@
-import {defineCliConfig} from 'sanity/cli'
+// studio-mitica/sanity.cli.ts
+import React from "react";
+(globalThis as any).React = React;
+
+import { defineCliConfig } from "sanity/cli";
 
 export default defineCliConfig({
   api: {
-    projectId: 'cdstv0qp',
-    dataset: 'production'
+    projectId: "cdstv0qp",
+    dataset: "production",
   },
   deployment: {
-    /**
-     * Enable auto-updates for studios.
-     * Learn more at https://www.sanity.io/docs/cli#auto-updates
-     */
     autoUpdates: true,
-  }
-})
+    appId: "lt0oz1lq3xfydlpka8q6kqvp",
+  },
+});

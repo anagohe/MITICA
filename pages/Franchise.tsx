@@ -4,21 +4,7 @@ import { Title, TitleVariant } from '../components/Typography'
 
 // ✅ Sanity
 import { client } from '../sanity/client'
-import imageUrlBuilder from '@sanity/image-url'
-
-const builder = imageUrlBuilder(client)
-
-// ✅ Imagen optimizada (crop opcional)
-function imgUrl(source: any, w: number, h?: number, q: number = 80) {
-  let img = builder.image(source).width(w).quality(q)
-  if (h) img = img.height(h)
-  return img.auto('format').fit('crop').url()
-}
-
-// ✅ Contain / no recorte (mantiene imagen completa)
-function imgUrlContain(source: any, w: number, q: number = 80) {
-  return builder.image(source).width(w).quality(q).auto('format').fit('max').url()
-}
+import { imgUrl } from '../sanity/image'
 
 // ✅ singleton => _id fijo "franchisePage"
 const FRANCHISE_QUERY = `*[_type == "franchisePage" && _id == "franchisePage"][0]{
@@ -117,6 +103,7 @@ type FranchiseData = {
 
 const Franchise = () => {
   const [data, setData] = useState<FranchiseData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   // ✅ Form state (funcional)
   const [form, setForm] = useState({
@@ -131,6 +118,8 @@ const Franchise = () => {
 
   useEffect(() => {
     let mounted = true
+    setLoading(true)
+
     client
       .fetch(FRANCHISE_QUERY)
       .then((res) => {
@@ -141,10 +130,20 @@ const Franchise = () => {
         if (!mounted) return
         setData(null)
       })
+      .finally(() => {
+        if (!mounted) return
+        setLoading(false)
+      })
+
     return () => {
       mounted = false
     }
   }, [])
+
+  // ✅ Evita el “flash” inicial del formulario antes de que llegue Sanity
+  if (loading) {
+    return <div className="w-full bg-white min-h-screen" />
+  }
 
   // ===== HERO =====
   const hero = data?.hero
@@ -179,23 +178,28 @@ const Franchise = () => {
   const heroDesktopVideoUrl = hero?.videoFile?.asset?.url || ''
   const heroMobileVideoUrl = hero?.mobileVideoFile?.asset?.url || ''
 
-  const heroDesktopDefault = hero?.desktopImage ? imgUrl(hero.desktopImage, 2200, undefined, 80) : ''
+  // ✅ Imagenes optimizadas via helper central (sin @sanity/image-url)
+  const heroDesktopDefault = hero?.desktopImage
+    ? imgUrl(hero.desktopImage, { w: 2200, fit: 'crop', q: 80 })
+    : ''
   const heroDesktopSrcSet = hero?.desktopImage
     ? [
-        `${imgUrl(hero.desktopImage, 1280, undefined, 80)} 1280w`,
-        `${imgUrl(hero.desktopImage, 1920, undefined, 80)} 1920w`,
-        `${imgUrl(hero.desktopImage, 2560, undefined, 80)} 2560w`,
+        `${imgUrl(hero.desktopImage, { w: 1280, fit: 'crop', q: 80 })} 1280w`,
+        `${imgUrl(hero.desktopImage, { w: 1920, fit: 'crop', q: 80 })} 1920w`,
+        `${imgUrl(hero.desktopImage, { w: 2560, fit: 'crop', q: 80 })} 2560w`,
       ].join(', ')
     : undefined
 
-  const heroMobileDefault = hero?.mobileImage ? imgUrlContain(hero.mobileImage, 900, 80) : ''
+  const heroMobileDefault = hero?.mobileImage
+    ? imgUrl(hero.mobileImage, { w: 900, fit: 'max', q: 80 })
+    : ''
   const heroMobileSrcSet = hero?.mobileImage
     ? [
-        `${imgUrlContain(hero.mobileImage, 480, 80)} 480w`,
-        `${imgUrlContain(hero.mobileImage, 640, 80)} 640w`,
-        `${imgUrlContain(hero.mobileImage, 750, 80)} 750w`,
-        `${imgUrlContain(hero.mobileImage, 900, 80)} 900w`,
-        `${imgUrlContain(hero.mobileImage, 1080, 80)} 1080w`,
+        `${imgUrl(hero.mobileImage, { w: 480, fit: 'max', q: 80 })} 480w`,
+        `${imgUrl(hero.mobileImage, { w: 640, fit: 'max', q: 80 })} 640w`,
+        `${imgUrl(hero.mobileImage, { w: 750, fit: 'max', q: 80 })} 750w`,
+        `${imgUrl(hero.mobileImage, { w: 900, fit: 'max', q: 80 })} 900w`,
+        `${imgUrl(hero.mobileImage, { w: 1080, fit: 'max', q: 80 })} 1080w`,
       ].join(', ')
     : undefined
 
@@ -302,35 +306,26 @@ const Franchise = () => {
               </video>
             </>
           ) : (
-            <>
-              {/* Desktop image */}
+            <picture className="block w-full h-full">
               {heroDesktopDefault ? (
-                <img
-                  src={heroDesktopDefault}
-                  srcSet={heroDesktopSrcSet}
+                <source
+                  media="(min-width: 768px)"
+                  srcSet={heroDesktopSrcSet || heroDesktopDefault}
                   sizes="100vw"
-                  alt={heroTitle || 'Franquicias Hero'}
-                  className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
                 />
               ) : null}
 
-              {/* Mobile image */}
-              {heroMobileDefault || heroDesktopDefault ? (
-                <img
-                  src={heroMobileDefault || heroDesktopDefault}
-                  srcSet={heroMobileSrcSet}
-                  sizes="100vw"
-                  alt={heroTitle || 'Franquicias Hero'}
-                  className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-              ) : null}
-            </>
+              <img
+                src={heroMobileDefault || heroDesktopDefault}
+                srcSet={heroMobileSrcSet}
+                sizes="100vw"
+                alt={heroTitle || 'Franquicias Hero'}
+                className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
           )}
 
           {/* ✅ Overlay opcional */}
@@ -392,7 +387,7 @@ const Franchise = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-4xl mx-auto">
             {specialItems.slice(0, 3).map((item, idx) => {
-              const iconUrl = item.icon ? imgUrlContain(item.icon, 200, 85) : ''
+              const iconUrl = item.icon ? imgUrl(item.icon, { w: 200, fit: 'max', q: 85 }) : ''
               return (
                 <div key={idx} className="text-center">
                   <div className="mx-auto mb-5 w-16 h-16 rounded-full bg-mitica-yellow flex items-center justify-center overflow-hidden">
@@ -401,6 +396,8 @@ const Franchise = () => {
                         src={iconUrl}
                         alt={item.title || 'Icon'}
                         className="w-10 h-10 object-contain"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : null}
                   </div>
@@ -489,7 +486,9 @@ const Franchise = () => {
                 </div>
 
                 {error ? <p className="text-red-300 text-sm text-center">{error}</p> : null}
-                {sent ? <p className="text-green-300 text-sm text-center">¡Listo! Te contactaremos pronto.</p> : null}
+                {sent ? (
+                  <p className="text-green-300 text-sm text-center">¡Listo! Te contactaremos pronto.</p>
+                ) : null}
 
                 <button
                   type="submit"

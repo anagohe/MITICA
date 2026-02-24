@@ -1,6 +1,12 @@
 // App.tsx
 import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import {
+  HashRouter as Router,
+  Routes,
+  Route,
+  Outlet,
+  useLocation,
+} from 'react-router-dom';
 import { Layout } from './components/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -15,9 +21,13 @@ import Locations from './pages/Locations';
 import Franchise from './pages/Franchise';
 import FAQ from './pages/FAQ';
 
+// ✅ NUEVO: Páginas legales
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-  
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
@@ -51,6 +61,10 @@ const App = () => {
           <Route path="/locations" element={<Locations />} />
           <Route path="/franchise" element={<Franchise />} />
           <Route path="/faq" element={<FAQ />} />
+
+          {/* ✅ NUEVO: Rutas legales */}
+          <Route path="/terminos-y-condiciones" element={<Terms />} />
+          <Route path="/aviso-de-privacidad" element={<Privacy />} />
         </Route>
       </Routes>
     </Router>

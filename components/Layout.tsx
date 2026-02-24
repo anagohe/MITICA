@@ -10,7 +10,6 @@ import {
   useMotionValueEvent,
 } from 'framer-motion';
 
-// ✅ Iconos mejores (React Icons - FontAwesome 6)
 import {
   FaInstagram,
   FaFacebookF,
@@ -22,8 +21,8 @@ import {
 
 interface LayoutProps {
   children: React.ReactNode;
-  showFooterBanner?: boolean; // Sanity Toggle
-  footerBannerBg?: string; // (legacy) 'image' or 'color' url - ya no se usa en este diseño
+  showFooterBanner?: boolean;
+  footerBannerBg?: string;
 }
 
 const Navbar = () => {
@@ -34,16 +33,12 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ✅ Animación de scroll (más robusta: sin setState de scrollY)
   const SWITCH_AT = 120;
   const OPTICAL_DOWN = 26;
 
   const { scrollY } = useScroll();
-
-  // p = 0→1 según scroll
   const p = useTransform(scrollY, [0, SWITCH_AT], [0, 1], { clamp: true });
 
-  // ✅ Logo 1: círculo (se va)
   const circleOpacity = useTransform(p, [0, 1], [1, 0], { clamp: true });
   const circleScale = useTransform(p, [0, 1], [1, 0.94], { clamp: true });
   const circleY = useTransform(scrollY, (v) => {
@@ -51,15 +46,12 @@ const Navbar = () => {
     return OPTICAL_DOWN - yClamped + 4;
   });
 
-  // ✅ Logo 2: ancho (aparece)
-  const wideOpacity = p; // misma animación
-  const wideY = useTransform(p, [0, 1], [10, 0], { clamp: true }); // misma animación
+  const wideOpacity = p;
+  const wideY = useTransform(p, [0, 1], [10, 0], { clamp: true });
 
-  // ✅ (Opcional) scrolled por si luego lo usas
   const [scrolled, setScrolled] = useState(false);
   useMotionValueEvent(scrollY, 'change', (v) => {
     const next = (v ?? 0) > 50;
-    // ✅ OPT: evita renders si no cambió el valor
     setScrolled((prev) => (prev === next ? prev : next));
   });
 
@@ -122,14 +114,10 @@ const Navbar = () => {
   return (
     <nav className="fixed w-full z-50 bg-mitica-black transition-all duration-300 py-5 shadow-md">
       <div className="container mx-auto px-6 flex items-center">
-        {/* IZQUIERDA: Logo (desktop) */}
-        {/* ✅ CAMBIO: desktop solo desde XL para evitar que se encime en anchos 1024–1279 */}
         <div className="hidden xl:flex w-[260px] items-center">
           <Link to="/" className="z-50 flex items-center gap-2 group">
             <div className="relative ml-4">
-              {/* Wrapper ABSOLUTO fijo */}
               <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-[260px] h-[96px] -ml-16">
-                {/* Logo 1: círculo */}
                 {!isOpen && (
                   <motion.div
                     className="absolute inset-0 flex items-center justify-center"
@@ -154,7 +142,6 @@ const Navbar = () => {
                   </motion.div>
                 )}
 
-                {/* Logo 2: ancho (aparece) */}
                 <motion.div
                   className="absolute inset-0 flex items-center justify-center -mt-2"
                   style={{
@@ -176,14 +163,11 @@ const Navbar = () => {
                 </motion.div>
               </div>
 
-              {/* espaciador invisible */}
               <div className="w-24 h-10" />
             </div>
           </Link>
         </div>
 
-        {/* Logo en mobile */}
-        {/* ✅ CAMBIO: mobile hasta XL */}
         <div className="xl:hidden flex items-center -ml-2">
           <Link to="/" className="z-50 flex items-center">
             <img
@@ -196,8 +180,6 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* CENTRO: Desktop Nav centrado */}
-        {/* ✅ CAMBIO: desktop solo desde XL */}
         <div className="hidden xl:flex flex-1 justify-center">
           <div className="flex items-center gap-8">
             {navLinks.map((link) => {
@@ -232,7 +214,6 @@ const Navbar = () => {
                     </Link>
                   )}
 
-                  {/* Dropdown Desktop */}
                   <AnimatePresence>
                     {link.dropdown && activeDropdown === link.name && (
                       <motion.div
@@ -260,8 +241,6 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* DERECHA: CTA (desktop) */}
-        {/* ✅ CAMBIO: desktop solo desde XL */}
         <div className="hidden xl:flex w-[260px] justify-end">
           <Link
             to="/delivery"
@@ -271,8 +250,6 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Mobile Toggle */}
-        {/* ✅ CAMBIO: mobile hasta XL */}
         <button
           className="xl:hidden text-white z-50 ml-auto"
           onClick={() => {
@@ -285,7 +262,6 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile Nav Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.aside
@@ -297,7 +273,6 @@ const Navbar = () => {
             role="dialog"
             aria-modal="true"
           >
-            {/* Header del menú (logo normal + X) */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/10">
               <img
                 src="/images/brand/logo.png"
@@ -319,7 +294,6 @@ const Navbar = () => {
               </button>
             </div>
 
-            {/* Lista acordeón */}
             <nav className="px-6">
               {navLinks.map((link) => {
                 const hasSub = !!link.dropdown;
@@ -392,7 +366,6 @@ const Navbar = () => {
               })}
             </nav>
 
-            {/* CTA abajo */}
             <div className="px-6 py-8">
               <Link
                 to="/delivery"
@@ -433,18 +406,27 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
   return (
     <footer className="bg-mitica-black text-white pt-0 border-t border-gray-900">
       {showBanner && (
-        <section className="relative z-20 w-full bg-amber-400">
-          <div className="mx-auto max-w-7xl px-4 pt-20 pb-14 md:pt-2 md:pb-0 md:px-6 lg:px-8">
-            <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-3">
-              <div className="order-2 md:order-1 flex justify-center md:justify-start">
-                <div
-                  className="
-                    flex items-end justify-center overflow-hidden
-                    h-[250px] w-[310px]
-                    md:h-[140px] md:w-[190px]
-                    lg:h-[150px] lg:w-[200px]
-                  "
-                >
+        <section className="relative z-20 w-full bg-amber-400 overflow-hidden">
+          <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-[280px] md:pt-6 md:pb-6 md:px-6 lg:px-8">
+            {/* Celulares en mobile: ABS abajo pegados */}
+            <div className="md:hidden absolute bottom-0 left-1/2 -translate-x-1/2 w-full flex justify-center pointer-events-none">
+              <img
+                src="/images/footer/ambos3.png"
+                alt="App Mítica"
+                className="w-[320px] max-w-[92%] h-auto object-contain"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+
+            {/* ✅ CAMBIO CLAVE:
+                - En md+ todo queda CENTRADO (ya no “pegado” a izq/der).
+                - El espacio que se adapta es el padding exterior del contenedor.
+            */}
+            <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-3 md:gap-4 md:justify-items-center">
+              {/* Celulares en md+ (centrados en su columna) */}
+              <div className="hidden md:flex order-1 md:order-1 w-full justify-center">
+                <div className="flex items-end justify-center overflow-hidden h-[140px] w-[190px] lg:h-[150px] lg:w-[200px]">
                   <img
                     src="/images/footer/ambos3.png"
                     alt="App Mítica"
@@ -457,17 +439,21 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                 </div>
               </div>
 
-              <div className="order-1 md:order-2 mt-1 flex flex-col items-center text-center">
-                <p className="font-rethink font-extrabold uppercase tracking-[0.07em] text-zinc-900 text-2xl md:text-3xl">
-                  TU ANTOJO
-                </p>
+              {/* Texto (centrado) */}
+              <div className="order-1 md:order-2 mt-1 flex flex-col items-center text-center w-full">
+                <div className="w-[332px] max-w-[92vw] md:w-auto flex flex-col items-center">
+                  <p className="font-rethink font-extrabold uppercase tracking-[0.07em] text-zinc-900 text-3xl md:text-3xl">
+                    TU ANTOJO
+                  </p>
 
-                <span className="font-nexa inline-flex justify-center rounded-lg bg-zinc-900 text-amber-100 mt-0.5 text-3xl px-6 py-3 md:text-3xl">
-                  TIENE APP
-                </span>
+                  <span className="font-nexa inline-flex justify-center rounded-lg bg-zinc-900 text-amber-100 mt-1 px-7 py-4 text-4xl w-full md:w-auto md:text-3xl md:px-6 md:py-3">
+                    TIENE APP
+                  </span>
+                </div>
               </div>
 
-              <div className="order-3 md:order-3 flex flex-nowrap items-center justify-center md:justify-end gap-3">
+              {/* Badges (centrados en tablet, uno arriba del otro) */}
+              <div className="order-2 md:order-3 w-full flex items-center justify-center gap-3 mt-14 md:mt-0 md:flex-col md:gap-4 lg:flex-row lg:gap-3">
                 {storeBadges.map((b) => (
                   <a
                     key={b.label}
@@ -481,7 +467,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                       alt={b.label}
                       width={b.w}
                       height={b.h}
-                      className="object-contain w-[160px] md:w-[150px] lg:w-[160px]"
+                      className="object-contain w-[160px] md:w-[190px] lg:w-[160px]"
                       loading="lazy"
                       decoding="async"
                     />
@@ -514,7 +500,6 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
               SÍGUENOS EN REDES
             </h4>
 
-            {/* ✅ Redes con links reales + iconos mejores */}
             <div className="flex gap-4 mb-8">
               <a
                 href="https://www.instagram.com/miticaburgers/"
@@ -565,14 +550,12 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
               DESCARGA NUESTRA APP
             </h4>
 
-            {/* ✅ App Store / Play Store con iconos mejores + links directos */}
             <div className="flex gap-3">
               <a
                 href="https://apps.apple.com/mx/app/mitica-burger/id1591940572"
                 target="_blank"
                 rel="noreferrer"
-                className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center
-                           hover:bg-mitica-yellow hover:border-mitica-yellow transition-colors"
+                className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center hover:bg-mitica-yellow hover:border-mitica-yellow transition-colors"
                 aria-label="App Store"
                 title="App Store"
               >
@@ -583,8 +566,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                 href="https://play.google.com/store/apps/details?id=creaworlds.mitica&hl=es_MX"
                 target="_blank"
                 rel="noreferrer"
-                className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center
-                           hover:bg-mitica-yellow hover:border-mitica-yellow transition-colors"
+                className="group w-10 h-10 rounded-md bg-white/10 border border-white/10 flex items-center justify-center hover:bg-mitica-yellow hover:border-mitica-yellow transition-colors"
                 aria-label="Google Play"
                 title="Google Play"
               >
@@ -656,10 +638,16 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
             </ul>
 
             <div className="mt-8 flex flex-col gap-2 text-[10px] text-gray-600 font-rethink uppercase">
-              <Link to="#" className="hover:text-mitica-yellow">
+              <Link
+                to="/terminos-y-condiciones"
+                className="hover:text-mitica-yellow"
+              >
                 Términos y Condiciones
               </Link>
-              <Link to="#" className="hover:text-mitica-yellow">
+              <Link
+                to="/aviso-de-privacidad"
+                className="hover:text-mitica-yellow"
+              >
                 Aviso de Privacidad
               </Link>
             </div>
