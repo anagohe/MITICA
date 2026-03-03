@@ -407,7 +407,11 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
     <footer className="bg-mitica-black text-white pt-0 border-t border-gray-900">
       {showBanner && (
         <section className="relative z-20 w-full bg-amber-400 overflow-hidden">
-          <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-[280px] md:pt-6 md:pb-6 md:px-6 lg:px-8">
+          {/* ✅ SOLO CAMBIO:
+              - En md+ quitamos el padding-bottom para que el bloque (y el phone)
+                quede pegado a la línea inferior del banner como antes.
+          */}
+          <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-[280px] md:pt-6 md:pb-0 md:px-6 lg:px-8">
             {/* Celulares en mobile: ABS abajo pegados */}
             <div className="md:hidden absolute bottom-0 left-1/2 -translate-x-1/2 w-full flex justify-center pointer-events-none">
               <img
@@ -419,13 +423,12 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
               />
             </div>
 
-            {/* ✅ CAMBIO CLAVE:
-                - En md+ todo queda CENTRADO (ya no “pegado” a izq/der).
-                - El espacio que se adapta es el padding exterior del contenedor.
-            */}
             <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-3 md:gap-4 md:justify-items-center">
               {/* Celulares en md+ (centrados en su columna) */}
-              <div className="hidden md:flex order-1 md:order-1 w-full justify-center">
+              {/* ✅ SOLO CAMBIO:
+                  - Forzamos a que esta columna se “pegue” al fondo del grid en md+.
+              */}
+              <div className="hidden md:flex order-1 md:order-1 w-full justify-center md:self-end">
                 <div className="flex items-end justify-center overflow-hidden h-[140px] w-[190px] lg:h-[150px] lg:w-[200px]">
                   <img
                     src="/images/footer/ambos3.png"

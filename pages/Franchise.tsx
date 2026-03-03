@@ -362,7 +362,8 @@ const Franchise = () => {
       {/* ✅ Contenido */}
       <div className="container mx-auto px-6 max-w-6xl">
         <div className="text-center mt-10 mb-12">
-          <h1 className="font-nexa text-3xl md:text-5xl uppercase text-black tracking-wide">
+          {/* ✅ FIX: quitar separación entre letras (tracking-wide) */}
+          <h1 className="font-nexa text-3xl md:text-5xl uppercase text-black">
             {pageTitle}
           </h1>
         </div>
@@ -380,7 +381,8 @@ const Franchise = () => {
       <div className="w-full bg-gray-50 py-12 mb-14">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-10">
-            <h2 className="font-nexa text-xl md:text-2xl uppercase text-black tracking-wide">
+            {/* ✅ FIX: quitar separación entre letras (tracking-wide) */}
+            <h2 className="font-nexa text-xl md:text-2xl uppercase text-black">
               {specialTitle}
             </h2>
           </div>
@@ -415,7 +417,8 @@ const Franchise = () => {
 
       <div className="container mx-auto px-6 max-w-6xl">
         <div className="max-w-4xl mx-auto mb-10">
-          <h2 className="font-nexa text-xl md:text-2xl uppercase text-black tracking-wide mb-8">
+          {/* ✅ FIX: quitar separación entre letras (tracking-wide) */}
+          <h2 className="font-nexa text-xl md:text-2xl uppercase text-black mb-8">
             {benefitsTitle}
           </h2>
 
