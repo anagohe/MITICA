@@ -1,4 +1,3 @@
-// studio-mitica/schemaTypes/locationsPage.ts
 import { defineType, defineField } from 'sanity';
 
 const locationsPage = defineType({
@@ -16,7 +15,6 @@ const locationsPage = defineType({
       name: 'subtitle',
       title: 'Subtítulo (texto pequeño arriba)',
       type: 'string',
-      // ahora vacío por defecto; si escribes algo aquí, se mostrará
       initialValue: '',
     }),
     defineField({
@@ -69,20 +67,68 @@ const locationsPage = defineType({
               name: 'latitude',
               title: 'Latitud',
               type: 'number',
-              description:
-                'Coordenada de latitud para mostrar en el mapa (opcional).',
+              description: 'Coordenada de latitud para mostrar en el mapa.',
+              validation: (Rule) => Rule.required(),
             }),
             defineField({
               name: 'longitude',
               title: 'Longitud',
               type: 'number',
-              description:
-                'Coordenada de longitud para mostrar en el mapa (opcional).',
+              description: 'Coordenada de longitud para mostrar en el mapa.',
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'image',
+              title: 'Imagen de la sucursal',
+              type: 'image',
+              options: { hotspot: true },
+            }),
+            defineField({
+              name: 'images',
+              title: 'Slides de la sucursal',
+              type: 'array',
+              of: [
+                {
+                  type: 'image',
+                  options: { hotspot: true },
+                },
+              ],
+              description: 'Máximo 4 imágenes por sucursal.',
+              validation: (Rule) => Rule.max(4),
             }),
             defineField({
               name: 'phone',
-              title: 'Teléfono',
+              title: 'Teléfono principal',
               type: 'string',
+            }),
+            defineField({
+              name: 'phones',
+              title: 'Números de teléfono',
+              type: 'array',
+              of: [{ type: 'string' }],
+              description: 'Máximo 2 números: principal y uno adicional.',
+              validation: (Rule) => Rule.max(2),
+            }),
+            defineField({
+              name: 'schedules',
+              title: 'Horarios',
+              type: 'array',
+              of: [{ type: 'string' }],
+              description: 'Ejemplo: Lunes a Domingo: 1:00 PM - 11:00 PM',
+            }),
+            defineField({
+              name: 'directionsUrl',
+              title: 'URL de cómo llegar',
+              type: 'url',
+              description:
+                'Link directo de Google Maps para esta sucursal. Si lo dejas vacío, el front usará latitud y longitud.',
+            }),
+            defineField({
+              name: 'deliverySectionTitle',
+              title: 'Texto de la sección Delivery & Pickup',
+              type: 'string',
+              initialValue: 'Delivery & Pickup',
+              description: 'Texto editable para esta sucursal.',
             }),
             defineField({
               name: 'isComingSoon',
@@ -95,11 +141,13 @@ const locationsPage = defineType({
             select: {
               title: 'name',
               subtitle: 'city',
+              media: 'image',
             },
-            prepare({ title, subtitle }) {
+            prepare({ title, subtitle, media }) {
               return {
                 title: title || 'Restaurante Mitica',
                 subtitle: subtitle || 'Sin ciudad',
+                media,
               };
             },
           },
@@ -160,8 +208,7 @@ const locationsPage = defineType({
     defineField({
       name: 'ctaCards',
       title: 'Tarjetas de acción (debajo del mapa)',
-      description:
-        'Máximo 3 tarjetas tipo: Contáctanos, Ver Menú, Promociones.',
+      description: 'Máximo 3 tarjetas tipo: Contáctanos, Ver Menú, Promociones.',
       type: 'array',
       validation: (Rule) => Rule.max(3),
       of: [
@@ -185,8 +232,7 @@ const locationsPage = defineType({
               name: 'linkText',
               title: 'Texto del enlace',
               type: 'string',
-              description:
-                'Ej. “Solicitar información >”, “Ver menú >”, etc.',
+              description: 'Ej. “Solicitar información >”, “Ver menú >”, etc.',
             }),
             defineField({
               name: 'linkUrl',
