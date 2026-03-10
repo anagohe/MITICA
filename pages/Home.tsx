@@ -185,6 +185,13 @@ const Home: React.FC = () => {
     setCurrentSlide((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1));
   };
 
+  const fadeUp = {
+    initial: { opacity: 0, y: 50 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.2 },
+    transition: { duration: 0.8, ease: 'easeOut' as const },
+  };
+
   // ===== Fetch desde Sanity =====
   useEffect(() => {
     const fetchHome = async () => {
@@ -256,9 +263,7 @@ const Home: React.FC = () => {
           ? {
               titleType: data.introSection.titleType ?? 'text',
               titleText: data.introSection.titleText ?? '',
-              // título-imagen suele ser “logo/título”: no necesita crop
               titleImageUrl: data.introSection.titleImage ? imgMax(data.introSection.titleImage, 900, 80) : '',
-              // imagen principal: grande pero optimizada
               imageUrl: data.introSection.image ? imgMax(data.introSection.image, 1400, 75) : '',
             }
           : null;
@@ -334,7 +339,6 @@ const Home: React.FC = () => {
               <div className="w-full h-full relative">
                 {current.imgs?.desktop?.src || current.imgs?.mobile?.src ? (
                   <picture className="block w-full h-full">
-                    {/* Desktop */}
                     {current.imgs?.desktop?.src ? (
                       <source
                         media="(min-width: 768px)"
@@ -343,7 +347,6 @@ const Home: React.FC = () => {
                       />
                     ) : null}
 
-                    {/* Mobile (fallback) */}
                     <img
                       src={current.imgs?.mobile?.src || current.imgs?.desktop?.src || ''}
                       srcSet={current.imgs?.mobile?.srcSet || current.imgs?.mobile?.src || undefined}
@@ -446,12 +449,13 @@ const Home: React.FC = () => {
       {introSection && (
         <section className="py-16 container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center gap-16">
-            <div className="flex-1">
+            <motion.div className="flex-1" {...fadeUp}>
               {introSection.imageUrl ? (
                 <motion.img
-                  initial={{ x: -50, opacity: 0 }}
-                  whileInView={{ x: 0, opacity: 1 }}
-                  viewport={{ once: true }}
+                  initial={{ y: 50, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
                   src={introSection.imageUrl}
                   alt="Intro"
                   className="w-full max-w-2xl md:max-w-3xl mx-auto drop-shadow-2xl md:scale-110 lg:scale-125 hover:scale-110 transition-transform duration-500 object-contain"
@@ -461,9 +465,9 @@ const Home: React.FC = () => {
               ) : (
                 <div className="w-full max-w-2xl md:max-w-3xl mx-auto aspect-[4/3] bg-gray-100 rounded-xl" />
               )}
-            </div>
+            </motion.div>
 
-            <div className="flex-1 text-center md:text-left">
+            <motion.div className="flex-1 text-center md:text-left" {...fadeUp}>
               {introSection.titleType === 'image' && introSection.titleImageUrl ? (
                 <img
                   src={introSection.titleImageUrl}
@@ -480,7 +484,7 @@ const Home: React.FC = () => {
                   align="center"
                 />
               )}
-            </div>
+            </motion.div>
           </div>
         </section>
       )}
@@ -489,20 +493,26 @@ const Home: React.FC = () => {
       {legendSections.length > 0 && (
         <section className="pt-10 pb-16 bg-white">
           <div className="container mx-auto px-6 space-y-16">
-            {legendSections.map((section) => {
+            {legendSections.map((section, index) => {
               const imageOnRight = section.imagePosition === 'right';
 
               return (
-                <div
+                <motion.div
                   key={section.id}
+                  {...fadeUp}
+                  transition={{ duration: 0.8, delay: index * 0.08, ease: 'easeOut' }}
                   className={`flex flex-col gap-10 md:gap-16 md:items-stretch py-6 md:py-8 ${
                     imageOnRight ? 'md:flex-row-reverse' : 'md:flex-row'
                   }`}
                 >
-                  <div
+                  <motion.div
                     className={`flex justify-center md:basis-7/12 lg:basis-8/12 ${
                       imageOnRight ? 'md:justify-end' : 'md:justify-start'
                     }`}
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
                   >
                     <div className="relative w-full max-w-3xl md:max-w-2xl aspect-[4/3]">
                       <div
@@ -522,12 +532,16 @@ const Home: React.FC = () => {
                         <div className="w-full h-full bg-gray-100 shadow-xl" />
                       )}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div
+                  <motion.div
                     className={`md:basis-5/12 lg:basis-4/12 md:flex md:flex-col md:justify-center xl:transform ${
                       imageOnRight ? 'xl:translate-x-16' : 'xl:-translate-x-16'
                     }`}
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
                   >
                     <div className="w-full max-w-3xl mx-auto">
                       <h3 className="font-rethink-bold text-3xl mb-4 uppercase text-left">
@@ -545,8 +559,8 @@ const Home: React.FC = () => {
                         </Link>
                       )}
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                </motion.div>
               );
             })}
           </div>
@@ -557,53 +571,65 @@ const Home: React.FC = () => {
       {promos.length > 0 && (
         <section className="pt-12 pb-20 bg-white">
           <div className="container mx-auto px-6 text-center">
-            <Title
-              variant={TitleVariant.REGULAR}
-              text={promotionsTitle}
-              className="text-4xl md:text-6xl mb-14 text-black"
-              align="center"
-            />
+            <motion.div {...fadeUp}>
+              <Title
+                variant={TitleVariant.REGULAR}
+                text={promotionsTitle}
+                className="text-4xl md:text-6xl mb-14 text-black"
+                align="center"
+              />
+            </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              {promos.map((promo) => (
-                <Link to={`/blog/${promo.slug}`} key={promo.id} className="group block h-full">
-                  <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
-                    <div className="h-64 overflow-hidden">
-                      {promo.imageUrl ? (
-                        <img
-                          src={promo.imageUrl}
-                          alt={promo.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100" />
-                      )}
-                    </div>
+              {promos.map((promo, index) => (
+                <motion.div
+                  key={promo.id}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  transition={{ duration: 0.7, delay: index * 0.12, ease: 'easeOut' }}
+                >
+                  <Link to={`/blog/${promo.slug}`} className="group block h-full">
+                    <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
+                      <div className="h-64 overflow-hidden">
+                        {promo.imageUrl ? (
+                          <img
+                            src={promo.imageUrl}
+                            alt={promo.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100" />
+                        )}
+                      </div>
 
-                    <div className="p-8 text-left flex flex-col flex-1">
-                      <h3 className="font-rethink-bold text-lg mb-2">{promo.title || 'Promoción'}</h3>
+                      <div className="p-8 text-left flex flex-col flex-1">
+                        <h3 className="font-rethink-bold text-lg mb-2">{promo.title || 'Promoción'}</h3>
 
-                      <p className="font-rethink text-gray-500 text-sm mb-4 text-justify line-clamp-3 min-h-[3.75rem] overflow-hidden">
-                        {promo.desc}
-                      </p>
+                        <p className="font-rethink text-gray-500 text-sm mb-4 text-justify line-clamp-3 min-h-[3.75rem] overflow-hidden">
+                          {promo.desc}
+                        </p>
 
-                      <div className="mt-auto">
-                        <div className="w-8 h-1 bg-mitica-yellow group-hover:w-full transition-all duration-300" />
+                        <div className="mt-auto">
+                          <div className="w-8 h-1 bg-mitica-yellow group-hover:w-full transition-all duration-300" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </motion.div>
               ))}
             </div>
 
-            <Link
-              to="/blog?category=Promociones"
-              className="inline-block bg-black text-white text-sm font-nexa px-10 py-4 rounded uppercase hover:bg-mitica-yellow hover:text-black transition-colors"
-            >
-              Ver Más
-            </Link>
+            <motion.div {...fadeUp}>
+              <Link
+                to="/blog?category=Promociones"
+                className="inline-block bg-black text-white text-sm font-nexa px-10 py-4 rounded uppercase hover:bg-mitica-yellow hover:text-black transition-colors"
+              >
+                Ver Más
+              </Link>
+            </motion.div>
           </div>
         </section>
       )}

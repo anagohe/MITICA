@@ -389,15 +389,15 @@ const Franchise = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-4xl mx-auto">
             {specialItems.slice(0, 3).map((item, idx) => {
-              const iconUrl = item.icon ? imgUrl(item.icon, { w: 200, fit: 'max', q: 85 }) : ''
+              const iconUrl = item.icon ? imgUrl(item.icon, { w: 300, h: 300, fit: 'crop', q: 85 }) : ''
               return (
                 <div key={idx} className="text-center">
-                  <div className="mx-auto mb-5 w-16 h-16 rounded-full bg-mitica-yellow flex items-center justify-center overflow-hidden">
+                  <div className="mx-auto mb-5 w-16 h-16 rounded-full overflow-hidden bg-mitica-yellow">
                     {iconUrl ? (
                       <img
                         src={iconUrl}
                         alt={item.title || 'Icon'}
-                        className="w-10 h-10 object-contain"
+                        className="w-full h-full object-cover"
                         loading="lazy"
                         decoding="async"
                       />

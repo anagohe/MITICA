@@ -323,7 +323,7 @@ const Navbar = () => {
                           aria-expanded={isOpenSub}
                           aria-controls={`sub-${link.name}`}
                         >
-                          <span className="text-2xl">{link.name}</span>
+                          <span className="text-xl leading-none">{link.name}</span>
                           <ChevronDown
                             size={24}
                             className={`transition-transform ${
@@ -358,7 +358,7 @@ const Navbar = () => {
                         onClick={() => handleNavClick(link.path)}
                         className="w-full text-left py-6 uppercase font-nexa font-extrabold tracking-wide text-white hover:text-mitica-yellow transition-colors"
                       >
-                        <span className="text-2xl">{link.name}</span>
+                        <span className="text-xl leading-none">{link.name}</span>
                       </button>
                     )}
                   </div>
@@ -367,8 +367,10 @@ const Navbar = () => {
             </nav>
 
             <div className="px-6 py-8">
-              <Link
-                to="/delivery"
+              <a
+                href="https://wa.me/529979790642"
+                target="_blank"
+                rel="noreferrer"
                 onClick={() => {
                   setIsOpen(false);
                   setOpenMobileSub(null);
@@ -376,7 +378,7 @@ const Navbar = () => {
                 className="block w-full text-center bg-mitica-yellow text-black font-nexa py-4 rounded text-xl uppercase hover:bg-white transition-colors"
               >
                 Ordena Ahora
-              </Link>
+              </a>
             </div>
           </motion.aside>
         )}
@@ -404,15 +406,13 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
   ];
 
   return (
-    <footer className="bg-mitica-black text-white pt-0 border-t border-gray-900">
+    <footer className="bg-mitica-black text-white pt-0">
       {showBanner && (
-        <section className="relative z-20 w-full bg-amber-400 overflow-hidden">
-          {/* ✅ SOLO CAMBIO:
-              - En md+ quitamos el padding-bottom para que el bloque (y el phone)
-                quede pegado a la línea inferior del banner como antes.
-          */}
+        <section
+          className="relative z-20 w-full overflow-hidden bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/images/footer/textura.jpg')" }}
+        >
           <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-[280px] md:pt-6 md:pb-0 md:px-6 lg:px-8">
-            {/* Celulares en mobile: ABS abajo pegados */}
             <div className="md:hidden absolute bottom-0 left-1/2 -translate-x-1/2 w-full flex justify-center pointer-events-none">
               <img
                 src="/images/footer/ambos3.png"
@@ -424,10 +424,6 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
             </div>
 
             <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-3 md:gap-4 md:justify-items-center">
-              {/* Celulares en md+ (centrados en su columna) */}
-              {/* ✅ SOLO CAMBIO:
-                  - Forzamos a que esta columna se “pegue” al fondo del grid en md+.
-              */}
               <div className="hidden md:flex order-1 md:order-1 w-full justify-center md:self-end">
                 <div className="flex items-end justify-center overflow-hidden h-[140px] w-[190px] lg:h-[150px] lg:w-[200px]">
                   <img
@@ -442,7 +438,6 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                 </div>
               </div>
 
-              {/* Texto (centrado) */}
               <div className="order-1 md:order-2 mt-1 flex flex-col items-center text-center w-full">
                 <div className="w-[332px] max-w-[92vw] md:w-auto flex flex-col items-center">
                   <p className="font-rethink font-extrabold uppercase tracking-[0.07em] text-zinc-900 text-3xl md:text-3xl">
@@ -455,7 +450,6 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                 </div>
               </div>
 
-              {/* Badges (centrados en tablet, uno arriba del otro) */}
               <div className="order-2 md:order-3 w-full flex items-center justify-center gap-3 mt-14 md:mt-0 md:flex-col md:gap-4 lg:flex-row lg:gap-3">
                 {storeBadges.map((b) => (
                   <a

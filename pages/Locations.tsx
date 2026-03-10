@@ -1,16 +1,10 @@
-// pages/Locations.tsx
+// src/pages/Locations.tsx
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Title, TitleVariant, BodyText } from '../components/Typography';
 import { Link } from 'react-router-dom';
 import { client } from '../sanity/client';
-import imageUrlBuilder from '@sanity/image-url';
+import { imgUrl } from '../sanity/image';
 import { GoogleMap, Marker, MarkerClusterer, useJsApiLoader } from '@react-google-maps/api';
-
-// ================= Sanity image builder =================
-const builder = imageUrlBuilder(client);
-function urlFor(source: any) {
-  return builder.image(source).url();
-}
 
 // ================= Google Maps Config =================
 // ✅ KEY desde .env (Vite)
@@ -19,9 +13,6 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 if (!GOOGLE_MAPS_API_KEY) {
   console.error('Missing VITE_GOOGLE_MAPS_API_KEY');
 }
-
-// ✅ Importante: si usas PlacesService, necesitas "places"
-const libraries: ('places')[] = ['places'];
 
 const MAP_CONTAINER_STYLE = {
   width: '100%',
@@ -79,7 +70,13 @@ type LocationSanity = {
   latitude?: number;
   longitude?: number;
   phone?: string;
+  phones?: string[];
+  schedules?: string[];
+  image?: any;
+  images?: any[];
+  directionsUrl?: string;
   isComingSoon?: boolean;
+  deliverySectionTitle?: string;
 };
 
 type DeliveryButtonSanity = {
@@ -117,7 +114,13 @@ type RestaurantLocation = {
   latitude: number;
   longitude: number;
   phone: string;
+  phones: string[];
+  schedules: string[];
+  imageUrl?: string;
+  imageUrls: string[];
+  directionsUrl: string;
   isComingSoon: boolean;
+  deliverySectionTitle: string;
 };
 
 type DeliveryButton = {
@@ -134,15 +137,6 @@ type CtaCard = {
   linkText: string;
   linkUrl: string;
   iconUrl?: string;
-};
-
-type GooglePlaceDetails = {
-  name?: string;
-  rating?: number;
-  userRatingsTotal?: number;
-  phoneNumber?: string;
-  weekdayText?: string[];
-  photoUrl?: string;
 };
 
 // ================= GROQ =================
@@ -164,7 +158,13 @@ coalesce(
     latitude,
     longitude,
     phone,
-    isComingSoon
+    phones,
+    schedules,
+    image,
+    images,
+    directionsUrl,
+    isComingSoon,
+    deliverySectionTitle
   },
   deliveryButtons[]{
     _key,
@@ -195,23 +195,23 @@ const LocationsPage: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(true); // ✅ CAMBIO: siempre desplegado
+  const [showFilters, setShowFilters] = useState(true);
 
   const [activeLocationId, setActiveLocationId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const [placeDetails, setPlaceDetails] = useState<Record<string, GooglePlaceDetails>>({});
-  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [phoneOptions, setPhoneOptions] = useState<string[]>([]);
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // ✅ CAMBIO: Loader que evita el “places provided more than once”
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
-    id: 'google-maps-script', // 👈 IMPORTANTÍSIMO para dedupe
+    id: 'google-maps-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries,
   });
 
   // ============= Fetch =============
@@ -231,24 +231,60 @@ const LocationsPage: React.FC = () => {
         const mappedLocations: RestaurantLocation[] =
           data?.locations
             ?.filter((l) => typeof l.latitude === 'number' && typeof l.longitude === 'number')
-            .map((loc) => ({
-              id: loc._key,
-              name: loc.name ?? 'Restaurante Mítica',
-              city: loc.city ?? '',
-              state: loc.state ?? '',
-              address: loc.address ?? '',
-              latitude: loc.latitude!,
-              longitude: loc.longitude!,
-              phone: loc.phone ?? '',
-              isComingSoon: !!loc.isComingSoon,
-            })) ?? [];
+            .map((loc) => {
+              const phoneListFromPhones =
+                Array.isArray(loc.phones) && loc.phones.length > 0
+                  ? loc.phones.filter((p) => typeof p === 'string' && p.trim().length > 0)
+                  : [];
+
+              const mergedPhones = [
+                ...(loc.phone && loc.phone.trim().length > 0 ? [loc.phone.trim()] : []),
+                ...phoneListFromPhones.map((p) => p.trim()),
+              ];
+
+              const uniquePhones = Array.from(new Set(mergedPhones)).slice(0, 2);
+
+              const galleryImages =
+                Array.isArray(loc.images) && loc.images.length > 0
+                  ? loc.images
+                      .filter(Boolean)
+                      .slice(0, 4)
+                      .map((img) => imgUrl(img, { w: 900, fit: 'crop', q: 80 }))
+                  : loc.image
+                    ? [imgUrl(loc.image, { w: 900, fit: 'crop', q: 80 })]
+                    : [];
+
+              return {
+                id: loc._key,
+                name: loc.name ?? 'Restaurante Mítica',
+                city: loc.city ?? '',
+                state: loc.state ?? '',
+                address: loc.address ?? '',
+                latitude: loc.latitude!,
+                longitude: loc.longitude!,
+                phone: loc.phone ?? '',
+                phones: uniquePhones,
+                schedules:
+                  Array.isArray(loc.schedules) && loc.schedules.length > 0
+                    ? loc.schedules.filter((s) => typeof s === 'string' && s.trim().length > 0)
+                    : [],
+                imageUrl: loc.image ? imgUrl(loc.image, { w: 900, fit: 'crop', q: 80 }) : undefined,
+                imageUrls: galleryImages,
+                directionsUrl:
+                  loc.directionsUrl && loc.directionsUrl.trim().length > 0
+                    ? loc.directionsUrl
+                    : `https://www.google.com/maps/dir/?api=1&destination=${loc.latitude},${loc.longitude}`,
+                isComingSoon: !!loc.isComingSoon,
+                deliverySectionTitle: loc.deliverySectionTitle?.trim() || 'Delivery & Pickup',
+              };
+            }) ?? [];
 
         const mappedDeliveryButtons: DeliveryButton[] =
           data?.deliveryButtons?.map((b) => ({
             id: b._key,
             title: b.title ?? '',
             linkUrl: b.linkUrl ?? '#',
-            imageUrl: b.image ? urlFor(b.image) : undefined,
+            imageUrl: b.image ? imgUrl(b.image, { w: 180, fit: 'crop', q: 85 }) : undefined,
           })) ?? [];
 
         const mappedCtaCards: CtaCard[] =
@@ -258,7 +294,7 @@ const LocationsPage: React.FC = () => {
             description: card.description ?? '',
             linkText: card.linkText ?? '',
             linkUrl: card.linkUrl ?? '#',
-            iconUrl: card.icon ? urlFor(card.icon) : undefined,
+            iconUrl: card.icon ? imgUrl(card.icon, { w: 240, fit: 'max', q: 85 }) : undefined,
           })) ?? [];
 
         setLocations(mappedLocations);
@@ -310,6 +346,20 @@ const LocationsPage: React.FC = () => {
     [activeLocationId, locations]
   );
 
+  useEffect(() => {
+    setCurrentSlideIndex(0);
+  }, [activeLocationId]);
+
+  useEffect(() => {
+    if (!activeLocation || activeLocation.imageUrls.length <= 1) return;
+
+    const interval = window.setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % activeLocation.imageUrls.length);
+    }, 6000);
+
+    return () => window.clearInterval(interval);
+  }, [activeLocation]);
+
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
@@ -319,8 +369,7 @@ const LocationsPage: React.FC = () => {
       mapRef.current.panTo({ lat: location.latitude, lng: location.longitude });
       mapRef.current.setZoom(17);
     }
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
-    window.open(url, '_blank');
+    window.open(location.directionsUrl, '_blank');
   }, []);
 
   const sanitizePhone = (phone: string) => phone.replace(/[^\d+]/g, '');
@@ -331,10 +380,28 @@ const LocationsPage: React.FC = () => {
     window.location.href = `tel:${phone}`;
   }, []);
 
+  const handlePhonesAction = useCallback(
+    (phones: string[]) => {
+      const validPhones = phones
+        .filter((p) => typeof p === 'string' && p.trim().length > 0)
+        .slice(0, 2);
+
+      if (validPhones.length === 0) return;
+
+      if (validPhones.length === 1) {
+        handlePhoneClick(validPhones[0]);
+        return;
+      }
+
+      setPhoneOptions(validPhones);
+      setIsPhoneModalOpen(true);
+    },
+    [handlePhoneClick]
+  );
+
   const handleAppClick = useCallback(() => {
     const isIOS =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      // iPadOS 13+ puede reportar "MacIntel" con touch
       ((navigator.platform as any) === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
 
     const url = isIOS
@@ -344,89 +411,16 @@ const LocationsPage: React.FC = () => {
     window.open(url, '_blank');
   }, []);
 
-  // =========== Google Places: detalles ===========
-  const fetchPlaceDetails = useCallback(
-    (loc: RestaurantLocation) => {
-      if (!mapRef.current) return;
+  const handleMarkerClick = useCallback((location: RestaurantLocation) => {
+    setActiveLocationId(location.id);
+    setViewMode('detail');
+    setIsSidebarOpen(true);
 
-      // ✅ Optimización: si ya tenemos detalles, no vuelvas a pedirlos
-      if (placeDetails[loc.id]) return;
-
-      const service = new google.maps.places.PlacesService(mapRef.current);
-      setIsDetailsLoading(true);
-
-      const query = `${loc.name} ${loc.city} ${loc.address}`;
-
-      const findRequest: google.maps.places.FindPlaceFromQueryRequest = {
-        query,
-        fields: ['place_id'],
-      };
-
-      service.findPlaceFromQuery(findRequest, (results, status) => {
-        if (
-          status !== google.maps.places.PlacesServiceStatus.OK ||
-          !results ||
-          !results[0].place_id
-        ) {
-          setIsDetailsLoading(false);
-          return;
-        }
-
-        const placeId = results[0].place_id;
-
-        const detailsRequest: google.maps.places.PlaceDetailsRequest = {
-          placeId,
-          fields: [
-            'name',
-            'rating',
-            'user_ratings_total',
-            'formatted_phone_number',
-            'opening_hours',
-            'photos',
-          ],
-        };
-
-        service.getDetails(detailsRequest, (place, status2) => {
-          setIsDetailsLoading(false);
-          if (status2 !== google.maps.places.PlacesServiceStatus.OK || !place) return;
-
-          const photoUrl =
-            place.photos && place.photos.length > 0
-              ? place.photos[0].getUrl({ maxWidth: 800, maxHeight: 400 })
-              : undefined;
-
-          setPlaceDetails((prev) => ({
-            ...prev,
-            [loc.id]: {
-              name: place.name ?? loc.name,
-              rating: place.rating ?? undefined,
-              userRatingsTotal: place.user_ratings_total ?? undefined,
-              phoneNumber: place.formatted_phone_number ?? loc.phone,
-              weekdayText: place.opening_hours?.weekday_text ?? undefined,
-              photoUrl,
-            },
-          }));
-        });
-      });
-    },
-    [placeDetails]
-  );
-
-  const handleMarkerClick = useCallback(
-    (location: RestaurantLocation) => {
-      setActiveLocationId(location.id);
-      setViewMode('detail');
-      setIsSidebarOpen(true);
-
-      if (mapRef.current) {
-        mapRef.current.panTo({ lat: location.latitude, lng: location.longitude });
-        mapRef.current.setZoom(16);
-      }
-
-      fetchPlaceDetails(location);
-    },
-    [fetchPlaceDetails]
-  );
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat: location.latitude, lng: location.longitude });
+      mapRef.current.setZoom(16);
+    }
+  }, []);
 
   const handleListSelect = useCallback(
     (location: RestaurantLocation) => {
@@ -450,9 +444,6 @@ const LocationsPage: React.FC = () => {
       mapRef.current.panTo(DEFAULT_CENTER);
     }
   }, []);
-
-  const details =
-    activeLocation && placeDetails[activeLocation.id] ? placeDetails[activeLocation.id] : undefined;
 
   return (
     <div className="w-full bg-[#F5F7FB]">
@@ -653,13 +644,7 @@ const LocationsPage: React.FC = () => {
                                     {loc.address}
                                   </p>
 
-                                  <div
-                                    className="flex items-center gap-1 text-blue-900 text-[11px] font-rethink-bold underline decoration-1 underline-offset-2 group-hover:text-blue-700 cursor-pointer"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDirectionsClick(loc);
-                                    }}
-                                  >
+                                  <div className="flex items-center gap-1 text-blue-900 text-[11px] font-rethink-bold underline decoration-1 underline-offset-2 group-hover:text-blue-700">
                                     <svg
                                       width="12"
                                       height="12"
@@ -670,7 +655,15 @@ const LocationsPage: React.FC = () => {
                                     >
                                       <path d="M3 11l19-9-9 19-2-8-8-2z" />
                                     </svg>
-                                    Cómo llegar
+                                    <span
+                                      className="cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDirectionsClick(loc);
+                                      }}
+                                    >
+                                      Cómo llegar
+                                    </span>
                                   </div>
 
                                   <button
@@ -731,40 +724,32 @@ const LocationsPage: React.FC = () => {
                                   Sucursal
                                 </p>
                                 <h3 className="font-rethink-bold text-base text-slate-900 uppercase">
-                                  {details?.name ?? activeLocation.name}
+                                  {activeLocation.name}
                                 </h3>
                               </div>
                             </div>
 
-                            {details?.photoUrl && (
-                              <div className="w-full rounded-2xl overflow-hidden mb-3">
+                            {activeLocation.imageUrls.length > 0 && (
+                              <div className="w-full rounded-2xl overflow-hidden mb-3 relative">
                                 <img
-                                  src={details.photoUrl}
-                                  alt={details.name ?? activeLocation.name}
+                                  src={activeLocation.imageUrls[currentSlideIndex]}
+                                  alt={activeLocation.name}
                                   className="w-full h-32 md:h-40 object-cover"
                                   loading="lazy"
+                                  decoding="async"
                                 />
-                              </div>
-                            )}
 
-                            {details && (
-                              <div className="flex items-center gap-1 mb-3 mt-1">
-                                <div className="flex text-yellow-400 text-xs">
-                                  {'★★★★★'.split('').map((_, idx) => (
-                                    <span key={idx}>
-                                      {details.rating && idx < Math.round(details.rating) ? '★' : '☆'}
-                                    </span>
-                                  ))}
-                                </div>
-                                {details.rating && (
-                                  <span className="text-[11px] text-slate-700 font-rethink-bold">
-                                    {details.rating.toFixed(1)}
-                                  </span>
-                                )}
-                                {details.userRatingsTotal && (
-                                  <span className="text-[10px] text-slate-400">
-                                    ({details.userRatingsTotal} opiniones)
-                                  </span>
+                                {activeLocation.imageUrls.length > 1 && (
+                                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                                    {activeLocation.imageUrls.map((_, index) => (
+                                      <span
+                                        key={`${activeLocation.id}-dot-${index}`}
+                                        className={`block w-2 h-2 rounded-full ${
+                                          index === currentSlideIndex ? 'bg-white' : 'bg-white/50'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             )}
@@ -772,80 +757,100 @@ const LocationsPage: React.FC = () => {
                             <p className="text-sm font-rethink text-slate-900 font-bold mb-1">
                               {activeLocation.city}
                             </p>
-                            <p className="text-xs text-slate-500 font-rethink mb-3">
+                            <p className="text-xs text-slate-500 font-rethink mb-2">
                               {activeLocation.address}
                             </p>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDirectionsClick(activeLocation)}
+                              className="w-full h-11 rounded-xl bg-[#F6BA27] text-slate-900 font-rethink-bold text-[12px] shadow-sm hover:brightness-95 transition mb-3"
+                            >
+                              Cómo llegar
+                            </button>
 
                             <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 gap-4">
                               <div>
                                 <p className="text-[11px] font-rethink-bold text-slate-900 mb-1">
                                   Horario
                                 </p>
-                                {isDetailsLoading && !details && (
-                                  <p className="text-[11px] text-slate-400">
-                                    Cargando información de Google...
-                                  </p>
-                                )}
-                                {details?.weekdayText ? (
+                                {activeLocation.schedules.length > 0 ? (
                                   <ul className="text-[11px] text-slate-600 space-y-0.5">
-                                    {details.weekdayText.map((line) => (
+                                    {activeLocation.schedules.map((line) => (
                                       <li key={line}>{line}</li>
                                     ))}
                                   </ul>
                                 ) : (
-                                  !isDetailsLoading && (
-                                    <p className="text-[11px] text-slate-600">
-                                      Horario no disponible.
-                                    </p>
-                                  )
+                                  <p className="text-[11px] text-slate-600">
+                                    Horario no disponible.
+                                  </p>
                                 )}
                               </div>
                             </div>
 
                             <div className="mt-5 pt-4 border-t border-slate-100">
                               <p className="text-[11px] font-rethink-bold text-slate-900 mb-3">
-                                Delivery &amp; Pickup
+                                {activeLocation.deliverySectionTitle}
                               </p>
 
                               <div className="space-y-3">
-                                {/* TELÉFONO (click -> tel:) */}
-                                <button
-                                  type="button"
-                                  onClick={() => handlePhoneClick(details?.phoneNumber ?? activeLocation.phone)}
-                                  className="w-full flex items-center gap-3 text-left"
-                                  disabled={!(details?.phoneNumber ?? activeLocation.phone)}
-                                >
-                                  <div className="w-11 h-11 rounded-xl bg-[#F6BA27] flex items-center justify-center shadow-sm">
-                                    <svg
-                                      width="20"
-                                      height="20"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                                    </svg>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <p className="text-[11px] font-rethink-bold text-slate-900">
-                                      Teléfono
-                                    </p>
-                                    {details?.phoneNumber || activeLocation.phone ? (
-                                      <p className="text-[12px] font-rethink text-slate-800 leading-tight">
-                                        {details?.phoneNumber ?? activeLocation.phone}
+                                {activeLocation.phones.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePhonesAction(activeLocation.phones)}
+                                    className="w-full flex items-center gap-3 text-left"
+                                  >
+                                    <div className="w-11 h-11 rounded-xl bg-[#F6BA27] flex items-center justify-center shadow-sm">
+                                      <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                      </svg>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <p className="text-[11px] font-rethink-bold text-slate-900">
+                                        {activeLocation.phones.length > 1 ? 'Teléfonos' : 'Teléfono'}
                                       </p>
-                                    ) : (
+                                      <p className="text-[12px] font-rethink text-slate-800 leading-tight">
+                                        {activeLocation.phones.join(' / ')}
+                                      </p>
+                                    </div>
+                                  </button>
+                                ) : (
+                                  <div className="w-full flex items-center gap-3 text-left opacity-70">
+                                    <div className="w-11 h-11 rounded-xl bg-[#F6BA27] flex items-center justify-center shadow-sm">
+                                      <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                      </svg>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <p className="text-[11px] font-rethink-bold text-slate-900">
+                                        Teléfono
+                                      </p>
                                       <p className="text-[11px] text-slate-500">
                                         Número no disponible
                                       </p>
-                                    )}
+                                    </div>
                                   </div>
-                                </button>
+                                )}
 
-                                {/* MÍTICA APP (detecta iOS/Android y abre store) */}
+                                {/* MÍTICA APP */}
                                 <button
                                   type="button"
                                   onClick={handleAppClick}
@@ -856,6 +861,8 @@ const LocationsPage: React.FC = () => {
                                       src="/images/brand/Mitica-Logo-fondoNegro.png"
                                       alt="Mítica App"
                                       className="w-full h-full object-cover"
+                                      loading="lazy"
+                                      decoding="async"
                                     />
                                   </div>
                                   <p className="text-[12px] font-rethink-bold text-slate-900">
@@ -863,7 +870,7 @@ const LocationsPage: React.FC = () => {
                                   </p>
                                 </button>
 
-                                {/* BOTONES DELIVERY DESDE SANITY (ej. Rappi) */}
+                                {/* BOTONES DELIVERY DESDE SANITY */}
                                 {deliveryButtons.map((b) => (
                                   <a
                                     key={b.id}
@@ -878,6 +885,8 @@ const LocationsPage: React.FC = () => {
                                           src={b.imageUrl}
                                           alt={b.title}
                                           className="w-full h-full object-cover"
+                                          loading="lazy"
+                                          decoding="async"
                                         />
                                       ) : (
                                         <div className="w-full h-full" />
@@ -919,6 +928,51 @@ const LocationsPage: React.FC = () => {
                 )}
               </div>
             )}
+
+            {/* MODAL SELECCIÓN DE TELÉFONO */}
+            {isPhoneModalOpen && (
+              <div className="absolute inset-0 z-20 flex items-end sm:items-center justify-center bg-black/40 p-4 pointer-events-auto">
+                <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden">
+                  <div className="p-5 border-b border-slate-100">
+                    <h3 className="font-rethink-bold text-base text-slate-900">
+                      Elegir número
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Selecciona el número al que deseas llamar
+                    </p>
+                  </div>
+
+                  <div className="p-4 space-y-3">
+                    {phoneOptions.map((phone, index) => (
+                      <button
+                        key={`phone-option-${index}`}
+                        type="button"
+                        onClick={() => {
+                          handlePhoneClick(phone);
+                          setIsPhoneModalOpen(false);
+                        }}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-left hover:border-[#F6BA27] hover:bg-[#FFF8E1] transition"
+                      >
+                        <p className="text-[11px] font-rethink-bold text-slate-900 mb-1">
+                          {index === 0 ? 'Principal' : 'Secundario'}
+                        </p>
+                        <p className="text-sm text-slate-700">{phone}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="p-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setIsPhoneModalOpen(false)}
+                      className="w-full h-11 rounded-xl bg-slate-100 text-slate-700 font-rethink-bold text-sm hover:bg-slate-200 transition"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -935,6 +989,8 @@ const LocationsPage: React.FC = () => {
                       src={card.iconUrl}
                       alt={card.title}
                       className="w-24 h-24 md:w-28 md:h-28 mb-6 object-contain group-hover:scale-110 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
                     />
                   )}
                   <h3 className="font-rethink-bold text-xl md:text-2xl text-slate-900 mb-2">

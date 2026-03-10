@@ -3,18 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Title, TitleVariant } from '../components/Typography';
 import { MessageCircle, Apple, Play, ChevronRight, X } from 'lucide-react';
 import { client } from '../sanity/client';
-import imageUrlBuilder from '@sanity/image-url';
-
-// ==== Sanity image builder ====
-const builder = imageUrlBuilder(client);
-
-// ✅ Optimización: urlFor con width/height/quality + auto(format)
-function urlFor(source: any, w: number = 1400, h?: number, q: number = 80) {
-  let img = builder.image(source).width(w).quality(q).auto('format');
-  if (h) img = img.height(h).fit('crop');
-  else img = img.fit('max');
-  return img.url();
-}
+import { imgUrl } from '../sanity/image';
 
 // ==== Tipo de deliveryPage en Sanity ====
 type Benefit = {
@@ -127,12 +116,12 @@ const Delivery = () => {
   const hero = data?.hero;
 
   const appBannerImageUrl = useMemo(
-    () => (data?.appBannerImage ? urlFor(data.appBannerImage, 900, undefined, 80) : undefined),
+    () => (data?.appBannerImage ? imgUrl(data.appBannerImage, { w: 900, fit: 'max', q: 80 }) : undefined),
     [data?.appBannerImage]
   );
 
   const choiceImageUrl = useMemo(
-    () => (data?.choiceImage ? urlFor(data.choiceImage, 900, undefined, 85) : undefined),
+    () => (data?.choiceImage ? imgUrl(data.choiceImage, { w: 900, fit: 'max', q: 85 }) : undefined),
     [data?.choiceImage]
   );
 
@@ -149,31 +138,31 @@ const Delivery = () => {
   const mobileVideoUrl = hero?.mobileVideoFile?.asset?.url;
 
   const desktopImgUrl = useMemo(
-    () => (hero?.desktopImage ? urlFor(hero.desktopImage, 1600, 900, 80) : undefined),
+    () => (hero?.desktopImage ? imgUrl(hero.desktopImage, { w: 1600, h: 900, fit: 'crop', q: 80 }) : undefined),
     [hero?.desktopImage]
   );
   const desktopImgSrcSet = useMemo(() => {
     const s = hero?.desktopImage;
     return s
       ? [
-          `${urlFor(s, 960, 540, 80)} 960w`,
-          `${urlFor(s, 1280, 720, 80)} 1280w`,
-          `${urlFor(s, 1600, 900, 80)} 1600w`,
+          `${imgUrl(s, { w: 960, h: 540, fit: 'crop', q: 80 })} 960w`,
+          `${imgUrl(s, { w: 1280, h: 720, fit: 'crop', q: 80 })} 1280w`,
+          `${imgUrl(s, { w: 1600, h: 900, fit: 'crop', q: 80 })} 1600w`,
         ].join(', ')
       : undefined;
   }, [hero?.desktopImage]);
 
   const mobileImgUrl = useMemo(
-    () => (hero?.mobileImage ? urlFor(hero.mobileImage, 900, 1200, 80) : undefined),
+    () => (hero?.mobileImage ? imgUrl(hero.mobileImage, { w: 900, h: 1200, fit: 'crop', q: 80 }) : undefined),
     [hero?.mobileImage]
   );
   const mobileImgSrcSet = useMemo(() => {
     const s = hero?.mobileImage;
     return s
       ? [
-          `${urlFor(s, 480, 640, 80)} 480w`,
-          `${urlFor(s, 720, 960, 80)} 720w`,
-          `${urlFor(s, 900, 1200, 80)} 900w`,
+          `${imgUrl(s, { w: 480, h: 640, fit: 'crop', q: 80 })} 480w`,
+          `${imgUrl(s, { w: 720, h: 960, fit: 'crop', q: 80 })} 720w`,
+          `${imgUrl(s, { w: 900, h: 1200, fit: 'crop', q: 80 })} 900w`,
         ].join(', ')
       : undefined;
   }, [hero?.mobileImage]);
@@ -198,12 +187,12 @@ const Delivery = () => {
   const whatsappIsExternal = ctaWhatsapp?.type !== 'internal';
 
   const appLabelImgUrl = useMemo(
-    () => (ctaApp?.labelImage ? urlFor(ctaApp.labelImage, 256, 256, 85) : undefined),
+    () => (ctaApp?.labelImage ? imgUrl(ctaApp.labelImage, { w: 256, h: 256, fit: 'crop', q: 85 }) : undefined),
     [ctaApp?.labelImage]
   );
 
   const whatsappLabelImgUrl = useMemo(
-    () => (ctaWhatsapp?.labelImage ? urlFor(ctaWhatsapp.labelImage, 256, 256, 85) : undefined),
+    () => (ctaWhatsapp?.labelImage ? imgUrl(ctaWhatsapp.labelImage, { w: 256, h: 256, fit: 'crop', q: 85 }) : undefined),
     [ctaWhatsapp?.labelImage]
   );
 
@@ -253,39 +242,23 @@ const Delivery = () => {
             />
           </>
         ) : desktopImgUrl || mobileImgUrl ? (
-          <>
-            {/* Desktop image (si existe) */}
-            {desktopImgUrl && (
-              <img
-                src={desktopImgUrl}
-                srcSet={desktopImgSrcSet}
-                sizes="100vw"
-                alt={hero?.title || 'Delivery'}
-                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-              />
-            )}
+          <picture className="block w-full h-full">
+            {desktopImgUrl ? (
+              <source media="(min-width: 768px)" srcSet={desktopImgSrcSet || desktopImgUrl} sizes="100vw" />
+            ) : null}
 
-            {/* Mobile image (si existe) */}
-            {mobileImgUrl && (
-              <img
-                src={mobileImgUrl}
-                srcSet={mobileImgSrcSet}
-                sizes="100vw"
-                alt={hero?.title || 'Delivery'}
-                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-              />
-            )}
-
-            {/* Si falta una de las dos, no forzamos fallback; solo queda el bg-black */}
-          </>
+            <img
+              src={mobileImgUrl || desktopImgUrl || ''}
+              srcSet={mobileImgSrcSet || undefined}
+              sizes="100vw"
+              alt={hero?.title || 'Delivery'}
+              className={`w-full h-full object-cover ${mediaOpacityClass}`}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
         ) : (
-          // Sin media: solo fondo negro (sin fallbacks)
           <div className="w-full h-full bg-black" />
         )}
 
@@ -353,15 +326,8 @@ const Delivery = () => {
                   ))}
                 </p>
 
-                {/* Action Buttons (manteniendo tus assets) */}
+                {/* Action Buttons */}
                 <div className="flex justify-center lg:justify-start gap-6 mt-10">
-                  {/* ✅ BOTÓN APP:
-                      - Si hay appStoreUrl/googlePlayUrl => abre modal
-                      - Si no hay, pero hay url legacy => link normal
-                      - Si no hay nada => botón como antes
-
-                      ✅ CAMBIO: si viene labelImage desde Sanity, esa imagen es EL BOTÓN COMPLETO (sin fondo negro automático)
-                  */}
                   {hasStoreLinks ? (
                     <button
                       type="button"
@@ -430,9 +396,6 @@ const Delivery = () => {
                     </button>
                   )}
 
-                  {/* CTA WHATSAPP: si hay link en sanity, úsalo; si no, deja button como antes
-                      ✅ CAMBIO: si viene labelImage desde Sanity, esa imagen es EL BOTÓN COMPLETO (sin fondo negro automático)
-                  */}
                   {whatsappHref ? (
                     <a
                       href={whatsappHref}
@@ -491,7 +454,7 @@ const Delivery = () => {
         </div>
       </section>
 
-      {/* ✅ MODAL DESCARGA APP (como referencia) */}
+      {/* ✅ MODAL DESCARGA APP */}
       {isAppModalOpen && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
@@ -501,10 +464,8 @@ const Delivery = () => {
             if (e.target === e.currentTarget) setIsAppModalOpen(false);
           }}
         >
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
-          {/* Card (más chico, mismo estilo rectangular) */}
           <div className="relative w-full max-w-[520px] bg-white rounded-[2.3rem] shadow-2xl px-8 py-8 md:px-10 md:py-10">
             <button
               type="button"
@@ -581,23 +542,21 @@ const Delivery = () => {
             {benefitsFromSanity ? (
               data!.benefits!.map((benefit, idx) => (
                 <div key={idx} className="flex flex-col items-center">
-                  <div className="w-24 h-24 md:w-28 md:h-28 bg-black rounded-full flex items-center justify-center shadow-2xl mb-8">
-                    {benefit.icon ? (
+                  {benefit.icon ? (
+                    <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden shadow-2xl mb-8">
                       <img
-                        src={urlFor(benefit.icon, 256, 256, 85)}
+                        src={imgUrl(benefit.icon, { w: 256, h: 256, fit: 'crop', q: 85 })}
                         alt={benefit.title || `Beneficio ${idx + 1}`}
-                        className="w-14 h-14 md:w-16 md:h-16 object-contain"
+                        className="w-full h-full object-cover"
                         loading="lazy"
                         decoding="async"
-                        style={{
-                          filter:
-                            'brightness(0) saturate(100%) invert(83%) sepia(71%) saturate(900%) hue-rotate(2deg) brightness(105%) contrast(103%)',
-                        }}
                       />
-                    ) : (
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 md:w-28 md:h-28 bg-black rounded-full flex items-center justify-center shadow-2xl mb-8">
                       <span className="text-mitica-yellow text-4xl md:text-5xl leading-none">★</span>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <h4 className="font-nexa uppercase text-lg md:text-xl lg:text-2xl leading-tight tracking-wide text-black max-w-xs">
                     {benefit.title
