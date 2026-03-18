@@ -1,5 +1,5 @@
 // src/pages/About.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Title, TitleVariant, BodyText } from '../components/Typography';
 import { client } from '../sanity/client';
@@ -34,21 +34,23 @@ type AboutHeroSanity = {
   mediaType?: 'image' | 'video';
   desktopImage?: any;
   mobileImage?: any;
-  videoFile?: any; // deref en GROQ
-  mobileVideoFile?: any; // deref en GROQ
+  videoFile?: any;
+  mobileVideoFile?: any;
   title?: string;
   subtitle?: string;
   titleVariant?: 'regular' | 'textured';
-  titleColor?: string; // tailwind class
-  subtitleColor?: string; // tailwind class
+  titleColor?: string;
+  subtitleColor?: string;
   overlayEnabled?: boolean;
-  overlayOpacity?: number; // 0-80
+  overlayOpacity?: number;
 };
 
 type WhoWeAreSanity = {
   mainText?: any[];
   sideImage?: any;
   content?: any[];
+  bottomText?: any[];
+  bottomImage?: any;
 };
 
 type VisionMissionSanity = {
@@ -92,7 +94,9 @@ const ABOUT_QUERY = `
   whoWeAre{
     mainText,
     sideImage,
-    content
+    content,
+    bottomText,
+    bottomImage
   },
   visionMission{
     visionText,
@@ -112,19 +116,24 @@ const ABOUT_QUERY = `
 const About: React.FC = () => {
   const location = useLocation();
   const [data, setData] = useState<AboutPageSanity | null>(null);
+  const [aboutLoaded, setAboutLoaded] = useState(false);
 
-  // ✅ Detectar desktop para no montar video + imagen al mismo tiempo
   const [isDesktop, setIsDesktop] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     return window.matchMedia('(min-width: 768px)').matches;
   });
+
+  const sideTextRef = useRef<HTMLDivElement | null>(null);
+  const [sideTextHeight, setSideTextHeight] = useState<number>(0);
+
+  const bottomTextRef = useRef<HTMLDivElement | null>(null);
+  const [bottomTextHeight, setBottomTextHeight] = useState<number>(0);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(min-width: 768px)');
     const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
 
-    // soporte safari viejo
     if (mq.addEventListener) mq.addEventListener('change', onChange);
     else mq.addListener(onChange);
 
@@ -136,7 +145,54 @@ const About: React.FC = () => {
     };
   }, []);
 
-  // Scroll por hash (#vision, #manifesto)
+  useEffect(() => {
+    if (!sideTextRef.current || typeof window === 'undefined') return;
+
+    const updateHeight = () => {
+      if (!sideTextRef.current) return;
+      const nextHeight = sideTextRef.current.getBoundingClientRect().height;
+      setSideTextHeight(nextHeight);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    observer.observe(sideTextRef.current);
+    window.addEventListener('resize', updateHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [data]);
+
+  useEffect(() => {
+    if (!bottomTextRef.current || typeof window === 'undefined') return;
+
+    const updateHeight = () => {
+      if (!bottomTextRef.current) return;
+      const nextHeight = bottomTextRef.current.getBoundingClientRect().height;
+      setBottomTextHeight(nextHeight);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    observer.observe(bottomTextRef.current);
+    window.addEventListener('resize', updateHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [data]);
+
   useEffect(() => {
     if (location.hash) {
       const elementId = location.hash.replace('#', '');
@@ -145,7 +201,6 @@ const About: React.FC = () => {
     }
   }, [location]);
 
-  // Fetch desde Sanity
   useEffect(() => {
     const fetchAbout = async () => {
       try {
@@ -154,30 +209,26 @@ const About: React.FC = () => {
         setData(result);
       } catch (err) {
         console.error('Error fetching aboutPage from Sanity', err);
+      } finally {
+        setAboutLoaded(true);
       }
     };
     fetchAbout();
   }, []);
 
-  // ===== Derivados =====
   const hero = data?.hero;
   const who = data?.whoWeAre;
   const vm = data?.visionMission;
   const manifesto = data?.manifesto;
 
-  // ✅ sin fallback de título
   const heroTitle = (hero?.title ?? '').trim();
   const heroSubtitle = (hero?.subtitle ?? '').trim();
 
-  // ✅ Overlay opcional desde Sanity (defaults: ON y 40)
   const overlayEnabled = hero?.overlayEnabled ?? true;
   const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
   const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
-
-  // ✅ CLAVE: si overlay está OFF, NO bajes opacidad del media
   const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
 
-  // ✅ HERO IMAGES OPTIMIZADAS
   const heroDesktopDefault = hero?.desktopImage
     ? imgUrl(hero.desktopImage, 2000, undefined, 80)
     : FALLBACK_HERO_DESKTOP;
@@ -208,7 +259,6 @@ const About: React.FC = () => {
   const heroDesktopVideoUrl = hero?.videoFile?.asset?.url || '';
   const heroMobileVideoUrl = hero?.mobileVideoFile?.asset?.url || '';
 
-  // ✅ OTRAS IMÁGENES (optimización suave)
   const whoSideImageUrl = who?.sideImage
     ? imgUrl(who.sideImage, 1200, undefined, 80)
     : FALLBACK_WHO_SIDE;
@@ -218,6 +268,18 @@ const About: React.FC = () => {
         `${imgUrl(who.sideImage, 640, undefined, 80)} 640w`,
         `${imgUrl(who.sideImage, 960, undefined, 80)} 960w`,
         `${imgUrl(who.sideImage, 1200, undefined, 80)} 1200w`,
+      ].join(', ')
+    : undefined;
+
+  const whoBottomImageUrl = who?.bottomImage
+    ? imgUrl(who.bottomImage, 1200, undefined, 80)
+    : FALLBACK_WHO_SIDE;
+
+  const whoBottomSrcSet = who?.bottomImage
+    ? [
+        `${imgUrl(who.bottomImage, 640, undefined, 80)} 640w`,
+        `${imgUrl(who.bottomImage, 960, undefined, 80)} 960w`,
+        `${imgUrl(who.bottomImage, 1200, undefined, 80)} 1200w`,
       ].join(', ')
     : undefined;
 
@@ -258,12 +320,11 @@ const About: React.FC = () => {
         ].join(', ')
       : undefined;
 
-  // ===== PortableText components =====
   const portableLight = useMemo(
     () => ({
       block: {
         normal: ({ children }: any) => (
-          <p className="m-0 font-rethink text-base md:text-lg leading-relaxed text-gray-700 text-justify">
+          <p className="m-0 font-rethink text-[15px] md:text-[17px] leading-[1.45] text-gray-700 text-justify">
             {children}
           </p>
         ),
@@ -287,7 +348,31 @@ const About: React.FC = () => {
     () => ({
       block: {
         normal: ({ children }: any) => (
-          <p className="m-0 font-rethink text-lg md:text-xl leading-relaxed text-gray-800 text-center">
+          <p className="m-0 font-rethink text-[15px] md:text-[17px] leading-[1.45] text-gray-800 text-center">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        highlight: ({ children }: any) => (
+          <span className="text-mitica-yellow font-bold">{children}</span>
+        ),
+        strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
+        em: ({ children }: any) => <em className="italic">{children}</em>,
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  );
+
+  const portableBottomJustified = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="mb-4 last:mb-0 whitespace-pre-line font-rethink text-[15px] md:text-[17px] leading-[1.45] text-gray-800 text-justify">
             {children}
           </p>
         ),
@@ -336,9 +421,33 @@ const About: React.FC = () => {
       {/* ✅ HERO (igual estilo que Menu) + debajo del navbar en móvil */}
       <div className="relative w-full overflow-hidden bg-mitica-black pt-24 md:pt-0 min-h-[100svh]">
         <div className="relative w-full h-[calc(100svh-96px)] md:h-[100svh] bg-black overflow-hidden">
-          {hero?.mediaType === 'video' ? (
-            isDesktop ? (
-              heroDesktopVideoUrl ? (
+          {aboutLoaded &&
+            (hero?.mediaType === 'video' ? (
+              isDesktop ? (
+                heroDesktopVideoUrl ? (
+                  <video
+                    className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                  >
+                    <source src={heroDesktopVideoUrl} type="video/mp4" />
+                  </video>
+                ) : (
+                  <img
+                    src={heroDesktopDefault}
+                    srcSet={heroDesktopSrcSet}
+                    sizes="100vw"
+                    alt={heroTitle || 'Nosotros'}
+                    className={`w-full h-full object-cover ${mediaOpacityClass}`}
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                  />
+                )
+              ) : heroMobileVideoUrl ? (
                 <video
                   className={`w-full h-full object-cover ${mediaOpacityClass}`}
                   autoPlay
@@ -347,12 +456,12 @@ const About: React.FC = () => {
                   playsInline
                   preload="metadata"
                 >
-                  <source src={heroDesktopVideoUrl} type="video/mp4" />
+                  <source src={heroMobileVideoUrl} type="video/mp4" />
                 </video>
               ) : (
                 <img
-                  src={heroDesktopDefault}
-                  srcSet={heroDesktopSrcSet}
+                  src={heroMobileDefault}
+                  srcSet={heroMobileSrcSet}
                   sizes="100vw"
                   alt={heroTitle || 'Nosotros'}
                   className={`w-full h-full object-cover ${mediaOpacityClass}`}
@@ -361,57 +470,31 @@ const About: React.FC = () => {
                   decoding="async"
                 />
               )
-            ) : heroMobileVideoUrl ? (
-              <video
-                className={`w-full h-full object-cover ${mediaOpacityClass}`}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-              >
-                <source src={heroMobileVideoUrl} type="video/mp4" />
-              </video>
             ) : (
-              <img
-                src={heroMobileDefault}
-                srcSet={heroMobileSrcSet}
-                sizes="100vw"
-                alt={heroTitle || 'Nosotros'}
-                className={`w-full h-full object-cover ${mediaOpacityClass}`}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-              />
-            )
-          ) : (
-            <>
-              {/* Desktop image */}
-              <img
-                src={heroDesktopDefault}
-                srcSet={heroDesktopSrcSet}
-                sizes="100vw"
-                alt={heroTitle || 'Nosotros'}
-                className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-              />
-              {/* Mobile image */}
-              <img
-                src={heroMobileDefault}
-                srcSet={heroMobileSrcSet}
-                sizes="100vw"
-                alt={heroTitle || 'Nosotros'}
-                className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-              />
-            </>
-          )}
+              <>
+                <img
+                  src={heroDesktopDefault}
+                  srcSet={heroDesktopSrcSet}
+                  sizes="100vw"
+                  alt={heroTitle || 'Nosotros'}
+                  className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+                <img
+                  src={heroMobileDefault}
+                  srcSet={heroMobileSrcSet}
+                  sizes="100vw"
+                  alt={heroTitle || 'Nosotros'}
+                  className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </>
+            ))}
 
-          {/* ✅ Overlay OPCIONAL desde Sanity */}
           {overlayEnabled && (
             <div
               className="absolute inset-0"
@@ -419,14 +502,16 @@ const About: React.FC = () => {
             />
           )}
 
-          {/* Textos igual que Menu */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
             {heroTitle && (
-              <Title
-                variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
-                text={heroTitle}
-                className={`text-4xl md:text-7xl ${hero?.titleColor || 'text-white'} mb-7 md:mb-9`}
-              />
+              <div className="w-full max-w-[1050px] mx-auto">
+                <Title
+                  variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
+                  text={heroTitle}
+                  className={`whitespace-pre-line text-4xl md:text-7xl ${hero?.titleColor || 'text-white'} mb-7 md:mb-9`}
+                  align="center"
+                />
+              </div>
             )}
 
             {heroSubtitle && (
@@ -444,7 +529,7 @@ const About: React.FC = () => {
 
       {/* ¿QUIÉNES SOMOS? */}
       <section className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-6xl px-6">
           <div className="text-center">
             <Title
               variant={TitleVariant.REGULAR}
@@ -454,26 +539,39 @@ const About: React.FC = () => {
             />
 
             {Array.isArray(who?.mainText) && (who?.mainText?.length || 0) > 0 ? (
-              <div className="mx-auto max-w-6xl space-y-4">
+              <div className="mx-auto max-w-5xl space-y-4">
                 <PortableText value={who?.mainText || []} components={portableMainCentered} />
               </div>
             ) : (
-              <div className="mx-auto max-w-6xl">
+              <div className="mx-auto max-w-5xl">
                 <BodyText
                   text="MÍTICA es un concepto de hamburguesería FAST-CASUAL que nace el 30 de Enero de 2020..."
-                  className="text-gray-800 text-lg md:text-xl leading-relaxed text-center"
+                  className="text-gray-800 text-[15px] md:text-[17px] leading-[1.45] text-center"
                 />
               </div>
             )}
           </div>
 
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-14 items-start">
-            <div className="w-full">
-              <div className="w-full aspect-[4/3] overflow-hidden">
+          <div className="mt-10 flex flex-col md:flex-row md:items-start gap-6 md:gap-8">
+            <div className="w-full md:w-auto flex justify-center md:justify-start md:flex-shrink-0">
+              <div
+                className="w-full max-w-full overflow-hidden md:max-w-[320px]"
+                style={
+                  isDesktop && sideTextHeight > 0
+                    ? {
+                        width: `${sideTextHeight}px`,
+                        height: `${sideTextHeight}px`,
+                        maxWidth: '320px',
+                      }
+                    : {
+                        aspectRatio: '1 / 1',
+                      }
+                }
+              >
                 <img
                   src={whoSideImageUrl}
                   srcSet={whoSideSrcSet}
-                  sizes="(min-width: 768px) 50vw, 100vw"
+                  sizes="(min-width: 768px) 320px, 100vw"
                   alt="Quiénes somos"
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -482,13 +580,13 @@ const About: React.FC = () => {
               </div>
             </div>
 
-            <div className="w-full text-left">
+            <div ref={sideTextRef} className="w-full flex-1 text-left">
               {Array.isArray(who?.content) && (who?.content?.length || 0) > 0 ? (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   <PortableText value={who?.content || []} components={portableLight} />
                 </div>
               ) : (
-                <div className="space-y-6 font-rethink text-base md:text-lg text-gray-700 text-justify">
+                <div className="space-y-5 font-rethink text-[15px] md:text-[17px] leading-[1.45] text-gray-700 text-justify">
                   <p>
                     <strong className="text-black">MÍTICA</strong> está inspirada en el verdadero{' '}
                     <span className="text-mitica-yellow font-bold">amor por las hamburguesas</span>.
@@ -499,6 +597,43 @@ const About: React.FC = () => {
               )}
             </div>
           </div>
+
+          {Array.isArray(who?.bottomText) && (who?.bottomText?.length || 0) > 0 ? (
+            <div className="mt-8 w-full">
+              <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-8">
+                <div className="w-full md:w-auto flex justify-center md:justify-end md:flex-shrink-0 order-1 md:order-2">
+                  <div
+                    className="w-full max-w-full overflow-hidden md:max-w-[320px]"
+                    style={
+                      isDesktop && bottomTextHeight > 0
+                        ? {
+                            width: `${bottomTextHeight}px`,
+                            height: `${bottomTextHeight}px`,
+                            maxWidth: '320px',
+                          }
+                        : {
+                            aspectRatio: '1 / 1',
+                          }
+                    }
+                  >
+                    <img
+                      src={whoBottomImageUrl}
+                      srcSet={whoBottomSrcSet}
+                      sizes="(min-width: 768px) 320px, 100vw"
+                      alt="Texto inferior"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                </div>
+
+                <div ref={bottomTextRef} className="w-full flex-1 order-2 md:order-1">
+                  <PortableText value={who?.bottomText || []} components={portableBottomJustified} />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -563,7 +698,7 @@ const About: React.FC = () => {
           />
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-10 md:gap-x-16 max-w-5xl mx-auto">
-            {values.map((val, idx) => {
+            {values.map((val) => {
               return (
                 <h4
                   key={val}

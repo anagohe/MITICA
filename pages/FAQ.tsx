@@ -339,15 +339,17 @@ const FAQ = () => {
             />
           )}
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
             {heroTitle ? (
-              <Title
-                variant={heroTitleVariant}
-                text={heroTitle}
-                color={heroTitleColor}
-                className="text-4xl md:text-7xl text-center"
-                align="center"
-              />
+              <div className="w-full max-w-[1050px] mx-auto">
+                <Title
+                  variant={heroTitleVariant}
+                  text={heroTitle}
+                  color={heroTitleColor}
+                  className="whitespace-pre-line text-4xl md:text-7xl text-center"
+                  align="center"
+                />
+              </div>
             ) : null}
 
             {heroSubtitle ? (
@@ -361,12 +363,15 @@ const FAQ = () => {
         </div>
       ) : (
         <div className="relative h-screen w-full bg-mitica-black overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Title
-              variant={TitleVariant.REGULAR}
-              text="PREGUNTAS FRECUENTES"
-              className="text-4xl md:text-7xl text-white text-center"
-            />
+          <div className="absolute inset-0 flex items-center justify-center px-8 sm:px-12 md:px-20 lg:px-28">
+            <div className="w-full max-w-[1050px] mx-auto">
+              <Title
+                variant={TitleVariant.REGULAR}
+                text="PREGUNTAS FRECUENTES"
+                className="whitespace-pre-line text-4xl md:text-7xl text-white text-center"
+                align="center"
+              />
+            </div>
           </div>
         </div>
       )}

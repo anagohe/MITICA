@@ -59,7 +59,9 @@ export const hero = defineType({
     defineField({
       name: 'title',
       title: 'Título',
-      type: 'string',
+      type: 'text',
+      rows: 3,
+      description: 'Puedes usar Enter para hacer saltos de línea.',
     }),
     defineField({
       name: 'titleVariant',

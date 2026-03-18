@@ -217,11 +217,9 @@ export const franchisePage = defineType({
     }),
     defineField({
       name: 'paragraphText',
-      type: 'text',
+      type: 'blockContent',
       title: 'Párrafo principal',
-      rows: 4,
-      initialValue:
-        'En octubre de 2024, seguimos expandiéndonos. Mítica ofrece un modelo de negocio rentable y escalable. Con nuestro soporte operativo y de marketing, aseguramos que cada sucursal mantenga los estándares de calidad que nos caracterizan.',
+      description: 'Aquí puedes usar Enter, negritas y color, y se verá igual en el front.',
       fieldset: 'intro',
     }),
 
@@ -275,11 +273,9 @@ export const franchisePage = defineType({
     }),
     defineField({
       name: 'closingText',
-      type: 'text',
+      type: 'blockContent',
       title: 'Texto final (abajo de beneficios)',
-      rows: 3,
-      initialValue:
-        'Parte de nuestra filosofía es crecer junto a nuestros socios. Buscamos emprendedores apasionados por la comida y el servicio.',
+      description: 'Aquí puedes usar Enter, negritas y color, y se verá igual en el front.',
       fieldset: 'benefits',
     }),
 

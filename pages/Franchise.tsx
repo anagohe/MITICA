@@ -1,5 +1,6 @@
 // src/pages/Franchise.tsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { PortableText } from '@portabletext/react'
 import { Title, TitleVariant } from '../components/Typography'
 
 // ✅ Sanity
@@ -77,7 +78,7 @@ type FranchiseData = {
 
   pageTitle?: string
   leadText?: string
-  paragraphText?: string
+  paragraphText?: any[]
 
   specialTitle?: string
   specialItems?: { title?: string; desc?: string; icon?: any }[]
@@ -85,7 +86,7 @@ type FranchiseData = {
   benefitsTitle?: string
   benefits?: { title?: string; desc?: string }[]
 
-  closingText?: string
+  closingText?: any[]
 
   formTitle?: string
   formSubtitle?: string
@@ -139,6 +140,30 @@ const Franchise = () => {
       mounted = false
     }
   }, [])
+
+  const portableJustified = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="mb-4 last:mb-0 whitespace-pre-line font-rethink text-sm md:text-base text-gray-700 leading-relaxed text-justify">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        highlight: ({ children }: any) => (
+          <span className="text-mitica-yellow font-bold">{children}</span>
+        ),
+        strong: ({ children }: any) => <strong className="font-bold text-black">{children}</strong>,
+        em: ({ children }: any) => <em className="italic">{children}</em>,
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  )
 
   // ✅ Evita el “flash” inicial del formulario antes de que llegue Sanity
   if (loading) {
@@ -209,7 +234,7 @@ const Franchise = () => {
   // ===== CONTENIDO =====
   const pageTitle = data?.pageTitle || ''
   const leadText = data?.leadText || ''
-  const paragraphText = data?.paragraphText || ''
+  const paragraphText = Array.isArray(data?.paragraphText) ? data?.paragraphText : []
 
   const specialTitle = data?.specialTitle || ''
   const specialItems = data?.specialItems?.length ? data.specialItems : []
@@ -217,7 +242,7 @@ const Franchise = () => {
   const benefitsTitle = data?.benefitsTitle || ''
   const benefits = data?.benefits?.length ? data.benefits : []
 
-  const closingText = data?.closingText || ''
+  const closingText = Array.isArray(data?.closingText) ? data?.closingText : []
 
   const formTitle = data?.formTitle || ''
   const formSubtitle = data?.formSubtitle || ''
@@ -336,16 +361,18 @@ const Franchise = () => {
             />
           )}
 
-          {/* ✅ Textos igual que Menu/About */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+          {/* ✅ Textos igual que Events */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
             {heroTitle ? (
-              <Title
-                variant={heroTitleVariant}
-                text={heroTitle}
-                color={heroTitleColor}
-                className="text-4xl md:text-7xl mb-7 md:mb-9"
-                align="center"
-              />
+              <div className="w-full max-w-[1050px] mx-auto">
+                <Title
+                  variant={heroTitleVariant}
+                  text={heroTitle}
+                  color={heroTitleColor}
+                  className="whitespace-pre-line text-4xl md:text-7xl mb-7 md:mb-9"
+                  align="center"
+                />
+              </div>
             ) : null}
 
             {heroSubtitle ? (
@@ -372,9 +399,10 @@ const Franchise = () => {
           <p className="font-rethink font-bold text-base md:text-lg text-black mb-4 text-justify">
             {leadText}
           </p>
-          <p className="font-rethink text-sm md:text-base text-gray-700 leading-relaxed text-justify">
-            {paragraphText}
-          </p>
+
+          {paragraphText.length > 0 ? (
+            <PortableText value={paragraphText} components={portableJustified} />
+          ) : null}
         </div>
       </div>
 
@@ -435,9 +463,9 @@ const Franchise = () => {
         </div>
 
         <div className="max-w-4xl mx-auto mb-14">
-          <p className="font-rethink text-sm md:text-base text-gray-700 leading-relaxed">
-            {closingText}
-          </p>
+          {closingText.length > 0 ? (
+            <PortableText value={closingText} components={portableJustified} />
+          ) : null}
         </div>
 
         {/* ✅ FORM (funcional) */}

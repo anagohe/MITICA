@@ -1,4 +1,3 @@
-// studio-mitica/schemaTypes/about.ts
 import { defineType, defineField } from 'sanity';
 
 const aboutPage = defineType({
@@ -35,6 +34,17 @@ const aboutPage = defineType({
           name: 'content',
           type: 'blockContent',
           title: 'Contenido Rico (Texto Lateral)',
+        }),
+        defineField({
+          name: 'bottomText',
+          type: 'blockContent',
+          title: 'Texto Inferior Centrado (Rico)',
+        }),
+        defineField({
+          name: 'bottomImage',
+          type: 'image',
+          title: 'Imagen Derecha del Texto Inferior',
+          options: { hotspot: true },
         }),
       ],
     }),

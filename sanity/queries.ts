@@ -115,6 +115,10 @@ export const INGREDIENTS_PAGE_QUERY = `
     title,
     content,
     image,
+    images[]{
+      _key,
+      image
+    },
     layout
   },
   saucesIntro,

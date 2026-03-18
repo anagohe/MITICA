@@ -191,14 +191,54 @@ export const ingredientsPage = defineType({
         {
           type: 'object',
           fields: [
-            defineField({ name: 'title', title: 'Título de la sección', type: 'string' }),
-            defineField({ name: 'content', title: 'Contenido (rich text)', type: 'blockContent' }),
             defineField({
-              name: 'image',
-              title: 'Imagen de la sección',
-              type: 'image',
-              options: { hotspot: true },
+              name: 'title',
+              title: 'Título de la sección',
+              type: 'string',
             }),
+
+            defineField({
+              name: 'content',
+              title: 'Contenido (rich text)',
+              type: 'blockContent',
+            }),
+
+            // ✅ ÚNICO campo de imágenes: sirve para una o varias
+            defineField({
+              name: 'images',
+              title: 'Imágenes de la sección',
+              type: 'array',
+              of: [
+                defineField({
+                  name: 'sectionImage',
+                  title: 'Imagen',
+                  type: 'object',
+                  fields: [
+                    defineField({
+                      name: 'image',
+                      title: 'Imagen',
+                      type: 'image',
+                      options: { hotspot: true },
+                      validation: (Rule) => Rule.required(),
+                    }),
+                  ],
+                  preview: {
+                    select: {
+                      media: 'image',
+                    },
+                    prepare({ media }) {
+                      return {
+                        title: 'Imagen',
+                        media,
+                      }
+                    },
+                  },
+                }),
+              ],
+              description:
+                'Aquí agregas una sola imagen o varias. Si agregas varias, el front las mostrará como slider.',
+            }),
+
             defineField({
               name: 'layout',
               title: 'Layout',
@@ -212,6 +252,18 @@ export const ingredientsPage = defineType({
               initialValue: 'text-left',
             }),
           ],
+          preview: {
+            select: {
+              title: 'title',
+              media: 'images.0.image',
+            },
+            prepare({ title, media }) {
+              return {
+                title: title || 'Sección',
+                media,
+              }
+            },
+          },
         },
       ],
     }),

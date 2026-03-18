@@ -1,7 +1,3 @@
-// studio-mitica/sanity.cli.ts
-import React from "react";
-(globalThis as any).React = React;
-
 import { defineCliConfig } from "sanity/cli";
 
 export default defineCliConfig({

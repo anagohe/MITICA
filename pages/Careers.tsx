@@ -252,14 +252,16 @@ const Careers = () => {
           <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
         )}
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
           {heroTitle ? (
-            <Title
-              variant={heroTitleVariant}
-              text={heroTitle}
-              className={`text-4xl md:text-7xl ${heroTitleColorClass} mb-7 md:mb-9`}
-              align="center"
-            />
+            <div className="w-full max-w-[1050px] mx-auto">
+              <Title
+                variant={heroTitleVariant}
+                text={heroTitle}
+                className={`whitespace-pre-line text-4xl md:text-7xl ${heroTitleColorClass} mb-7 md:mb-9`}
+                align="center"
+              />
+            </div>
           ) : null}
 
           {heroSubtitle ? (

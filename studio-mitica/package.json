@@ -8,23 +8,24 @@
     "dev": "sanity dev",
     "start": "sanity start",
     "build": "sanity build",
-    "deploy": "NODE_OPTIONS=\"--require ./preload-react.cjs\" sanity deploy",
-    "deploy:no-preload": "sanity deploy",
+    "deploy": "sanity deploy --no-build",
+    "deploy:latest": "npx sanity@latest deploy --no-build",
+    "manifest": "sanity manifest extract",
     "deploy-graphql": "sanity graphql deploy"
   },
   "keywords": [
     "sanity"
   ],
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "sanity": "^5.13.0",
-    "styled-components": "^6.3.10"
+    "react": "^19.2.2",
+    "react-dom": "^19.2.2",
+    "sanity": "^5.15.0",
+    "styled-components": "^6.3.11"
   },
   "devDependencies": {
     "@sanity/eslint-config-studio": "^5.0.2",
     "@sanity/export": "^6.0.5",
-    "@sanity/vision": "^5.13.0",
+    "@sanity/vision": "^5.15.0",
     "@types/react": "^19.0.0",
     "eslint": "^9.28.0",
     "prettier": "^3.5.0",

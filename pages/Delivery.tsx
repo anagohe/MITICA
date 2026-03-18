@@ -271,15 +271,18 @@ const Delivery = () => {
         )}
 
         {/* Textos (mismos tamaños Menu/About) */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
           {hero?.title && (
-            <Title
-              variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
-              text={hero.title}
-              className={`text-4xl md:text-7xl ${
-                hero?.titleColor || hero?.textColor || 'text-white'
-              } mb-7 md:mb-9`}
-            />
+            <div className="w-full max-w-[1050px] mx-auto">
+              <Title
+                variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
+                text={hero.title}
+                className={`whitespace-pre-line text-4xl md:text-7xl ${
+                  hero?.titleColor || hero?.textColor || 'text-white'
+                } mb-7 md:mb-9`}
+                align="center"
+              />
+            </div>
           )}
 
           {hero?.subtitle && (

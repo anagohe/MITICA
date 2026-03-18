@@ -5,6 +5,7 @@ import { client } from '../sanity/client';
 import { INGREDIENTS_PAGE_QUERY } from '../sanity/queries';
 import { urlFor } from '../sanity/image';
 import { PortableText } from '@portabletext/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type HeroType = {
   mediaType?: 'image' | 'video';
@@ -27,10 +28,16 @@ type HeroType = {
   overlayOpacity?: number;
 };
 
+type SectionImage = {
+  _key?: string;
+  image?: any;
+};
+
 type Section = {
   title?: string;
   content?: any;
   image?: any;
+  images?: SectionImage[];
   layout?: 'text-left' | 'text-right';
 };
 
@@ -60,14 +67,14 @@ function getFileUrl(file: any): string | undefined {
   return file?.asset?.url || file?.url || undefined;
 }
 
-// ===== Imagen helpers (evita originales) =====
-function imgCrop(source: any, w: number, h: number, q = 75) {
-  return urlFor(source).width(w).height(h).fit('crop').quality(q).url();
+// ===== Imagen helpers optimizados (menos bandwidth) =====
+function imgCrop(source: any, w: number, h: number, q = 60) {
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).auto('format').url();
 }
-function imgMax(source: any, w: number, q = 75) {
-  return urlFor(source).width(w).fit('max').quality(q).url();
+function imgMax(source: any, w: number, q = 60) {
+  return urlFor(source).width(w).fit('max').quality(q).auto('format').url();
 }
-function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 75) {
+function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 60) {
   return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ');
 }
 
@@ -75,6 +82,7 @@ const Ingredients: React.FC = () => {
   const [page, setPage] = useState<IngredientsPageDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [sectionSlides, setSectionSlides] = useState<Record<number, number>>({});
 
   // ✅ Solo fuentes de Typography (CSS vars)
   const FONT_TITLE_MAIN = 'var(--font-title-main)';
@@ -112,7 +120,7 @@ const Ingredients: React.FC = () => {
       block: {
         normal: ({ children }: any) => (
           <p
-            className="m-0 text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center"
+            className="m-0 text-gray-600 text-base md:text-lg leading-relaxed w-full mx-auto text-center"
             style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
           >
             {children}
@@ -148,14 +156,24 @@ const Ingredients: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  const goToPrevSlide = (sectionIdx: number, total: number) => {
+    if (total <= 1) return;
+    setSectionSlides((prev) => ({
+      ...prev,
+      [sectionIdx]: ((prev[sectionIdx] ?? 0) - 1 + total) % total,
+    }));
+  };
+
+  const goToNextSlide = (sectionIdx: number, total: number) => {
+    if (total <= 1) return;
+    setSectionSlides((prev) => ({
+      ...prev,
+      [sectionIdx]: ((prev[sectionIdx] ?? 0) + 1) % total,
+    }));
+  };
+
   if (loading) {
-    return (
-      <div className="w-full bg-white min-h-screen flex items-center justify-center">
-        <p className="text-gray-700" style={{ fontFamily: FONT_BODY, fontWeight: 400 }}>
-          Cargando ingredientes...
-        </p>
-      </div>
-    );
+    return <div className="w-full min-h-screen bg-mitica-black" />;
   }
 
   if (!page) {
@@ -198,19 +216,19 @@ const Ingredients: React.FC = () => {
   const heroTitleVariant =
     hero?.titleVariant === 'textured' ? TitleVariant.TEXTURED_BORDERED : TitleVariant.REGULAR;
 
-  // ✅ Hero imágenes optimizadas + srcSet
+  // ✅ Hero imágenes optimizadas + srcSet más ligeros
   const desktopHero =
     hero?.desktopImage
       ? {
-          src: imgCrop(hero.desktopImage, 1600, 900, 75),
+          src: imgCrop(hero.desktopImage, 1440, 810, 58),
           srcSet: srcSetCrop(
             hero.desktopImage,
             [
-              [960, 540],
-              [1280, 720],
-              [1600, 900],
+              [768, 432],
+              [1152, 648],
+              [1440, 810],
             ],
-            75
+            58
           ),
         }
       : null;
@@ -218,15 +236,15 @@ const Ingredients: React.FC = () => {
   const mobileHero =
     hero?.mobileImage
       ? {
-          src: imgCrop(hero.mobileImage, 900, 1200, 75),
+          src: imgCrop(hero.mobileImage, 750, 1000, 58),
           srcSet: srcSetCrop(
             hero.mobileImage,
             [
-              [480, 640],
-              [720, 960],
-              [900, 1200],
+              [375, 500],
+              [560, 747],
+              [750, 1000],
             ],
-            75
+            58
           ),
         }
       : desktopHero
@@ -304,15 +322,17 @@ const Ingredients: React.FC = () => {
           <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
         )}
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
           {hero?.title && (
-            <Title
-              variant={heroTitleVariant}
-              text={hero.title}
-              align="center"
-              borderColor="#FFF"
-              className={`text-4xl md:text-7xl ${titleColorClass} mb-7 md:mb-9 max-w-5xl mx-auto`}
-            />
+            <div className="w-full max-w-[1050px] mx-auto">
+              <Title
+                variant={heroTitleVariant}
+                text={hero.title}
+                align="center"
+                borderColor="#FFF"
+                className={`whitespace-pre-line text-4xl md:text-7xl ${titleColorClass} mb-7 md:mb-9`}
+              />
+            </div>
           )}
 
           {hero?.subtitle && (
@@ -338,15 +358,36 @@ const Ingredients: React.FC = () => {
           {sections.map((section, idx) => {
             const isTextLeft = section.layout === 'text-left' || !section.layout;
 
+            const validImagesFromArray =
+              Array.isArray(section.images) && section.images.length > 0
+                ? section.images.map((item) => item?.image).filter(Boolean)
+                : [];
+
+            const galleryImages =
+              validImagesFromArray.length > 0
+                ? validImagesFromArray
+                : section.image
+                ? [section.image]
+                : [];
+
+            const currentSlide = Math.min(sectionSlides[idx] ?? 0, Math.max(galleryImages.length - 1, 0));
+            const currentImage = galleryImages[currentSlide];
+            const totalSlides = galleryImages.length;
+            const hasVisual = !!currentImage;
+
             return (
               <div
                 key={idx}
-                className="flex flex-col lg:flex-row items-center lg:items-stretch gap-10 lg:gap-16 mb-24"
+                className={`flex flex-col lg:flex-row ${
+                  hasVisual ? 'items-center lg:items-stretch xl:items-center justify-center gap-8 lg:gap-10' : 'items-start'
+                } mb-20 w-full`}
               >
-                {/* Texto (centrado vertical + justificado) */}
+                {/* Texto */}
                 <div
-                  className={`w-full lg:w-[48%] flex flex-col justify-center text-left ${
-                    isTextLeft ? 'order-1 lg:order-1' : 'order-1 lg:order-2'
+                  className={`flex flex-col justify-center text-left ${
+                    hasVisual
+                      ? `w-full lg:w-[42%] xl:w-[42%] ${isTextLeft ? 'order-1 lg:order-1' : 'order-1 lg:order-2'}`
+                      : 'w-full max-w-none order-1'
                   }`}
                 >
                   {section.title && (
@@ -365,31 +406,68 @@ const Ingredients: React.FC = () => {
                   )}
                 </div>
 
-                {/* Imagen (más chica para que quepa más texto) */}
-                {section.image && (
+                {/* Slider de imágenes */}
+                {hasVisual && (
                   <div
-                    className={`w-full lg:w-[52%] overflow-hidden relative group h-[320px] sm:h-[360px] lg:h-[440px] xl:h-[480px] 2xl:h-[520px] ${
+                    className={`w-full md:max-w-none lg:w-[58%] xl:w-[58%] lg:max-w-[590px] overflow-hidden relative group aspect-[4/3] lg:aspect-auto xl:aspect-[4/3] lg:self-stretch xl:self-auto ${
                       isTextLeft ? 'order-2 lg:order-2' : 'order-2 lg:order-1'
                     }`}
                   >
                     <img
-                      src={imgCrop(section.image, 1200, 900, 75)}
+                      src={imgCrop(currentImage, 960, 720, 58)}
                       srcSet={srcSetCrop(
-                        section.image,
+                        currentImage,
                         [
-                          [720, 540],
+                          [480, 360],
+                          [768, 576],
                           [960, 720],
-                          [1200, 900],
                         ],
-                        75
+                        58
                       )}
-                      sizes="(min-width: 1024px) 52vw, 100vw"
+                      sizes="(min-width: 1280px) 590px, (min-width: 1024px) 58vw, 100vw"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       alt={section.title || 'Ingredientes Mítica'}
                       loading="lazy"
                       decoding="async"
                     />
+
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+
+                    {totalSlides > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => goToPrevSlide(idx, totalSlides)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/65 transition-colors"
+                          aria-label="Imagen anterior"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => goToNextSlide(idx, totalSlides)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/65 transition-colors"
+                          aria-label="Siguiente imagen"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                          {galleryImages.map((_, dotIdx) => (
+                            <button
+                              key={dotIdx}
+                              type="button"
+                              onClick={() => setSectionSlides((prev) => ({ ...prev, [idx]: dotIdx }))}
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                dotIdx === currentSlide ? 'w-8 bg-mitica-yellow' : 'w-2 bg-white/70'
+                              }`}
+                              aria-label={`Ir a la imagen ${dotIdx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -408,12 +486,12 @@ const Ingredients: React.FC = () => {
                 />
 
                 {Array.isArray(saucesIntro) && saucesIntro.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-4 w-full">
                     <PortableText value={saucesIntro} components={portableTextCentered} />
                   </div>
                 ) : (
                   <p
-                    className="text-gray-600 text-base md:text-lg leading-relaxed max-w-4xl mx-auto text-center whitespace-pre-line"
+                    className="text-gray-600 text-base md:text-lg leading-relaxed w-full mx-auto text-center whitespace-pre-line"
                     style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
                   >
                     {
@@ -427,10 +505,19 @@ const Ingredients: React.FC = () => {
                 <div className="flex w-max animate-scroll group-hover:paused">
                   {[...sauces, ...sauces, ...sauces].map((sauce, idx) => (
                     <div key={idx} className="mx-8 flex flex-col items-center justify-center w-32">
-                      <div className="w-24 h-24 rounded-full shadow-lg mb-4 border-4 border-white overflow-hidden transition-transform hover:scale-110 bg-gray-100">
+                      <div className="w-24 h-24 rounded-full shadow-lg mb-4 overflow-hidden transition-transform hover:scale-110 bg-gray-100">
                         {sauce.image && (
                           <img
-                            src={imgCrop(sauce.image, 200, 200, 80)}
+                            src={imgCrop(sauce.image, 120, 120, 52)}
+                            srcSet={srcSetCrop(
+                              sauce.image,
+                              [
+                                [80, 80],
+                                [120, 120],
+                              ],
+                              52
+                            )}
+                            sizes="96px"
                             alt={sauce.name || 'Aderezo Mítica'}
                             className="w-full h-full object-cover"
                             loading="lazy"

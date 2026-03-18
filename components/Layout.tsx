@@ -405,6 +405,47 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
     },
   ];
 
+  const footerLogos = [
+    {
+      name: 'Milos',
+      src: '/images/footer/milos.png',
+      alt: 'Milo’s',
+      className: 'h-8 md:h-9 lg:h-10',
+      href: 'https://www.milospanini.com/',
+    },
+    {
+      name: 'Diegos',
+      src: '/images/footer/diegos.png',
+      alt: 'Diego’s Urban Kitchen',
+      className: 'h-8 md:h-9 lg:h-10',
+      href: 'https://www.diegos.mx',
+    },
+    {
+      name: 'Casa Pietra',
+      src: '/images/footer/casapietra.png',
+      alt: 'Casa Pietra',
+      className: 'h-8 md:h-9 lg:h-10',
+    },
+    {
+      name: 'Mad Krunch',
+      src: '/images/footer/madkrunch.png',
+      alt: 'Mad Krunch',
+      className: 'h-8 md:h-9 lg:h-10',
+    },
+    {
+      name: 'Smash',
+      src: '/images/footer/smash.png',
+      alt: 'Smash58',
+      className: 'h-8 md:h-9 lg:h-10',
+    },
+    {
+      name: 'Tefis',
+      src: '/images/footer/tefis.png',
+      alt: 'Tefi’s Bread House',
+      className: 'h-8 md:h-9 lg:h-10',
+    },
+  ];
+
   return (
     <footer className="bg-mitica-black text-white pt-0">
       {showBanner && (
@@ -651,6 +692,46 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
           </div>
         </div>
       </div>
+
+      <div className="h-px bg-white/10 scale-y-50 origin-top" />
+
+      <div className="container mx-auto px-8 py-10 md:py-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 md:gap-x-8 lg:gap-x-10 gap-y-8 md:gap-y-10 items-center justify-items-center">
+          {footerLogos.map((logo) => (
+            <div
+              key={logo.name}
+              className="flex items-center justify-center w-full h-10 md:h-11 lg:h-12"
+            >
+              {logo.href ? (
+                <a
+                  href={logo.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center"
+                  aria-label={logo.alt}
+                  title={logo.alt}
+                >
+                  <img
+                    src={logo.src}
+                    alt={logo.alt}
+                    className={`${logo.className} w-auto max-w-full object-contain`}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </a>
+              ) : (
+                <img
+                  src={logo.src}
+                  alt={logo.alt}
+                  className={`${logo.className} w-auto max-w-full object-contain`}
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </footer>
   );
 };
@@ -659,11 +740,15 @@ export const Layout: React.FC<LayoutProps> = ({
   children,
   showFooterBanner = true,
 }) => {
+  const location = useLocation();
+  const shouldShowFooterBanner =
+    showFooterBanner && location.pathname !== '/delivery';
+
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
       <Navbar />
       <main className="flex-grow">{children}</main>
-      <Footer showBanner={showFooterBanner} />
+      <Footer showBanner={shouldShowFooterBanner} />
     </div>
   );
 };

@@ -1,26 +1,22 @@
-// studio-mitica/sanity.config.ts
-import React from "react";
-(globalThis as any).React = React;
-
-import { defineConfig } from "sanity";
-import { structureTool } from "sanity/structure";
-import { visionTool } from "@sanity/vision";
-import { schemaTypes } from "./schemaTypes";
-import { deskStructure } from "./deskStructure";
+import {defineConfig} from 'sanity'
+import {structureTool} from 'sanity/structure'
+import {visionTool} from '@sanity/vision'
+import {schemaTypes} from './schemaTypes'
+import {deskStructure} from './deskStructure'
 
 export default defineConfig({
-  name: "mitica-studio",
-  title: "Mítica CMS",
+  name: 'mitica-studio',
+  title: 'Mítica CMS',
 
-  projectId: "cdstv0qp",
-  dataset: "production",
+  projectId: 'cdstv0qp',
+  dataset: 'production',
 
   plugins: [
-    structureTool({ structure: deskStructure }),
+    structureTool({structure: deskStructure}),
     visionTool(),
   ],
 
   schema: {
     types: schemaTypes,
   },
-});
+})
