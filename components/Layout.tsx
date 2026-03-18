@@ -242,12 +242,14 @@ const Navbar = () => {
         </div>
 
         <div className="hidden xl:flex w-[260px] justify-end">
-          <Link
-            to="/delivery"
+          <a
+            href="https://wa.me/529979790642"
+            target="_blank"
+            rel="noreferrer"
             className="bg-mitica-yellow text-mitica-black font-nexa px-6 py-2 rounded-full text-sm hover:bg-white hover:scale-105 transition-all shadow-md"
           >
             ORDENA AHORA
-          </Link>
+          </a>
         </div>
 
         <button
