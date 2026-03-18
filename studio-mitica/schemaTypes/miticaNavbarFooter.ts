@@ -45,7 +45,7 @@ const miticaNavbarFooter = defineType({
           type: 'object',
           fields: [
             defineField({ name: 'text', title: 'Texto', type: 'string', initialValue: 'ORDENA AHORA' }),
-            defineField({ name: 'link', title: 'Link', type: 'string', initialValue: '/delivery' }),
+            defineField({ name: 'link', title: 'Link', type: 'string', initialValue: 'https://wa.me/529979790642' }),
           ],
         }),
 
