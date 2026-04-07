@@ -1,7 +1,7 @@
 // App.tsx
 import React, { useEffect } from 'react';
 import {
-  HashRouter as Router,
+  BrowserRouter as Router,
   Routes,
   Route,
   Outlet,
@@ -20,17 +20,35 @@ import Careers from './pages/Careers';
 import Locations from './pages/Locations';
 import Franchise from './pages/Franchise';
 import FAQ from './pages/FAQ';
-
-// ✅ NUEVO: Páginas legales
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
+const ScrollManager = () => {
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    let timeoutId: number | undefined;
+
+    if (hash) {
+      timeoutId = window.setTimeout(() => {
+        const elementId = decodeURIComponent(hash.replace('#', ''));
+        const element = document.getElementById(elementId);
+
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      }, 120);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [pathname, hash]);
 
   return null;
 };
@@ -38,7 +56,7 @@ const ScrollToTop = () => {
 const AppLayout = () => {
   return (
     <Layout>
-      <ScrollToTop />
+      <ScrollManager />
       <Outlet />
     </Layout>
   );
@@ -61,8 +79,6 @@ const App = () => {
           <Route path="/locations" element={<Locations />} />
           <Route path="/franchise" element={<Franchise />} />
           <Route path="/faq" element={<FAQ />} />
-
-          {/* ✅ NUEVO: Rutas legales */}
           <Route path="/terminos-y-condiciones" element={<Terms />} />
           <Route path="/aviso-de-privacidad" element={<Privacy />} />
         </Route>

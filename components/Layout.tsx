@@ -69,17 +69,10 @@ const Navbar = () => {
   }, [isOpen]);
 
   const handleNavClick = (path: string) => {
-    if (path.includes('#')) {
-      const [route, hash] = path.split('#');
-      navigate(route);
-      setTimeout(() => {
-        const element = document.getElementById(hash);
-        if (element) element.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    } else {
-      navigate(path);
-    }
+    navigate(path);
     setIsOpen(false);
+    setOpenMobileSub(null);
+    setActiveDropdown(null);
   };
 
   const navLinks = [
