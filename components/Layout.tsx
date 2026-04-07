@@ -248,7 +248,7 @@ const Navbar = () => {
             rel="noreferrer"
             className="bg-mitica-yellow text-mitica-black font-nexa px-6 py-2 rounded-full text-sm hover:bg-white hover:scale-105 transition-all shadow-md"
           >
-            ORDENA AHORA
+            WhatsApp
           </a>
         </div>
 
@@ -379,7 +379,7 @@ const Navbar = () => {
                 }}
                 className="block w-full text-center bg-mitica-yellow text-black font-nexa py-4 rounded text-xl uppercase hover:bg-white transition-colors"
               >
-                Ordena Ahora
+                WhatsApp
               </a>
             </div>
           </motion.aside>
