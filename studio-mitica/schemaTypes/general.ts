@@ -1,6 +1,21 @@
 // studio-mitica/schemaTypes/general.ts
 import { defineType, defineField } from 'sanity'
 
+const languageField = () =>
+  defineField({
+    name: 'language',
+    title: 'Idioma',
+    type: 'string',
+    options: {
+      list: [
+        { title: 'Español', value: 'es' },
+        { title: 'English', value: 'en' },
+      ],
+      layout: 'radio',
+    },
+    initialValue: 'es',
+  })
+
 // --- DELIVERY PAGE ---
 export const deliveryPage = defineType({
   name: 'deliveryPage',
@@ -126,6 +141,8 @@ export const location = defineType({
   title: 'Sucursal',
   type: 'document',
   fields: [
+    languageField(),
+
     defineField({
       name: 'name',
       type: 'string',

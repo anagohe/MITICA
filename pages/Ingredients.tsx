@@ -1,94 +1,149 @@
 // src/pages/Ingredients.tsx
-import React, { useEffect, useState, useMemo } from 'react';
-import { Title, TitleVariant } from '../components/Typography';
-import { client } from '../sanity/client';
-import { INGREDIENTS_PAGE_QUERY } from '../sanity/queries';
-import { urlFor } from '../sanity/image';
-import { PortableText } from '@portabletext/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react'
+import { Title, TitleVariant } from '../components/Typography'
+import { client } from '../sanity/client'
+import { urlFor } from '../sanity/image'
+import { PortableText } from '@portabletext/react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { getSanitySingletonId, useSiteLanguage } from '../i18n'
 
 type HeroType = {
-  mediaType?: 'image' | 'video';
-  desktopImage?: any;
-  mobileImage?: any;
+  mediaType?: 'image' | 'video'
+  desktopImage?: any
+  mobileImage?: any
 
-  videoFile?: { asset?: { url?: string }; url?: string };
-  mobileVideoFile?: { asset?: { url?: string }; url?: string };
+  videoFile?: { asset?: { url?: string }; url?: string }
+  mobileVideoFile?: { asset?: { url?: string }; url?: string }
 
-  title?: string;
-  subtitle?: string;
+  title?: string
+  subtitle?: string
 
-  titleVariant?: 'regular' | 'textured';
-  titleColor?: string;
-  subtitleColor?: string;
+  titleVariant?: 'regular' | 'textured'
+  titleColor?: string
+  subtitleColor?: string
 
-  textColor?: string;
+  textColor?: string
 
-  overlayEnabled?: boolean;
-  overlayOpacity?: number;
-};
+  overlayEnabled?: boolean
+  overlayOpacity?: number
+}
 
 type SectionImage = {
-  _key?: string;
-  image?: any;
-};
+  _key?: string
+  image?: any
+}
 
 type Section = {
-  title?: string;
-  content?: any;
-  image?: any;
-  images?: SectionImage[];
-  layout?: 'text-left' | 'text-right';
-};
+  title?: string
+  content?: any
+  image?: any
+  images?: SectionImage[]
+  layout?: 'text-left' | 'text-right'
+}
 
 type Sauce = {
-  name?: string;
-  image?: any;
-};
+  name?: string
+  image?: any
+}
 
 type IngredientsPageDoc = {
-  hero?: HeroType;
+  _id?: string
+  hero?: HeroType
 
-  sectionsTitle?: string;
-  saucesTitle?: string;
-  nutritionTitle?: string;
+  sectionsTitle?: string
+  saucesTitle?: string
+  nutritionTitle?: string
 
-  sections?: Section[];
+  sections?: Section[]
 
-  saucesIntro?: any[];
-  sauces?: Sauce[];
+  saucesIntro?: any[]
+  sauces?: Sauce[]
 
-  nutritionText?: any[];
+  nutritionText?: any[]
 
-  showFooterBanner?: boolean;
-};
+  showFooterBanner?: boolean
+}
+
+const INGREDIENTS_PAGE_QUERY = `
+*[
+  _id == $documentId
+  && !(_id in path("drafts.**"))
+][0]{
+  _id,
+  hero{
+    mediaType,
+    title,
+    subtitle,
+
+    titleVariant,
+    titleColor,
+    subtitleColor,
+
+    textColor,
+
+    overlayEnabled,
+    overlayOpacity,
+
+    desktopImage,
+    mobileImage,
+
+    videoFile{
+      asset->{ url }
+    },
+    mobileVideoFile{
+      asset->{ url }
+    }
+  },
+
+  sectionsTitle,
+  saucesTitle,
+  nutritionTitle,
+
+  sections[]{
+    title,
+    content,
+    image,
+    images[]{
+      _key,
+      image
+    },
+    layout
+  },
+
+  saucesIntro,
+  sauces[]{
+    name,
+    image
+  },
+
+  nutritionText,
+  showFooterBanner
+}
+`
 
 function getFileUrl(file: any): string | undefined {
-  return file?.asset?.url || file?.url || undefined;
+  return file?.asset?.url || file?.url || undefined
 }
 
-// ===== Imagen helpers optimizados (menos bandwidth) =====
 function imgCrop(source: any, w: number, h: number, q = 60) {
-  return urlFor(source).width(w).height(h).fit('crop').quality(q).auto('format').url();
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).auto('format').url()
 }
-function imgMax(source: any, w: number, q = 60) {
-  return urlFor(source).width(w).fit('max').quality(q).auto('format').url();
-}
+
 function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 60) {
-  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ');
+  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ')
 }
 
 const Ingredients: React.FC = () => {
-  const [page, setPage] = useState<IngredientsPageDoc | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [sectionSlides, setSectionSlides] = useState<Record<number, number>>({});
+  const { language, isEnglish } = useSiteLanguage()
 
-  // ✅ Solo fuentes de Typography (CSS vars)
-  const FONT_TITLE_MAIN = 'var(--font-title-main)';
-  const FONT_BODY = 'var(--font-body)';
+  const [page, setPage] = useState<IngredientsPageDoc | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [sectionSlides, setSectionSlides] = useState<Record<number, number>>({})
 
-  // ✅ PortableText components: negritas + color
+  const FONT_TITLE_MAIN = 'var(--font-title-main)'
+  const FONT_BODY = 'var(--font-body)'
+
   const portableTextDefault = useMemo(
     () => ({
       block: {
@@ -112,9 +167,8 @@ const Ingredients: React.FC = () => {
       hardBreak: () => <br />,
     }),
     []
-  );
+  )
 
-  // ✅ Para textos centrados (ADEREZOS intro)
   const portableTextCentered = useMemo(
     () => ({
       block: {
@@ -138,122 +192,161 @@ const Ingredients: React.FC = () => {
       hardBreak: () => <br />,
     }),
     []
-  );
+  )
 
   useEffect(() => {
-    client
-      .fetch<IngredientsPageDoc | null>(INGREDIENTS_PAGE_QUERY)
-      .then((res) => {
-        if (!res) {
-          setErrorMsg('No se encontró ningún documento "ingredientsPage" en Sanity.');
+    let mounted = true
+
+    const fetchIngredients = async () => {
+      try {
+        setLoading(true)
+        setErrorMsg(null)
+
+        const documentId = getSanitySingletonId('ingredientsPage', language)
+
+        const result = await client.fetch<IngredientsPageDoc | null>(INGREDIENTS_PAGE_QUERY, {
+          documentId,
+        })
+
+        console.log('INGREDIENTS QUERY PARAMS:', {
+          language,
+          documentId,
+        })
+
+        console.log('INGREDIENTS QUERY RESULT:', result)
+
+        if (!mounted) return
+
+        if (!result) {
+          setErrorMsg(
+            isEnglish
+              ? 'No ingredientsPage-us document was found in Sanity.'
+              : 'No se encontró ningún documento "ingredientsPage" en Sanity.'
+          )
         }
-        setPage(res);
-      })
-      .catch((err) => {
-        console.error('Error al cargar ingredientes desde Sanity:', err);
-        setErrorMsg('Ocurrió un error al conectar con Sanity.');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+
+        setPage(result)
+        setSectionSlides({})
+      } catch (error) {
+        console.error('Error al cargar ingredientes desde Sanity:', error)
+
+        if (!mounted) return
+
+        setErrorMsg(
+          isEnglish
+            ? 'There was an error connecting to Sanity.'
+            : 'Ocurrió un error al conectar con Sanity.'
+        )
+        setPage(null)
+      } finally {
+        if (!mounted) return
+        setLoading(false)
+      }
+    }
+
+    fetchIngredients()
+
+    return () => {
+      mounted = false
+    }
+  }, [language, isEnglish])
 
   const goToPrevSlide = (sectionIdx: number, total: number) => {
-    if (total <= 1) return;
+    if (total <= 1) return
+
     setSectionSlides((prev) => ({
       ...prev,
       [sectionIdx]: ((prev[sectionIdx] ?? 0) - 1 + total) % total,
-    }));
-  };
+    }))
+  }
 
   const goToNextSlide = (sectionIdx: number, total: number) => {
-    if (total <= 1) return;
+    if (total <= 1) return
+
     setSectionSlides((prev) => ({
       ...prev,
       [sectionIdx]: ((prev[sectionIdx] ?? 0) + 1) % total,
-    }));
-  };
+    }))
+  }
 
   if (loading) {
-    return <div className="w-full min-h-screen bg-mitica-black" />;
+    return <div className="w-full min-h-screen bg-mitica-black" />
   }
 
   if (!page) {
     return (
       <div className="w-full bg-white min-h-screen flex items-center justify-center px-4">
         <p className="text-red-600 text-center" style={{ fontFamily: FONT_BODY, fontWeight: 400 }}>
-          {errorMsg || 'No se pudo cargar la página de ingredientes desde Sanity.'}
+          {errorMsg ||
+            (isEnglish
+              ? 'The ingredients page could not be loaded from Sanity.'
+              : 'No se pudo cargar la página de ingredientes desde Sanity.')}
         </p>
       </div>
-    );
+    )
   }
 
-  const hero = page.hero;
-  const sections = page.sections || [];
-  const sauces = page.sauces || [];
-  const nutritionText = page.nutritionText;
+  const hero = page.hero
+  const sections = page.sections || []
+  const sauces = page.sauces || []
+  const nutritionText = page.nutritionText
 
-  const sectionsTitle = page.sectionsTitle;
-  const saucesTitle = page.saucesTitle;
-  const nutritionTitle = page.nutritionTitle;
+  const sectionsTitle = page.sectionsTitle
+  const saucesTitle = page.saucesTitle
+  const nutritionTitle = page.nutritionTitle
 
-  const saucesIntro = page.saucesIntro;
+  const saucesIntro = page.saucesIntro
 
-  const desktopVideoUrl = getFileUrl(hero?.videoFile);
-  const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile);
+  const desktopVideoUrl = getFileUrl(hero?.videoFile)
+  const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile)
 
-  // ✅ Overlay opcional desde Sanity (defaults: ON y 40)
-  const overlayEnabled = hero?.overlayEnabled ?? true;
-  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
-  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
+  const overlayEnabled = hero?.overlayEnabled ?? true
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100
 
-  // ✅ CLAVE: si overlay está OFF, NO bajes opacidad del media
-  const mediaOpacityClass = overlayEnabled ? 'opacity-70' : 'opacity-100';
+  const mediaOpacityClass = overlayEnabled ? 'opacity-70' : 'opacity-100'
 
-  // ✅ Colores: usa nuevos si existen, si no cae a legacy, si no a blanco
-  const titleColorClass = hero?.titleColor || hero?.textColor || 'text-white';
-  const subtitleColorClass = hero?.subtitleColor || hero?.textColor || 'text-[#F6BA27]';
+  const titleColorClass = hero?.titleColor || hero?.textColor || 'text-white'
+  const subtitleColorClass = hero?.subtitleColor || hero?.textColor || 'text-[#F6BA27]'
 
-  // ✅ TEXTURED: usamos TEXTURED_BORDERED
   const heroTitleVariant =
-    hero?.titleVariant === 'textured' ? TitleVariant.TEXTURED_BORDERED : TitleVariant.REGULAR;
+    hero?.titleVariant === 'textured' ? TitleVariant.TEXTURED_BORDERED : TitleVariant.REGULAR
 
-  // ✅ Hero imágenes optimizadas + srcSet más ligeros
-  const desktopHero =
-    hero?.desktopImage
-      ? {
-          src: imgCrop(hero.desktopImage, 1440, 810, 58),
-          srcSet: srcSetCrop(
-            hero.desktopImage,
-            [
-              [768, 432],
-              [1152, 648],
-              [1440, 810],
-            ],
-            58
-          ),
-        }
-      : null;
+  const desktopHero = hero?.desktopImage
+    ? {
+        src: imgCrop(hero.desktopImage, 1440, 810, 58),
+        srcSet: srcSetCrop(
+          hero.desktopImage,
+          [
+            [768, 432],
+            [1152, 648],
+            [1440, 810],
+          ],
+          58
+        ),
+      }
+    : null
 
-  const mobileHero =
-    hero?.mobileImage
-      ? {
-          src: imgCrop(hero.mobileImage, 750, 1000, 58),
-          srcSet: srcSetCrop(
-            hero.mobileImage,
-            [
-              [375, 500],
-              [560, 747],
-              [750, 1000],
-            ],
-            58
-          ),
-        }
-      : desktopHero
+  const mobileHero = hero?.mobileImage
+    ? {
+        src: imgCrop(hero.mobileImage, 750, 1000, 58),
+        srcSet: srcSetCrop(
+          hero.mobileImage,
+          [
+            [375, 500],
+            [560, 747],
+            [750, 1000],
+          ],
+          58
+        ),
+      }
+    : desktopHero
       ? { src: desktopHero.src, srcSet: desktopHero.srcSet }
-      : null;
+      : null
 
   return (
     <div className="w-full">
-      {/* === HERO DESDE SANITY === */}
+      {/* HERO */}
       <div className="relative h-screen w-full bg-mitica-black overflow-hidden">
         {hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl) ? (
           <>
@@ -276,54 +369,39 @@ const Ingredients: React.FC = () => {
               preload="metadata"
               src={mobileVideoUrl || desktopVideoUrl}
             />
-
-            {!desktopVideoUrl && !mobileVideoUrl && (desktopHero || mobileHero) ? (
-              <picture className="absolute inset-0 block w-full h-full">
-                {desktopHero ? (
-                  <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
-                ) : null}
-                <img
-                  src={mobileHero?.src || desktopHero?.src || ''}
-                  srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
-                  sizes="100vw"
-                  alt={hero?.title || 'Ingredientes'}
-                  className={`w-full h-full object-cover ${mediaOpacityClass}`}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-              </picture>
-            ) : null}
           </>
-        ) : (
-          <>
-            {desktopHero || mobileHero ? (
-              <picture className="block w-full h-full">
-                {desktopHero ? (
-                  <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
-                ) : null}
-
-                <img
-                  src={mobileHero?.src || desktopHero?.src || ''}
-                  srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
-                  sizes="100vw"
-                  alt={hero?.title || 'Ingredientes'}
-                  className={`w-full h-full object-cover ${mediaOpacityClass}`}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-              </picture>
+        ) : desktopHero || mobileHero ? (
+          <picture className="block w-full h-full">
+            {desktopHero ? (
+              <source
+                media="(min-width: 768px)"
+                srcSet={desktopHero.srcSet || desktopHero.src}
+                sizes="100vw"
+              />
             ) : null}
-          </>
-        )}
+
+            <img
+              src={mobileHero?.src || desktopHero?.src || ''}
+              srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
+              sizes="100vw"
+              alt={hero?.title || (isEnglish ? 'Ingredients' : 'Ingredientes')}
+              className={`w-full h-full object-cover ${mediaOpacityClass}`}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
+        ) : null}
 
         {overlayEnabled && (
-          <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+          />
         )}
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
-          {hero?.title && (
+          {hero?.title ? (
             <div className="w-full max-w-[1050px] mx-auto">
               <Title
                 variant={heroTitleVariant}
@@ -333,80 +411,91 @@ const Ingredients: React.FC = () => {
                 className={`whitespace-pre-line text-4xl md:text-7xl ${titleColorClass} mb-7 md:mb-9`}
               />
             </div>
-          )}
+          ) : null}
 
-          {hero?.subtitle && (
+          {hero?.subtitle ? (
             <p
               className={`text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${subtitleColorClass}`}
               style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
             >
               {hero.subtitle}
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* === CONTENIDO PRINCIPAL === */}
+      {/* CONTENIDO */}
       <div className="w-full py-20 bg-white">
         <div className="container mx-auto px-6">
-          {sectionsTitle && (
+          {sectionsTitle ? (
             <div className="text-center mb-14">
-              <Title variant={TitleVariant.REGULAR} text={sectionsTitle} align="center" className="text-5xl md:text-6xl" />
+              <Title
+                variant={TitleVariant.REGULAR}
+                text={sectionsTitle}
+                align="center"
+                className="text-5xl md:text-6xl"
+              />
             </div>
-          )}
+          ) : null}
 
           {sections.map((section, idx) => {
-            const isTextLeft = section.layout === 'text-left' || !section.layout;
+            const isTextLeft = section.layout === 'text-left' || !section.layout
 
             const validImagesFromArray =
               Array.isArray(section.images) && section.images.length > 0
                 ? section.images.map((item) => item?.image).filter(Boolean)
-                : [];
+                : []
 
             const galleryImages =
               validImagesFromArray.length > 0
                 ? validImagesFromArray
                 : section.image
-                ? [section.image]
-                : [];
+                  ? [section.image]
+                  : []
 
-            const currentSlide = Math.min(sectionSlides[idx] ?? 0, Math.max(galleryImages.length - 1, 0));
-            const currentImage = galleryImages[currentSlide];
-            const totalSlides = galleryImages.length;
-            const hasVisual = !!currentImage;
+            const currentSlide = Math.min(
+              sectionSlides[idx] ?? 0,
+              Math.max(galleryImages.length - 1, 0)
+            )
+
+            const currentImage = galleryImages[currentSlide]
+            const totalSlides = galleryImages.length
+            const hasVisual = !!currentImage
 
             return (
               <div
                 key={idx}
                 className={`flex flex-col lg:flex-row ${
-                  hasVisual ? 'items-center lg:items-stretch xl:items-center justify-center gap-8 lg:gap-10' : 'items-start'
+                  hasVisual
+                    ? 'items-center lg:items-stretch xl:items-center justify-center gap-8 lg:gap-10'
+                    : 'items-start'
                 } mb-20 w-full`}
               >
-                {/* Texto */}
                 <div
                   className={`flex flex-col justify-center text-left ${
                     hasVisual
-                      ? `w-full lg:w-[42%] xl:w-[42%] ${isTextLeft ? 'order-1 lg:order-1' : 'order-1 lg:order-2'}`
+                      ? `w-full lg:w-[42%] xl:w-[42%] ${
+                          isTextLeft ? 'order-1 lg:order-1' : 'order-1 lg:order-2'
+                        }`
                       : 'w-full max-w-none order-1'
                   }`}
                 >
-                  {section.title && (
+                  {section.title ? (
                     <Title
                       variant={TitleVariant.REGULAR}
                       text={section.title}
                       align="left"
                       className="text-3xl md:text-4xl mb-8"
                     />
-                  )}
+                  ) : null}
 
-                  {section.content && (
+                  {section.content ? (
                     <div className="space-y-4 text-gray-600 text-justify">
                       <PortableText value={section.content} components={portableTextDefault} />
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
-                {/* Slider de imágenes */}
                 {hasVisual && (
                   <div
                     className={`w-full md:max-w-none lg:w-[58%] xl:w-[58%] lg:max-w-[590px] overflow-hidden relative group aspect-[4/3] lg:aspect-auto xl:aspect-[4/3] lg:self-stretch xl:self-auto ${
@@ -426,7 +515,7 @@ const Ingredients: React.FC = () => {
                       )}
                       sizes="(min-width: 1280px) 590px, (min-width: 1024px) 58vw, 100vw"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      alt={section.title || 'Ingredientes Mítica'}
+                      alt={section.title || (isEnglish ? 'Mítica Ingredients' : 'Ingredientes Mítica')}
                       loading="lazy"
                       decoding="async"
                     />
@@ -439,7 +528,7 @@ const Ingredients: React.FC = () => {
                           type="button"
                           onClick={() => goToPrevSlide(idx, totalSlides)}
                           className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/65 transition-colors"
-                          aria-label="Imagen anterior"
+                          aria-label={isEnglish ? 'Previous image' : 'Imagen anterior'}
                         >
                           <ChevronLeft className="w-5 h-5" />
                         </button>
@@ -448,7 +537,7 @@ const Ingredients: React.FC = () => {
                           type="button"
                           onClick={() => goToNextSlide(idx, totalSlides)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/65 transition-colors"
-                          aria-label="Siguiente imagen"
+                          aria-label={isEnglish ? 'Next image' : 'Siguiente imagen'}
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
@@ -458,11 +547,19 @@ const Ingredients: React.FC = () => {
                             <button
                               key={dotIdx}
                               type="button"
-                              onClick={() => setSectionSlides((prev) => ({ ...prev, [idx]: dotIdx }))}
+                              onClick={() =>
+                                setSectionSlides((prev) => ({ ...prev, [idx]: dotIdx }))
+                              }
                               className={`h-2 rounded-full transition-all duration-300 ${
-                                dotIdx === currentSlide ? 'w-8 bg-mitica-yellow' : 'w-2 bg-white/70'
+                                dotIdx === currentSlide
+                                  ? 'w-8 bg-mitica-yellow'
+                                  : 'w-2 bg-white/70'
                               }`}
-                              aria-label={`Ir a la imagen ${dotIdx + 1}`}
+                              aria-label={
+                                isEnglish
+                                  ? `Go to image ${dotIdx + 1}`
+                                  : `Ir a la imagen ${dotIdx + 1}`
+                              }
                             />
                           ))}
                         </div>
@@ -471,16 +568,15 @@ const Ingredients: React.FC = () => {
                   </div>
                 )}
               </div>
-            );
+            )
           })}
 
-          {/* ADEREZOS CON IMAGEN */}
           {sauces.length > 0 && (
             <>
               <div className="text-center mb-10">
                 <Title
                   variant={TitleVariant.REGULAR}
-                  text={saucesTitle || 'ADEREZOS'}
+                  text={saucesTitle || (isEnglish ? 'SAUCES' : 'ADEREZOS')}
                   align="center"
                   className="text-4xl md:text-5xl mb-8"
                 />
@@ -494,9 +590,9 @@ const Ingredients: React.FC = () => {
                     className="text-gray-600 text-base md:text-lg leading-relaxed w-full mx-auto text-center whitespace-pre-line"
                     style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
                   >
-                    {
-                      'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'
-                    }
+                    {isEnglish
+                      ? 'Our house sauces are the perfect complement to our burgers.'
+                      : 'Nuestros más de 10 aderezos de la casa son el complemento perfecto para nuestras hamburguesas. Elaboradas en casa con recetas únicas. Son el toque final secreto que transforma una hamburguesa en tu hamburguesa favorita.'}
                   </p>
                 )}
               </div>
@@ -506,7 +602,7 @@ const Ingredients: React.FC = () => {
                   {[...sauces, ...sauces, ...sauces].map((sauce, idx) => (
                     <div key={idx} className="mx-8 flex flex-col items-center justify-center w-32">
                       <div className="w-24 h-24 rounded-full shadow-lg mb-4 overflow-hidden transition-transform hover:scale-110 bg-gray-100">
-                        {sauce.image && (
+                        {sauce.image ? (
                           <img
                             src={imgCrop(sauce.image, 120, 120, 52)}
                             srcSet={srcSetCrop(
@@ -518,14 +614,18 @@ const Ingredients: React.FC = () => {
                               52
                             )}
                             sizes="96px"
-                            alt={sauce.name || 'Aderezo Mítica'}
+                            alt={sauce.name || (isEnglish ? 'Mítica sauce' : 'Aderezo Mítica')}
                             className="w-full h-full object-cover"
                             loading="lazy"
                             decoding="async"
                           />
-                        )}
+                        ) : null}
                       </div>
-                      <span className="text-xs uppercase text-center" style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}>
+
+                      <span
+                        className="text-xs uppercase text-center"
+                        style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
+                      >
                         {sauce.name}
                       </span>
                     </div>
@@ -535,12 +635,14 @@ const Ingredients: React.FC = () => {
             </>
           )}
 
-          {/* NUTRICIÓN Y ALÉRGENOS */}
           {nutritionText && (
             <div className="mt-16 pt-8 border-t border-gray-200">
               <div className="pl-4 md:pl-6 border-l-4 md:border-l-[6px] border-mitica-yellow">
-                <h3 className="text-xl mb-3 uppercase" style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}>
-                  {nutritionTitle || 'NUTRICIÓN Y ALÉRGENOS'}
+                <h3
+                  className="text-xl mb-3 uppercase"
+                  style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
+                >
+                  {nutritionTitle || (isEnglish ? 'NUTRITION AND ALLERGENS' : 'NUTRICIÓN Y ALÉRGENOS')}
                 </h3>
 
                 {Array.isArray(nutritionText) && nutritionText.length > 0 ? (
@@ -560,7 +662,7 @@ const Ingredients: React.FC = () => {
         `}</style>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Ingredients;
+export default Ingredients

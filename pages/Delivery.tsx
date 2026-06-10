@@ -1,65 +1,66 @@
 // src/pages/Delivery.tsx
-import React, { useEffect, useState, useMemo } from 'react';
-import { Title, TitleVariant } from '../components/Typography';
-import { MessageCircle, Apple, Play, ChevronRight, X } from 'lucide-react';
-import { client } from '../sanity/client';
-import { imgUrl } from '../sanity/image';
+import React, { useEffect, useMemo, useState } from 'react'
+import { Title, TitleVariant } from '../components/Typography'
+import { MessageCircle, Apple, Play, ChevronRight, X } from 'lucide-react'
+import { client } from '../sanity/client'
+import { imgUrl } from '../sanity/image'
+import { getSanitySingletonId, useSiteLanguage } from '../i18n'
 
-// ==== Tipo de deliveryPage en Sanity ====
 type Benefit = {
-  title?: string;
-  icon?: any;
-};
+  title?: string
+  icon?: any
+}
 
 type DeliveryHero = {
-  mediaType?: 'image' | 'video';
-  desktopImage?: any;
-  mobileImage?: any;
-  videoFile?: { asset?: { url?: string } };
-  mobileVideoFile?: { asset?: { url?: string } };
+  mediaType?: 'image' | 'video'
+  desktopImage?: any
+  mobileImage?: any
+  videoFile?: { asset?: { url?: string } }
+  mobileVideoFile?: { asset?: { url?: string } }
 
-  title?: string;
-  subtitle?: string;
+  title?: string
+  subtitle?: string
 
-  titleVariant?: 'regular' | 'textured';
-  titleColor?: string;
-  subtitleColor?: string;
+  titleVariant?: 'regular' | 'textured'
+  titleColor?: string
+  subtitleColor?: string
 
-  // legacy
-  textColor?: string;
+  textColor?: string
 
-  // overlay opcional
-  overlayEnabled?: boolean;
-  overlayOpacity?: number; // 0-80
-};
+  overlayEnabled?: boolean
+  overlayOpacity?: number
+}
 
 type DeliveryCTA = {
-  labelImage?: any; // imagen del botón principal (icono)
-  url?: string; // legacy (por si quieres un solo link)
-  type?: 'internal' | 'external'; // legacy
+  labelImage?: any
+  url?: string
+  type?: 'internal' | 'external'
 
-  // ✅ NUEVO: links para modal
-  modalTitle?: string;
-  modalSubtitle?: string;
-  appStoreUrl?: string;
-  googlePlayUrl?: string;
-};
+  modalTitle?: string
+  modalSubtitle?: string
+  appStoreUrl?: string
+  googlePlayUrl?: string
+}
 
 type DeliveryPageSanity = {
-  hero?: DeliveryHero;
-  appBannerImage?: any;
-  choiceImage?: any;
-  benefits?: Benefit[];
+  _id?: string
+  hero?: DeliveryHero
+  appBannerImage?: any
+  choiceImage?: any
+  benefits?: Benefit[]
 
-  // editable en Sanity
-  chooseTitle?: string;
-  chooseText?: string;
-  ctaApp?: DeliveryCTA;
-  ctaWhatsapp?: DeliveryCTA;
-};
+  chooseTitle?: string
+  chooseText?: string
+  ctaApp?: DeliveryCTA
+  ctaWhatsapp?: DeliveryCTA
+}
 
 const DELIVERY_QUERY = `
-*[_type == "deliveryPage"][0]{
+*[
+  _id == $documentId
+  && !(_id in path("drafts.**"))
+][0]{
+  _id,
   hero{
     mediaType,
     title,
@@ -90,136 +91,217 @@ const DELIVERY_QUERY = `
     appStoreUrl,
     googlePlayUrl
   },
-  ctaWhatsapp{labelImage, url, type}
+  ctaWhatsapp{
+    labelImage,
+    url,
+    type
+  }
 }
-`;
+`
 
 const Delivery = () => {
-  const [data, setData] = useState<DeliveryPageSanity | null>(null);
-  const [isAppModalOpen, setIsAppModalOpen] = useState(false);
+  const { language, localizedPath, isEnglish } = useSiteLanguage()
+
+  const [data, setData] = useState<DeliveryPageSanity | null>(null)
+  const [isAppModalOpen, setIsAppModalOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+
     const fetchDelivery = async () => {
       try {
-        const result = await client.fetch<DeliveryPageSanity>(DELIVERY_QUERY);
-        console.log('SANITY deliveryPage:', result);
-        setData(result);
+        setLoading(true)
+
+        const documentId = getSanitySingletonId('deliveryPage', language)
+
+        const result = await client.fetch<DeliveryPageSanity | null>(DELIVERY_QUERY, {
+          documentId,
+        })
+
+        console.log('DELIVERY QUERY PARAMS:', {
+          language,
+          documentId,
+        })
+
+        console.log('DELIVERY QUERY RESULT:', result)
+
+        if (!mounted) return
+
+        setData(result)
       } catch (err) {
-        console.error('Error fetching deliveryPage from Sanity', err);
+        console.error('Error fetching deliveryPage from Sanity', err)
+
+        if (!mounted) return
+
+        setData(null)
+      } finally {
+        if (!mounted) return
+        setLoading(false)
       }
-    };
+    }
 
-    fetchDelivery();
-  }, []);
+    fetchDelivery()
 
-  // ==== URLs SIN fallbacks ====
-  const hero = data?.hero;
+    return () => {
+      mounted = false
+    }
+  }, [language])
+
+  const hero = data?.hero
 
   const appBannerImageUrl = useMemo(
-    () => (data?.appBannerImage ? imgUrl(data.appBannerImage, { w: 900, fit: 'max', q: 80 }) : undefined),
+    () =>
+      data?.appBannerImage
+        ? imgUrl(data.appBannerImage, { w: 900, fit: 'max', q: 80 })
+        : undefined,
     [data?.appBannerImage]
-  );
+  )
 
   const choiceImageUrl = useMemo(
-    () => (data?.choiceImage ? imgUrl(data.choiceImage, { w: 900, fit: 'max', q: 85 }) : undefined),
+    () =>
+      data?.choiceImage
+        ? imgUrl(data.choiceImage, { w: 900, fit: 'max', q: 85 })
+        : undefined,
     [data?.choiceImage]
-  );
+  )
 
-  const benefitsFromSanity = !!(data?.benefits && data.benefits.length > 0);
+  const benefitsFromSanity = !!(data?.benefits && data.benefits.length > 0)
 
-  // ===== HERO (igual que Menu/About) =====
-  const overlayEnabled = hero?.overlayEnabled ?? true;
-  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
-  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
+  const overlayEnabled = hero?.overlayEnabled ?? true
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100
 
-  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
+  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100'
 
-  const desktopVideoUrl = hero?.videoFile?.asset?.url;
-  const mobileVideoUrl = hero?.mobileVideoFile?.asset?.url;
+  const desktopVideoUrl = hero?.videoFile?.asset?.url
+  const mobileVideoUrl = hero?.mobileVideoFile?.asset?.url
 
   const desktopImgUrl = useMemo(
-    () => (hero?.desktopImage ? imgUrl(hero.desktopImage, { w: 1600, h: 900, fit: 'crop', q: 80 }) : undefined),
+    () =>
+      hero?.desktopImage
+        ? imgUrl(hero.desktopImage, { w: 1600, h: 900, fit: 'crop', q: 80 })
+        : undefined,
     [hero?.desktopImage]
-  );
+  )
+
   const desktopImgSrcSet = useMemo(() => {
-    const s = hero?.desktopImage;
-    return s
+    const source = hero?.desktopImage
+
+    return source
       ? [
-          `${imgUrl(s, { w: 960, h: 540, fit: 'crop', q: 80 })} 960w`,
-          `${imgUrl(s, { w: 1280, h: 720, fit: 'crop', q: 80 })} 1280w`,
-          `${imgUrl(s, { w: 1600, h: 900, fit: 'crop', q: 80 })} 1600w`,
+          `${imgUrl(source, { w: 960, h: 540, fit: 'crop', q: 80 })} 960w`,
+          `${imgUrl(source, { w: 1280, h: 720, fit: 'crop', q: 80 })} 1280w`,
+          `${imgUrl(source, { w: 1600, h: 900, fit: 'crop', q: 80 })} 1600w`,
         ].join(', ')
-      : undefined;
-  }, [hero?.desktopImage]);
+      : undefined
+  }, [hero?.desktopImage])
 
   const mobileImgUrl = useMemo(
-    () => (hero?.mobileImage ? imgUrl(hero.mobileImage, { w: 900, h: 1200, fit: 'crop', q: 80 }) : undefined),
+    () =>
+      hero?.mobileImage
+        ? imgUrl(hero.mobileImage, { w: 900, h: 1200, fit: 'crop', q: 80 })
+        : undefined,
     [hero?.mobileImage]
-  );
+  )
+
   const mobileImgSrcSet = useMemo(() => {
-    const s = hero?.mobileImage;
-    return s
+    const source = hero?.mobileImage
+
+    return source
       ? [
-          `${imgUrl(s, { w: 480, h: 640, fit: 'crop', q: 80 })} 480w`,
-          `${imgUrl(s, { w: 720, h: 960, fit: 'crop', q: 80 })} 720w`,
-          `${imgUrl(s, { w: 900, h: 1200, fit: 'crop', q: 80 })} 900w`,
+          `${imgUrl(source, { w: 480, h: 640, fit: 'crop', q: 80 })} 480w`,
+          `${imgUrl(source, { w: 720, h: 960, fit: 'crop', q: 80 })} 720w`,
+          `${imgUrl(source, { w: 900, h: 1200, fit: 'crop', q: 80 })} 900w`,
         ].join(', ')
-      : undefined;
-  }, [hero?.mobileImage]);
+      : undefined
+  }, [hero?.mobileImage])
 
   const hasAnyHeroMedia =
     (hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl)) ||
-    (hero?.mediaType !== 'video' && (desktopImgUrl || mobileImgUrl));
+    (hero?.mediaType !== 'video' && (desktopImgUrl || mobileImgUrl))
 
-  // ✅ Textos y botones desde Sanity (con fallbacks al texto viejo)
-  const chooseTitle = data?.chooseTitle || 'TÚ ELIGES';
+  const chooseTitle = data?.chooseTitle || (isEnglish ? 'YOU CHOOSE' : 'TÚ ELIGES')
+
   const chooseText =
     data?.chooseText ||
-    'Descarga nuestra App y vive la mejor experiencia.\nSi prefieres, ya puedes ordenar por WhatsApp.';
+    (isEnglish
+      ? 'Download our app and enjoy the best experience.\nIf you prefer, you can also order through WhatsApp.'
+      : 'Descarga nuestra App y vive la mejor experiencia.\nSi prefieres, ya puedes ordenar por WhatsApp.')
 
-  const ctaApp = data?.ctaApp;
-  const ctaWhatsapp = data?.ctaWhatsapp;
+  const rightTitle = isEnglish ? (
+    <>
+      DELIVERY <br />
+      OR PICKUP?
+    </>
+  ) : (
+    <>
+      ¿TE LA LLEVAMOS <br />
+      O VIENES POR <br />
+      ELLA?
+    </>
+  )
 
-  const appHref = ctaApp?.url;
-  const whatsappHref = ctaWhatsapp?.url;
+  const ctaApp = data?.ctaApp
+  const ctaWhatsapp = data?.ctaWhatsapp
 
-  const appIsExternal = ctaApp?.type !== 'internal';
-  const whatsappIsExternal = ctaWhatsapp?.type !== 'internal';
+  const appHref =
+    ctaApp?.type === 'internal' && ctaApp?.url ? localizedPath(ctaApp.url) : ctaApp?.url
+
+  const whatsappHref =
+    ctaWhatsapp?.type === 'internal' && ctaWhatsapp?.url
+      ? localizedPath(ctaWhatsapp.url)
+      : ctaWhatsapp?.url
+
+  const appIsExternal = ctaApp?.type !== 'internal'
+  const whatsappIsExternal = ctaWhatsapp?.type !== 'internal'
 
   const appLabelImgUrl = useMemo(
-    () => (ctaApp?.labelImage ? imgUrl(ctaApp.labelImage, { w: 256, h: 256, fit: 'crop', q: 85 }) : undefined),
+    () =>
+      ctaApp?.labelImage
+        ? imgUrl(ctaApp.labelImage, { w: 256, h: 256, fit: 'crop', q: 85 })
+        : undefined,
     [ctaApp?.labelImage]
-  );
+  )
 
   const whatsappLabelImgUrl = useMemo(
-    () => (ctaWhatsapp?.labelImage ? imgUrl(ctaWhatsapp.labelImage, { w: 256, h: 256, fit: 'crop', q: 85 }) : undefined),
+    () =>
+      ctaWhatsapp?.labelImage
+        ? imgUrl(ctaWhatsapp.labelImage, { w: 256, h: 256, fit: 'crop', q: 85 })
+        : undefined,
     [ctaWhatsapp?.labelImage]
-  );
+  )
 
-  // ✅ Modal links (Sanity)
-  const modalTitle = ctaApp?.modalTitle || 'DESCARGA LA APP';
-  const modalSubtitle = ctaApp?.modalSubtitle || 'Elige tu plataforma para empezar';
-  const appStoreUrl = ctaApp?.appStoreUrl;
-  const googlePlayUrl = ctaApp?.googlePlayUrl;
+  const modalTitle = ctaApp?.modalTitle || (isEnglish ? 'DOWNLOAD THE APP' : 'DESCARGA LA APP')
+  const modalSubtitle =
+    ctaApp?.modalSubtitle ||
+    (isEnglish ? 'Choose your platform to get started' : 'Elige tu plataforma para empezar')
 
-  const hasStoreLinks = !!(appStoreUrl || googlePlayUrl);
+  const appStoreUrl = ctaApp?.appStoreUrl
+  const googlePlayUrl = ctaApp?.googlePlayUrl
 
-  // Cerrar modal con ESC
+  const hasStoreLinks = !!(appStoreUrl || googlePlayUrl)
+
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsAppModalOpen(false);
-    };
-    if (isAppModalOpen) window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isAppModalOpen]);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsAppModalOpen(false)
+    }
+
+    if (isAppModalOpen) window.addEventListener('keydown', onKeyDown)
+
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isAppModalOpen])
+
+  if (loading) {
+    return <div className="w-full min-h-screen bg-black" />
+  }
 
   return (
     <div className="w-full bg-white">
-      {/* ✅ HERO (mismo que Menu/About) */}
+      {/* HERO */}
       <div className="relative h-screen w-full bg-black overflow-hidden mb-12">
         {hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl) ? (
           <>
-            {/* Desktop video */}
             <video
               className={`hidden md:block w-full h-full object-cover ${mediaOpacityClass}`}
               autoPlay
@@ -230,7 +312,6 @@ const Delivery = () => {
               src={desktopVideoUrl || mobileVideoUrl}
             />
 
-            {/* Mobile video */}
             <video
               className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
               autoPlay
@@ -244,7 +325,11 @@ const Delivery = () => {
         ) : desktopImgUrl || mobileImgUrl ? (
           <picture className="block w-full h-full">
             {desktopImgUrl ? (
-              <source media="(min-width: 768px)" srcSet={desktopImgSrcSet || desktopImgUrl} sizes="100vw" />
+              <source
+                media="(min-width: 768px)"
+                srcSet={desktopImgSrcSet || desktopImgUrl}
+                sizes="100vw"
+              />
             ) : null}
 
             <img
@@ -262,7 +347,6 @@ const Delivery = () => {
           <div className="w-full h-full bg-black" />
         )}
 
-        {/* Overlay opcional */}
         {overlayEnabled && hasAnyHeroMedia && (
           <div
             className="absolute inset-0"
@@ -270,9 +354,8 @@ const Delivery = () => {
           />
         )}
 
-        {/* Textos (mismos tamaños Menu/About) */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
-          {hero?.title && (
+          {hero?.title ? (
             <div className="w-full max-w-[1050px] mx-auto">
               <Title
                 variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
@@ -283,9 +366,9 @@ const Delivery = () => {
                 align="center"
               />
             </div>
-          )}
+          ) : null}
 
-          {hero?.subtitle && (
+          {hero?.subtitle ? (
             <p
               className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${
                 hero?.subtitleColor || hero?.textColor || 'text-white'
@@ -293,17 +376,16 @@ const Delivery = () => {
             >
               {hero.subtitle}
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* ✅ SECCIÓN PRINCIPAL: TÚ ELIGES / ¿TE LA LLEVAMOS? */}
+      {/* SECCIÓN PRINCIPAL */}
       <section className="relative bg-white pt-10 pb-20 md:py-24">
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center lg:items-center justify-center gap-12 lg:gap-32">
-            {/* LADO IZQUIERDO: Imagen + Texto + Botones */}
             <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-xl">
-              {appBannerImageUrl && (
+              {appBannerImageUrl ? (
                 <div className="w-full mb-12">
                   <img
                     src={appBannerImageUrl}
@@ -313,7 +395,7 @@ const Delivery = () => {
                     decoding="async"
                   />
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-6">
                 <h3 className="font-nexa text-4xl md:text-5xl text-zinc-900 tracking-wide uppercase">
@@ -321,15 +403,14 @@ const Delivery = () => {
                 </h3>
 
                 <p className="font-rethink text-zinc-500 text-lg md:text-xl max-w-md leading-relaxed mx-auto lg:mx-0">
-                  {chooseText.split('\n').map((line, i, arr) => (
-                    <React.Fragment key={i}>
+                  {chooseText.split('\n').map((line, index, array) => (
+                    <React.Fragment key={index}>
                       {line}
-                      {i < arr.length - 1 && <br className="hidden md:block" />}
+                      {index < array.length - 1 && <br className="hidden md:block" />}
                     </React.Fragment>
                   ))}
                 </p>
 
-                {/* Action Buttons */}
                 <div className="flex justify-center lg:justify-start gap-6 mt-10">
                   {hasStoreLinks ? (
                     <button
@@ -338,13 +419,13 @@ const Delivery = () => {
                       className={`group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-[2rem] shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                         appLabelImgUrl ? 'overflow-hidden p-0' : 'bg-zinc-900 hover:bg-black'
                       }`}
-                      aria-label="Pedir en app"
-                      title="Pedir en app"
+                      aria-label={isEnglish ? 'Order in app' : 'Pedir en app'}
+                      title={isEnglish ? 'Order in app' : 'Pedir en app'}
                     >
                       {appLabelImgUrl ? (
                         <img
                           src={appLabelImgUrl}
-                          alt="Pedir en app"
+                          alt={isEnglish ? 'Order in app' : 'Pedir en app'}
                           className="w-full h-full object-contain"
                           loading="lazy"
                           decoding="async"
@@ -352,7 +433,7 @@ const Delivery = () => {
                       ) : (
                         <img
                           src="/images/brand/mascot.png"
-                          alt="Pedir en app"
+                          alt={isEnglish ? 'Order in app' : 'Pedir en app'}
                           className="w-9 h-9 md:w-11 md:h-11 object-contain"
                           loading="lazy"
                           decoding="async"
@@ -366,13 +447,13 @@ const Delivery = () => {
                       className={`group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-[2rem] shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                         appLabelImgUrl ? 'overflow-hidden p-0' : 'bg-zinc-900 hover:bg-black'
                       }`}
-                      aria-label="Pedir en app"
-                      title="Pedir en app"
+                      aria-label={isEnglish ? 'Order in app' : 'Pedir en app'}
+                      title={isEnglish ? 'Order in app' : 'Pedir en app'}
                     >
                       {appLabelImgUrl ? (
                         <img
                           src={appLabelImgUrl}
-                          alt="Pedir en app"
+                          alt={isEnglish ? 'Order in app' : 'Pedir en app'}
                           className="w-full h-full object-contain"
                           loading="lazy"
                           decoding="async"
@@ -380,7 +461,7 @@ const Delivery = () => {
                       ) : (
                         <img
                           src="/images/brand/mascot.png"
-                          alt="Pedir en app"
+                          alt={isEnglish ? 'Order in app' : 'Pedir en app'}
                           className="w-9 h-9 md:w-11 md:h-11 object-contain"
                           loading="lazy"
                           decoding="async"
@@ -391,7 +472,7 @@ const Delivery = () => {
                     <button className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-zinc-900 rounded-[2rem] shadow-xl hover:bg-black transition-all duration-300 transform hover:scale-105 active:scale-95">
                       <img
                         src="/images/brand/mascot.png"
-                        alt="Pedir en app"
+                        alt={isEnglish ? 'Order in app' : 'Pedir en app'}
                         className="w-9 h-9 md:w-11 md:h-11 object-contain"
                         loading="lazy"
                         decoding="async"
@@ -406,13 +487,13 @@ const Delivery = () => {
                       className={`group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-[2rem] shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                         whatsappLabelImgUrl ? 'overflow-hidden p-0' : 'bg-zinc-900 hover:bg-black'
                       }`}
-                      aria-label="Ordenar por WhatsApp"
-                      title="Ordenar por WhatsApp"
+                      aria-label={isEnglish ? 'Order through WhatsApp' : 'Ordenar por WhatsApp'}
+                      title={isEnglish ? 'Order through WhatsApp' : 'Ordenar por WhatsApp'}
                     >
                       {whatsappLabelImgUrl ? (
                         <img
                           src={whatsappLabelImgUrl}
-                          alt="Ordenar por WhatsApp"
+                          alt={isEnglish ? 'Order through WhatsApp' : 'Ordenar por WhatsApp'}
                           className="w-full h-full object-contain"
                           loading="lazy"
                           decoding="async"
@@ -430,15 +511,12 @@ const Delivery = () => {
               </div>
             </div>
 
-            {/* LADO DERECHO: Título + Celular */}
             <div className="flex flex-col items-center max-w-[400px]">
               <h2 className="font-nexa text-3xl md:text-4xl lg:text-5xl text-zinc-900 leading-[1] tracking-tight text-center mb-10 md:mb-14 uppercase">
-                ¿TE LA LLEVAMOS <br />
-                O VIENES POR <br />
-                ELLA?
+                {rightTitle}
               </h2>
 
-              {choiceImageUrl && (
+              {choiceImageUrl ? (
                 <div className="relative w-[180px] md:w-[220px] lg:w-[240px]">
                   <div className="relative z-10 border-[8px] border-zinc-900 rounded-[3rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.3)] bg-black aspect-[9/18.5]">
                     <img
@@ -449,22 +527,22 @@ const Delivery = () => {
                       decoding="async"
                     />
                   </div>
-                  <div className="absolute -inset-2 border-2 border-blue-400/20 rounded-[3.2rem] -z-0"></div>
+
+                  <div className="absolute -inset-2 border-2 border-blue-400/20 rounded-[3.2rem] -z-0" />
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ✅ MODAL DESCARGA APP */}
       {isAppModalOpen && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
           role="dialog"
           aria-modal="true"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setIsAppModalOpen(false);
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsAppModalOpen(false)
           }}
         >
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -474,8 +552,8 @@ const Delivery = () => {
               type="button"
               onClick={() => setIsAppModalOpen(false)}
               className="absolute top-5 right-5 w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-800 transition-colors"
-              aria-label="Cerrar"
-              title="Cerrar"
+              aria-label={isEnglish ? 'Close' : 'Cerrar'}
+              title={isEnglish ? 'Close' : 'Cerrar'}
             >
               <X className="w-6 h-6" />
             </button>
@@ -483,10 +561,13 @@ const Delivery = () => {
             <h3 className="font-nexa text-2xl md:text-3xl text-zinc-900 uppercase tracking-wide">
               {modalTitle}
             </h3>
-            <p className="font-rethink text-zinc-500 text-sm md:text-base mt-2">{modalSubtitle}</p>
+
+            <p className="font-rethink text-zinc-500 text-sm md:text-base mt-2">
+              {modalSubtitle}
+            </p>
 
             <div className="mt-8 space-y-5">
-              {appStoreUrl && (
+              {appStoreUrl ? (
                 <a
                   href={appStoreUrl}
                   target="_blank"
@@ -495,20 +576,23 @@ const Delivery = () => {
                 >
                   <div className="flex items-center gap-4">
                     <Apple className="w-8 h-8 text-white" />
+
                     <div className="text-left leading-tight">
                       <p className="font-rethink text-[11px] md:text-xs text-white/70 uppercase tracking-wide">
-                        DISPONIBLE EN
+                        {isEnglish ? 'AVAILABLE ON' : 'DISPONIBLE EN'}
                       </p>
+
                       <p className="font-rethink text-base md:text-xl text-white">App Store</p>
                     </div>
                   </div>
+
                   <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
                     <ChevronRight className="w-5 h-5 text-white" />
                   </div>
                 </a>
-              )}
+              ) : null}
 
-              {googlePlayUrl && (
+              {googlePlayUrl ? (
                 <a
                   href={googlePlayUrl}
                   target="_blank"
@@ -517,39 +601,42 @@ const Delivery = () => {
                 >
                   <div className="flex items-center gap-4">
                     <Play className="w-8 h-8 text-white" />
+
                     <div className="text-left leading-tight">
                       <p className="font-rethink text-[11px] md:text-xs text-white/70 uppercase tracking-wide">
-                        DISPONIBLE EN
+                        {isEnglish ? 'AVAILABLE ON' : 'DISPONIBLE EN'}
                       </p>
+
                       <p className="font-rethink text-base md:text-xl text-white">Google Play</p>
                     </div>
                   </div>
+
                   <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
                     <ChevronRight className="w-5 h-5 text-white" />
                   </div>
                 </a>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
       )}
 
-      {/* BENEFICIOS – conectados a Sanity (benefits[]) */}
+      {/* BENEFICIOS */}
       <div className="bg-gray-50 py-20">
         <div className="container mx-auto px-6">
           <h3 className="text-center font-nexa uppercase text-2xl md:text-3xl lg:text-4xl leading-none tracking-wide mb-14 text-black">
-            BENEFICIOS DE DESCARGAR NUESTRA APP
+            {isEnglish ? 'BENEFITS OF DOWNLOADING OUR APP' : 'BENEFICIOS DE DESCARGAR NUESTRA APP'}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-14 md:gap-10 text-center">
             {benefitsFromSanity ? (
-              data!.benefits!.map((benefit, idx) => (
-                <div key={idx} className="flex flex-col items-center">
+              data!.benefits!.map((benefit, index) => (
+                <div key={index} className="flex flex-col items-center">
                   {benefit.icon ? (
                     <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden shadow-2xl mb-8">
                       <img
                         src={imgUrl(benefit.icon, { w: 256, h: 256, fit: 'crop', q: 85 })}
-                        alt={benefit.title || `Beneficio ${idx + 1}`}
+                        alt={benefit.title || `Beneficio ${index + 1}`}
                         className="w-full h-full object-cover"
                         loading="lazy"
                         decoding="async"
@@ -563,13 +650,15 @@ const Delivery = () => {
 
                   <h4 className="font-nexa uppercase text-lg md:text-xl lg:text-2xl leading-tight tracking-wide text-black max-w-xs">
                     {benefit.title
-                      ? benefit.title.split('\n').map((line, i, arr) => (
+                      ? benefit.title.split('\n').map((line, i, array) => (
                           <span key={i}>
                             {line}
-                            {i < arr.length - 1 && <br />}
+                            {i < array.length - 1 && <br />}
                           </span>
                         ))
-                      : `Beneficio ${idx + 1}`}
+                      : isEnglish
+                        ? `Benefit ${index + 1}`
+                        : `Beneficio ${index + 1}`}
                   </h4>
                 </div>
               ))
@@ -579,8 +668,19 @@ const Delivery = () => {
                   <div className="w-24 h-24 md:w-28 md:h-28 bg-black rounded-full flex items-center justify-center shadow-2xl mb-8">
                     <span className="text-mitica-yellow text-4xl md:text-5xl leading-none">$</span>
                   </div>
+
                   <h4 className="font-nexa uppercase text-lg md:text-xl lg:text-2xl leading-tight tracking-wide text-black max-w-xs">
-                    GANA HASTA 8% <br />DE CASHBACK
+                    {isEnglish ? (
+                      <>
+                        EARN UP TO 8% <br />
+                        CASHBACK
+                      </>
+                    ) : (
+                      <>
+                        GANA HASTA 8% <br />
+                        DE CASHBACK
+                      </>
+                    )}
                   </h4>
                 </div>
 
@@ -588,8 +688,19 @@ const Delivery = () => {
                   <div className="w-24 h-24 md:w-28 md:h-28 bg-black rounded-full flex items-center justify-center shadow-2xl mb-8">
                     <span className="text-mitica-yellow text-4xl md:text-5xl leading-none">★</span>
                   </div>
+
                   <h4 className="font-nexa uppercase text-lg md:text-xl lg:text-2xl leading-tight tracking-wide text-black max-w-xs">
-                    CUPONES, PRODUCTOS Y <br />PROMOCIONES EXCLUSIVAS
+                    {isEnglish ? (
+                      <>
+                        EXCLUSIVE COUPONS, <br />
+                        PRODUCTS AND PROMOS
+                      </>
+                    ) : (
+                      <>
+                        CUPONES, PRODUCTOS Y <br />
+                        PROMOCIONES EXCLUSIVAS
+                      </>
+                    )}
                   </h4>
                 </div>
 
@@ -597,8 +708,19 @@ const Delivery = () => {
                   <div className="w-24 h-24 md:w-28 md:h-28 bg-black rounded-full flex items-center justify-center shadow-2xl mb-8">
                     <span className="text-mitica-yellow text-4xl md:text-5xl leading-none">🚲</span>
                   </div>
+
                   <h4 className="font-nexa uppercase text-lg md:text-xl lg:text-2xl leading-tight tracking-wide text-black max-w-xs">
-                    DELIVERY SIN <br />COSTO EXTRA
+                    {isEnglish ? (
+                      <>
+                        DELIVERY WITH <br />
+                        NO EXTRA COST
+                      </>
+                    ) : (
+                      <>
+                        DELIVERY SIN <br />
+                        COSTO EXTRA
+                      </>
+                    )}
                   </h4>
                 </div>
               </>
@@ -607,7 +729,7 @@ const Delivery = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Delivery;
+export default Delivery

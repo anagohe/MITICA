@@ -1,14 +1,8 @@
-// Layout.tsx
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown } from 'lucide-react';
-import {
-  motion,
-  AnimatePresence,
-  useScroll,
-  useTransform,
-  useMotionValueEvent,
-} from 'framer-motion';
+// components/Layout.tsx
+import React, { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Menu, X, ChevronDown } from 'lucide-react'
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 
 import {
   FaInstagram,
@@ -17,98 +11,143 @@ import {
   FaXTwitter,
   FaApple,
   FaGooglePlay,
-} from 'react-icons/fa6';
+} from 'react-icons/fa6'
+
+import { removeLanguagePrefix, useSiteLanguage } from '../i18n'
 
 interface LayoutProps {
-  children: React.ReactNode;
-  showFooterBanner?: boolean;
-  footerBannerBg?: string;
+  children: React.ReactNode
+  showFooterBanner?: boolean
+  footerBannerBg?: string
+}
+
+type NavSubItem = {
+  name: string
+  path: string
+}
+
+type NavItem = {
+  name: string
+  path?: string
+  dropdown?: NavSubItem[]
 }
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [openMobileSub, setOpenMobileSub] = useState<string | null>(null);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const [openMobileSub, setOpenMobileSub] = useState<string | null>(null)
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
 
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { language, isEnglish, localizedPath, switchTo } = useSiteLanguage()
 
-  const SWITCH_AT = 120;
-  const OPTICAL_DOWN = 26;
+  const SWITCH_AT = 120
+  const OPTICAL_DOWN = 26
 
-  const { scrollY } = useScroll();
-  const p = useTransform(scrollY, [0, SWITCH_AT], [0, 1], { clamp: true });
+  const { scrollY } = useScroll()
+  const p = useTransform(scrollY, [0, SWITCH_AT], [0, 1], { clamp: true })
 
-  const circleOpacity = useTransform(p, [0, 1], [1, 0], { clamp: true });
-  const circleScale = useTransform(p, [0, 1], [1, 0.94], { clamp: true });
+  const circleOpacity = useTransform(p, [0, 1], [1, 0], { clamp: true })
+  const circleScale = useTransform(p, [0, 1], [1, 0.94], { clamp: true })
   const circleY = useTransform(scrollY, (v) => {
-    const yClamped = Math.max(0, Math.min(v ?? 0, SWITCH_AT));
-    return OPTICAL_DOWN - yClamped + 4;
-  });
+    const yClamped = Math.max(0, Math.min(v ?? 0, SWITCH_AT))
+    return OPTICAL_DOWN - yClamped + 4
+  })
 
-  const wideOpacity = p;
-  const wideY = useTransform(p, [0, 1], [10, 0], { clamp: true });
-
-  const [scrolled, setScrolled] = useState(false);
-  useMotionValueEvent(scrollY, 'change', (v) => {
-    const next = (v ?? 0) > 50;
-    setScrolled((prev) => (prev === next ? prev : next));
-  });
+  const wideOpacity = p
+  const wideY = useTransform(p, [0, 1], [10, 0], { clamp: true })
 
   useEffect(() => {
-    setActiveDropdown(null);
-    setOpenMobileSub(null);
-    setIsOpen(false);
-  }, [location]);
+    setActiveDropdown(null)
+    setOpenMobileSub(null)
+    setIsOpen(false)
+  }, [location])
 
   useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : '';
+    document.body.style.overflow = isOpen ? 'hidden' : ''
+
     return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
 
   const handleNavClick = (path: string) => {
-    navigate(path);
-    setIsOpen(false);
-    setOpenMobileSub(null);
-    setActiveDropdown(null);
-  };
+    navigate(localizedPath(path))
+    setIsOpen(false)
+    setOpenMobileSub(null)
+    setActiveDropdown(null)
+  }
 
-  const navLinks = [
-    {
-      name: 'Nuestros Productos',
-      dropdown: [
-        { name: 'Ingredientes', path: '/ingredients' },
-        { name: 'Menú', path: '/menu' },
-        { name: 'Delivery', path: '/delivery' },
-      ],
-    },
-    {
-      name: 'Nosotros',
-      dropdown: [
-        { name: '¿Quiénes Somos?', path: '/about' },
-        { name: 'Visión y Misión', path: '/about#vision' },
-        { name: 'Manifiesto Mítica', path: '/about#manifesto' },
-      ],
-    },
-    {
-      name: 'Comunidad',
-      dropdown: [
-        { name: 'Blog', path: '/blog' },
-        { name: 'Eventos y Patrocinios', path: '/events' },
-        { name: 'Bolsa de Trabajo', path: '/careers' },
-      ],
-    },
-    { name: 'Ubicaciones', path: '/locations' },
-    { name: 'Franquicias', path: '/franchise' },
-  ];
+  const handleLanguageSwitch = () => {
+    navigate(switchTo(language === 'es' ? 'en' : 'es'))
+    setIsOpen(false)
+    setOpenMobileSub(null)
+    setActiveDropdown(null)
+  }
+
+  const navLinks: NavItem[] = isEnglish
+    ? [
+        {
+          name: 'Our Products',
+          dropdown: [
+            { name: 'Ingredients', path: '/ingredients' },
+            { name: 'Menu', path: '/menu' },
+            { name: 'Delivery', path: '/delivery' },
+          ],
+        },
+        {
+          name: 'About Us',
+          dropdown: [
+            { name: 'Who We Are', path: '/about' },
+            { name: 'Vision & Mission', path: '/about#vision' },
+            { name: 'Mítica Manifesto', path: '/about#manifesto' },
+          ],
+        },
+        {
+          name: 'Community',
+          dropdown: [
+            { name: 'Blog', path: '/blog' },
+            { name: 'Events & Sponsorships', path: '/events' },
+            { name: 'Careers', path: '/careers' },
+          ],
+        },
+        { name: 'Locations', path: '/locations' },
+        { name: 'Franchising', path: '/franchise' },
+      ]
+    : [
+        {
+          name: 'Nuestros Productos',
+          dropdown: [
+            { name: 'Ingredientes', path: '/ingredients' },
+            { name: 'Menú', path: '/menu' },
+            { name: 'Delivery', path: '/delivery' },
+          ],
+        },
+        {
+          name: 'Nosotros',
+          dropdown: [
+            { name: '¿Quiénes Somos?', path: '/about' },
+            { name: 'Visión y Misión', path: '/about#vision' },
+            { name: 'Manifiesto Mítica', path: '/about#manifesto' },
+          ],
+        },
+        {
+          name: 'Comunidad',
+          dropdown: [
+            { name: 'Blog', path: '/blog' },
+            { name: 'Eventos y Patrocinios', path: '/events' },
+            { name: 'Bolsa de Trabajo', path: '/careers' },
+          ],
+        },
+        { name: 'Ubicaciones', path: '/locations' },
+        { name: 'Franquicias', path: '/franchise' },
+      ]
 
   return (
     <nav className="fixed w-full z-50 bg-mitica-black transition-all duration-300 py-5 shadow-md">
       <div className="container mx-auto px-6 flex items-center">
         <div className="hidden xl:flex w-[260px] items-center">
-          <Link to="/" className="z-50 flex items-center gap-2 group">
+          <Link to={localizedPath('/')} className="z-50 flex items-center gap-2 group">
             <div className="relative ml-4">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-[260px] h-[96px] -ml-16">
                 {!isOpen && (
@@ -162,7 +201,7 @@ const Navbar = () => {
         </div>
 
         <div className="xl:hidden flex items-center -ml-2">
-          <Link to="/" className="z-50 flex items-center">
+          <Link to={localizedPath('/')} className="z-50 flex items-center">
             <img
               src="/images/brand/logo.png"
               alt="MÍTICA"
@@ -179,7 +218,9 @@ const Navbar = () => {
               const displayName =
                 link.name === 'Nuestros Productos'
                   ? 'Nuestros\u00A0Productos'
-                  : link.name;
+                  : link.name === 'Our Products'
+                    ? 'Our\u00A0Products'
+                    : link.name
 
               return (
                 <div
@@ -200,7 +241,7 @@ const Navbar = () => {
                     </button>
                   ) : (
                     <Link
-                      to={link.path}
+                      to={localizedPath(link.path || '/')}
                       className="whitespace-nowrap text-white font-nexa font-bold text-sm hover:text-mitica-yellow uppercase transition-colors tracking-wide"
                     >
                       {displayName}
@@ -229,12 +270,12 @@ const Navbar = () => {
                     )}
                   </AnimatePresence>
                 </div>
-              );
+              )
             })}
           </div>
         </div>
 
-        <div className="hidden xl:flex w-[260px] justify-end">
+        <div className="hidden xl:flex w-[260px] justify-end items-center gap-3">
           <a
             href="https://wa.me/529979790642"
             target="_blank"
@@ -243,18 +284,38 @@ const Navbar = () => {
           >
             WhatsApp
           </a>
+
+          <button
+            type="button"
+            onClick={handleLanguageSwitch}
+            className="text-white border border-white/30 px-3 py-2 rounded-full text-xs font-nexa uppercase hover:border-mitica-yellow hover:text-mitica-yellow transition-colors"
+            aria-label={isEnglish ? 'Cambiar a español' : 'Switch to English'}
+          >
+            {isEnglish ? 'ES' : 'EN'}
+          </button>
         </div>
 
-        <button
-          className="xl:hidden text-white z-50 ml-auto"
-          onClick={() => {
-            setIsOpen(true);
-            setOpenMobileSub(null);
-          }}
-          aria-label="Abrir menú"
-        >
-          <Menu size={32} />
-        </button>
+        <div className="xl:hidden ml-auto flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleLanguageSwitch}
+            className="text-white border border-white/30 px-3 py-2 rounded-full text-xs font-nexa uppercase hover:border-mitica-yellow hover:text-mitica-yellow transition-colors"
+            aria-label={isEnglish ? 'Cambiar a español' : 'Switch to English'}
+          >
+            {isEnglish ? 'ES' : 'EN'}
+          </button>
+
+          <button
+            className="text-white z-50"
+            onClick={() => {
+              setIsOpen(true)
+              setOpenMobileSub(null)
+            }}
+            aria-label={isEnglish ? 'Open menu' : 'Abrir menú'}
+          >
+            <Menu size={32} />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -269,21 +330,29 @@ const Navbar = () => {
             aria-modal="true"
           >
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/10">
-              <img
-                src="/images/brand/logo.png"
-                alt="MÍTICA"
-                className="h-10 w-auto object-contain"
-                loading="lazy"
-                decoding="async"
-              />
+              <Link
+                to={localizedPath('/')}
+                onClick={() => {
+                  setIsOpen(false)
+                  setOpenMobileSub(null)
+                }}
+              >
+                <img
+                  src="/images/brand/logo.png"
+                  alt="MÍTICA"
+                  className="h-10 w-auto object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </Link>
 
               <button
                 className="text-white"
                 onClick={() => {
-                  setIsOpen(false);
-                  setOpenMobileSub(null);
+                  setIsOpen(false)
+                  setOpenMobileSub(null)
                 }}
-                aria-label="Cerrar menú"
+                aria-label={isEnglish ? 'Close menu' : 'Cerrar menú'}
               >
                 <X size={34} />
               </button>
@@ -291,22 +360,17 @@ const Navbar = () => {
 
             <nav className="px-6">
               {navLinks.map((link) => {
-                const hasSub = !!link.dropdown;
-                const isOpenSub = hasSub && openMobileSub === link.name;
+                const hasSub = !!link.dropdown
+                const isOpenSub = hasSub && openMobileSub === link.name
 
                 return (
-                  <div
-                    key={link.name}
-                    className="border-b border-white/10 last:border-b-0"
-                  >
+                  <div key={link.name} className="border-b border-white/10 last:border-b-0">
                     {hasSub ? (
                       <>
                         <button
                           type="button"
                           onClick={() => {
-                            setOpenMobileSub((prev) =>
-                              prev === link.name ? null : link.name
-                            );
+                            setOpenMobileSub((prev) => (prev === link.name ? null : link.name))
                           }}
                           className={`w-full flex items-center justify-between py-6 text-left uppercase font-nexa font-extrabold tracking-wide transition-colors
                             ${
@@ -321,18 +385,14 @@ const Navbar = () => {
                           <span className="text-xl leading-none">{link.name}</span>
                           <ChevronDown
                             size={24}
-                            className={`transition-transform ${
-                              isOpenSub ? 'rotate-180' : ''
-                            }`}
+                            className={`transition-transform ${isOpenSub ? 'rotate-180' : ''}`}
                           />
                         </button>
 
                         <div
                           id={`sub-${link.name}`}
                           className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-200 ${
-                            isOpenSub
-                              ? 'grid-rows-[1fr] opacity-100'
-                              : 'grid-rows-[0fr] opacity-0'
+                            isOpenSub ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                           }`}
                         >
                           <div className="min-h-0 pb-5">
@@ -350,39 +410,50 @@ const Navbar = () => {
                       </>
                     ) : (
                       <button
-                        onClick={() => handleNavClick(link.path)}
+                        onClick={() => handleNavClick(link.path || '/')}
                         className="w-full text-left py-6 uppercase font-nexa font-extrabold tracking-wide text-white hover:text-mitica-yellow transition-colors"
                       >
                         <span className="text-xl leading-none">{link.name}</span>
                       </button>
                     )}
                   </div>
-                );
+                )
               })}
             </nav>
 
-            <div className="px-6 py-8">
+            <div className="px-6 py-8 space-y-4">
               <a
                 href="https://wa.me/529979790642"
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => {
-                  setIsOpen(false);
-                  setOpenMobileSub(null);
+                  setIsOpen(false)
+                  setOpenMobileSub(null)
                 }}
                 className="block w-full text-center bg-mitica-yellow text-black font-nexa py-4 rounded text-xl uppercase hover:bg-white transition-colors"
               >
                 WhatsApp
               </a>
+
+              <button
+                type="button"
+                onClick={handleLanguageSwitch}
+                className="block w-full text-center border border-white/30 text-white font-nexa py-4 rounded text-xl uppercase hover:border-mitica-yellow hover:text-mitica-yellow transition-colors"
+                aria-label={isEnglish ? 'Cambiar a español' : 'Switch to English'}
+              >
+                {isEnglish ? 'Cambiar a ES' : 'Switch to EN'}
+              </button>
             </div>
           </motion.aside>
         )}
       </AnimatePresence>
     </nav>
-  );
-};
+  )
+}
 
 const Footer = ({ showBanner }: { showBanner: boolean }) => {
+  const { isEnglish, localizedPath } = useSiteLanguage()
+
   const storeBadges = [
     {
       label: 'App Store',
@@ -398,7 +469,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
       w: 160,
       h: 50,
     },
-  ];
+  ]
 
   const footerLogos = [
     {
@@ -439,7 +510,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
       alt: 'Tefi’s Bread House',
       className: 'h-8 md:h-9 lg:h-10',
     },
-  ];
+  ]
 
   return (
     <footer className="bg-mitica-black text-white pt-0">
@@ -477,11 +548,11 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
               <div className="order-1 md:order-2 mt-1 flex flex-col items-center text-center w-full">
                 <div className="w-[332px] max-w-[92vw] md:w-auto flex flex-col items-center">
                   <p className="font-rethink font-extrabold uppercase tracking-[0.07em] text-zinc-900 text-3xl md:text-3xl">
-                    TU ANTOJO
+                    {isEnglish ? 'YOUR CRAVING' : 'TU ANTOJO'}
                   </p>
 
                   <span className="font-nexa inline-flex justify-center rounded-lg bg-zinc-900 text-amber-100 mt-1 px-7 py-4 text-4xl w-full md:w-auto md:text-3xl md:px-6 md:py-3">
-                    TIENE APP
+                    {isEnglish ? 'HAS AN APP' : 'TIENE APP'}
                   </span>
                 </div>
               </div>
@@ -530,7 +601,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
 
           <div>
             <h4 className="font-nexa text-mitica-yellow text-lg mb-6">
-              SÍGUENOS EN REDES
+              {isEnglish ? 'FOLLOW US' : 'SÍGUENOS EN REDES'}
             </h4>
 
             <div className="flex gap-4 mb-8">
@@ -580,7 +651,7 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
             </div>
 
             <h4 className="font-nexa text-mitica-yellow text-lg mb-4">
-              DESCARGA NUESTRA APP
+              {isEnglish ? 'DOWNLOAD OUR APP' : 'DESCARGA NUESTRA APP'}
             </h4>
 
             <div className="flex gap-3">
@@ -610,37 +681,32 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
 
           <div>
             <h4 className="font-nexa text-mitica-yellow text-lg mb-6">
-              MÁS INFORMACIÓN
+              {isEnglish ? 'MORE INFORMATION' : 'MÁS INFORMACIÓN'}
             </h4>
+
             <ul className="space-y-3 text-sm text-gray-400 font-rethink font-bold uppercase">
               <li>
-                <Link to="/about" className="hover:text-white transition-colors">
-                  Quiénes Somos
+                <Link to={localizedPath('/about')} className="hover:text-white transition-colors">
+                  {isEnglish ? 'About Us' : 'Quiénes Somos'}
                 </Link>
               </li>
               <li>
-                <Link to="/menu" className="hover:text-white transition-colors">
-                  Menú
+                <Link to={localizedPath('/menu')} className="hover:text-white transition-colors">
+                  {isEnglish ? 'Menu' : 'Menú'}
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/locations"
-                  className="hover:text-white transition-colors"
-                >
-                  Ubicaciones
+                <Link to={localizedPath('/locations')} className="hover:text-white transition-colors">
+                  {isEnglish ? 'Locations' : 'Ubicaciones'}
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/franchise"
-                  className="hover:text-white transition-colors"
-                >
-                  Franquicias
+                <Link to={localizedPath('/franchise')} className="hover:text-white transition-colors">
+                  {isEnglish ? 'Franchising' : 'Franquicias'}
                 </Link>
               </li>
               <li>
-                <Link to="/blog" className="hover:text-white transition-colors">
+                <Link to={localizedPath('/blog')} className="hover:text-white transition-colors">
                   Blog
                 </Link>
               </li>
@@ -649,22 +715,20 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
 
           <div>
             <h4 className="font-nexa text-mitica-yellow text-lg mb-6">LINKS</h4>
+
             <ul className="space-y-3 text-sm text-gray-400 font-rethink font-bold uppercase">
               <li>
-                <Link to="/events" className="hover:text-white transition-colors">
-                  Eventos
+                <Link to={localizedPath('/events')} className="hover:text-white transition-colors">
+                  {isEnglish ? 'Events' : 'Eventos'}
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/delivery"
-                  className="hover:text-white transition-colors"
-                >
+                <Link to={localizedPath('/delivery')} className="hover:text-white transition-colors">
                   Delivery
                 </Link>
               </li>
               <li>
-                <Link to="/faq" className="hover:text-white transition-colors">
+                <Link to={localizedPath('/faq')} className="hover:text-white transition-colors">
                   FAQS
                 </Link>
               </li>
@@ -672,16 +736,17 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
 
             <div className="mt-8 flex flex-col gap-2 text-[10px] text-gray-600 font-rethink uppercase">
               <Link
-                to="/terminos-y-condiciones"
+                to={localizedPath('/terminos-y-condiciones')}
                 className="hover:text-mitica-yellow"
               >
-                Términos y Condiciones
+                {isEnglish ? 'Terms and Conditions' : 'Términos y Condiciones'}
               </Link>
+
               <Link
-                to="/aviso-de-privacidad"
+                to={localizedPath('/aviso-de-privacidad')}
                 className="hover:text-mitica-yellow"
               >
-                Aviso de Privacidad
+                {isEnglish ? 'Privacy Notice' : 'Aviso de Privacidad'}
               </Link>
             </div>
           </div>
@@ -728,16 +793,14 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
         </div>
       </div>
     </footer>
-  );
-};
+  )
+}
 
-export const Layout: React.FC<LayoutProps> = ({
-  children,
-  showFooterBanner = true,
-}) => {
-  const location = useLocation();
-  const shouldShowFooterBanner =
-    showFooterBanner && location.pathname !== '/delivery';
+export const Layout: React.FC<LayoutProps> = ({ children, showFooterBanner = true }) => {
+  const location = useLocation()
+  const pathWithoutLanguage = removeLanguagePrefix(location.pathname)
+
+  const shouldShowFooterBanner = showFooterBanner && pathWithoutLanguage !== '/delivery'
 
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
@@ -745,5 +808,5 @@ export const Layout: React.FC<LayoutProps> = ({
       <main className="flex-grow">{children}</main>
       <Footer showBanner={shouldShowFooterBanner} />
     </div>
-  );
-};
+  )
+}

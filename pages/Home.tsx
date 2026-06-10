@@ -1,106 +1,110 @@
 // src/pages/Home.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Title, TitleVariant, BodyText } from '../components/Typography';
-import { Link } from 'react-router-dom';
-import { HeroSlide } from '../types';
-import { client } from '../sanity/client';
-import { urlFor } from '../sanity/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Title, TitleVariant, BodyText } from '../components/Typography'
+import { Link } from 'react-router-dom'
+import { HeroSlide } from '../types'
+import { client } from '../sanity/client'
+import { urlFor } from '../sanity/image'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { getSanitySingletonId, useSiteLanguage } from '../i18n'
 
 // ========= Tipos de Sanity =========
 type HeroSlideSanity = {
-  _key: string;
-  ctaText?: string;
-  ctaLink?: string;
-  heroLink?: string;
-  align?: 'left' | 'center' | 'right';
+  _key: string
+  ctaText?: string
+  ctaLink?: string
+  heroLink?: string
+  align?: 'left' | 'center' | 'right'
   hero?: {
-    desktopImage?: any;
-    mobileImage?: any;
-    title?: string;
-    subtitle?: string;
-    [key: string]: any;
-  };
-};
+    desktopImage?: any
+    mobileImage?: any
+    title?: string
+    subtitle?: string
+    [key: string]: any
+  }
+}
 
 type IntroSectionSanity = {
-  titleType?: 'text' | 'image';
-  titleText?: string;
-  titleImage?: any;
-  image?: any;
-};
+  titleType?: 'text' | 'image'
+  titleText?: string
+  titleImage?: any
+  image?: any
+}
 
 type LegendSectionSanity = {
-  _key: string;
-  title?: string;
-  text?: string;
-  buttonText?: string;
-  buttonLink?: string;
-  imagePosition?: 'left' | 'right';
-  image?: any;
-};
+  _key: string
+  title?: string
+  text?: string
+  buttonText?: string
+  buttonLink?: string
+  imagePosition?: 'left' | 'right'
+  image?: any
+}
 
 type PromotionPostSanity = {
-  _id: string;
-  title?: string;
-  excerpt?: string;
-  publishedAt?: string;
-  category?: string;
-  slug?: string;
-  mainImage?: any;
-};
+  _id: string
+  title?: string
+  excerpt?: string
+  publishedAt?: string
+  category?: string
+  slug?: string
+  mainImage?: any
+  language?: 'es' | 'en'
+}
 
 type HomePageSanity = {
-  heroSlides?: HeroSlideSanity[];
-  introSection?: IntroSectionSanity;
-  legendSections?: LegendSectionSanity[];
-  promotionsTitle?: string;
-  promotions?: PromotionPostSanity[];
-};
+  _id?: string
+  heroSlides?: HeroSlideSanity[]
+  introSection?: IntroSectionSanity
+  legendSections?: LegendSectionSanity[]
+  promotionsTitle?: string
+  promotions?: PromotionPostSanity[]
+}
 
 // ========= Tipos locales =========
 type IntroSection = {
-  titleType: 'text' | 'image';
-  titleText: string;
-  titleImageUrl: string;
-  imageUrl: string;
-};
+  titleType: 'text' | 'image'
+  titleText: string
+  titleImageUrl: string
+  imageUrl: string
+}
 
 type LegendSection = {
-  id: string;
-  title: string;
-  text: string;
-  buttonText: string;
-  buttonLink: string;
-  imageUrl: string;
-  imagePosition: 'left' | 'right';
-};
+  id: string
+  title: string
+  text: string
+  buttonText: string
+  buttonLink: string
+  imageUrl: string
+  imagePosition: 'left' | 'right'
+}
 
 type PromoCard = {
-  id: string;
-  title: string;
-  desc: string;
-  imageUrl: string;
-  slug: string;
-};
+  id: string
+  title: string
+  desc: string
+  imageUrl: string
+  slug: string
+}
 
 type SlideImg = {
-  desktop: { src: string; srcSet: string };
-  mobile: { src: string; srcSet: string };
-};
+  desktop: { src: string; srcSet: string }
+  mobile: { src: string; srcSet: string }
+}
 
 type SlideMapped = HeroSlide & {
-  heroLink?: string;
-  imgs?: SlideImg;
-};
+  heroLink?: string
+  imgs?: SlideImg
+}
 
 // ========= GROQ =========
 const HOME_QUERY = `
-coalesce(
-  *[_id == "homePage"][0],
-  *[_type == "homePage"][0]
-){
+*[
+  _id == $documentId
+  && !(_id in path("drafts.**"))
+][0]{
+  _id,
   heroSlides[]{
     _key,
     ctaText,
@@ -136,6 +140,7 @@ coalesce(
     count(promotionsPosts) > 0 =>
       promotionsPosts[]->{
         _id,
+        language,
         title,
         excerpt,
         publishedAt,
@@ -143,8 +148,14 @@ coalesce(
         mainImage,
         "slug": slug.current
       },
-    *[_type == "post" && category == "Promociones"] | order(publishedAt desc)[0...3]{
+    *[
+      _type == "post"
+      && category == "Promociones"
+      && language == $language
+      && !(_id in path("drafts.**"))
+    ] | order(publishedAt desc)[0...3]{
       _id,
+      language,
       title,
       excerpt,
       publishedAt,
@@ -154,49 +165,84 @@ coalesce(
     }
   )
 }
-`;
+`
 
-// ========= Helpers de imagen (evita original) =========
+// ========= Helpers de imagen =========
 function imgCrop(source: any, w: number, h: number, q = 75) {
-  return urlFor(source).width(w).height(h).fit('crop').quality(q).url();
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).url()
 }
+
 function imgMax(source: any, w: number, q = 75) {
-  return urlFor(source).width(w).fit('max').quality(q).url();
+  return urlFor(source).width(w).fit('max').quality(q).url()
 }
+
 function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 75) {
-  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ');
+  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ')
+}
+
+const isExternalUrl = (url?: string) => {
+  if (!url) return false
+  return /^https?:\/\//i.test(url) || url.startsWith('mailto:') || url.startsWith('tel:')
 }
 
 const Home: React.FC = () => {
-  const [heroSlides, setHeroSlides] = useState<SlideMapped[]>([]);
-  const [introSection, setIntroSection] = useState<IntroSection | null>(null);
-  const [legendSections, setLegendSections] = useState<LegendSection[]>([]);
-  const [promos, setPromos] = useState<PromoCard[]>([]);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [promotionsTitle, setPromotionsTitle] = useState('PROMOCIONES');
+  const { language, sanityLanguage, localizedPath, isEnglish } = useSiteLanguage()
+
+  const [heroSlides, setHeroSlides] = useState<SlideMapped[]>([])
+  const [introSection, setIntroSection] = useState<IntroSection | null>(null)
+  const [legendSections, setLegendSections] = useState<LegendSection[]>([])
+  const [promos, setPromos] = useState<PromoCard[]>([])
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const [promotionsTitle, setPromotionsTitle] = useState(isEnglish ? 'PROMOTIONS' : 'PROMOCIONES')
+  const [loading, setLoading] = useState(true)
+
+  const getInternalLink = (path?: string) => {
+    const cleanPath = path?.trim() || '/'
+    if (isExternalUrl(cleanPath)) return cleanPath
+    return localizedPath(cleanPath)
+  }
 
   const nextSlide = () => {
-    if (!heroSlides.length) return;
-    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-  };
+    if (!heroSlides.length) return
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
+  }
 
   const prevSlide = () => {
-    if (!heroSlides.length) return;
-    setCurrentSlide((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1));
-  };
+    if (!heroSlides.length) return
+    setCurrentSlide((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1))
+  }
 
   // ===== Fetch desde Sanity =====
   useEffect(() => {
+    let mounted = true
+
     const fetchHome = async () => {
       try {
-        const data = await client.fetch<HomePageSanity>(HOME_QUERY);
+        setLoading(true)
+
+        const documentId = getSanitySingletonId('homePage', language)
+
+        const data = await client.fetch<HomePageSanity | null>(HOME_QUERY, {
+          documentId,
+          language: sanityLanguage,
+        })
+
+        console.log('HOME QUERY PARAMS:', {
+          language,
+          sanityLanguage,
+          documentId,
+        })
+
+        console.log('HOME QUERY RESULT:', data)
+
+        if (!mounted) return
 
         const mappedHeroSlides: SlideMapped[] =
           data?.heroSlides?.map((slide, index) => {
-            const heroData = slide.hero || {};
+            const heroData = slide.hero || {}
 
-            const hasDesktop = !!heroData.desktopImage;
-            const hasMobile = !!heroData.mobileImage;
+            const hasDesktop = !!heroData.desktopImage
+            const hasMobile = !!heroData.mobileImage
 
             const desktop = hasDesktop
               ? {
@@ -211,7 +257,7 @@ const Home: React.FC = () => {
                     75
                   ),
                 }
-              : { src: '', srcSet: '' };
+              : { src: '', srcSet: '' }
 
             const mobile = hasMobile
               ? {
@@ -227,15 +273,13 @@ const Home: React.FC = () => {
                   ),
                 }
               : hasDesktop
-              ? {
-                  // si no hay mobile, reusa desktop para no romper UI (pero igual optimizado)
-                  src: desktop.src,
-                  srcSet: desktop.srcSet,
-                }
-              : { src: '', srcSet: '' };
+                ? {
+                    src: desktop.src,
+                    srcSet: desktop.srcSet,
+                  }
+                : { src: '', srcSet: '' }
 
-            const imgs: SlideImg | undefined =
-              desktop.src || mobile.src ? { desktop, mobile } : undefined;
+            const imgs: SlideImg | undefined = desktop.src || mobile.src ? { desktop, mobile } : undefined
 
             return {
               id: index + 1,
@@ -249,69 +293,98 @@ const Home: React.FC = () => {
               align: slide.align ?? 'center',
               heroLink: (slide.heroLink || '').trim(),
               imgs,
-            };
-          }) ?? [];
+            }
+          }) ?? []
 
         const mappedIntro: IntroSection | null = data?.introSection
           ? {
               titleType: data.introSection.titleType ?? 'text',
               titleText: data.introSection.titleText ?? '',
-              // título-imagen suele ser “logo/título”: no necesita crop
-              titleImageUrl: data.introSection.titleImage ? imgMax(data.introSection.titleImage, 900, 80) : '',
-              // imagen principal: grande pero optimizada
+              titleImageUrl: data.introSection.titleImage
+                ? imgMax(data.introSection.titleImage, 900, 80)
+                : '',
               imageUrl: data.introSection.image ? imgMax(data.introSection.image, 1400, 75) : '',
             }
-          : null;
+          : null
 
         const mappedLegend: LegendSection[] =
-          data?.legendSections?.map((s) => ({
-            id: s._key,
-            title: s.title ?? '',
-            text: s.text ?? '',
-            buttonText: s.buttonText ?? '',
-            buttonLink: s.buttonLink ?? '#',
-            imageUrl: s.image ? imgCrop(s.image, 1200, 900, 75) : '',
-            imagePosition: s.imagePosition ?? 'right',
-          })) ?? [];
+          data?.legendSections?.map((section) => ({
+            id: section._key,
+            title: section.title ?? '',
+            text: section.text ?? '',
+            buttonText: section.buttonText ?? '',
+            buttonLink: section.buttonLink ?? '#',
+            imageUrl: section.image ? imgCrop(section.image, 1200, 900, 75) : '',
+            imagePosition: section.imagePosition ?? 'right',
+          })) ?? []
 
         const mappedPromos: PromoCard[] =
           (data?.promotions || [])
-            .filter((p) => !!p?.slug)
+            .filter((promo) => !!promo?.slug)
             .slice(0, 3)
-            .map((p) => ({
-              id: p._id,
-              title: p.title ?? 'Promoción',
-              desc: p.excerpt ?? '',
-              imageUrl: p.mainImage ? imgCrop(p.mainImage, 900, 650, 75) : '',
-              slug: p.slug ?? p._id,
-            })) ?? [];
+            .map((promo) => ({
+              id: promo._id,
+              title: promo.title ?? (isEnglish ? 'Promotion' : 'Promoción'),
+              desc: promo.excerpt ?? '',
+              imageUrl: promo.mainImage ? imgCrop(promo.mainImage, 900, 650, 75) : '',
+              slug: promo.slug ?? promo._id,
+            })) ?? []
 
-        setHeroSlides(mappedHeroSlides);
-        setIntroSection(mappedIntro);
-        setLegendSections(mappedLegend);
-        setPromos(mappedPromos);
+        setHeroSlides(mappedHeroSlides)
+        setIntroSection(mappedIntro)
+        setLegendSections(mappedLegend)
+        setPromos(mappedPromos)
+        setCurrentSlide(0)
 
-        setPromotionsTitle(data?.promotionsTitle?.trim() ? data.promotionsTitle.trim() : 'PROMOCIONES');
+        setPromotionsTitle(
+          data?.promotionsTitle?.trim()
+            ? data.promotionsTitle.trim()
+            : isEnglish
+              ? 'PROMOTIONS'
+              : 'PROMOCIONES'
+        )
       } catch (error) {
-        console.error('Error fetching homePage from Sanity', error);
+        console.error('Error fetching homePage from Sanity', error)
+
+        if (!mounted) return
+
+        setHeroSlides([])
+        setIntroSection(null)
+        setLegendSections([])
+        setPromos([])
+      } finally {
+        if (!mounted) return
+        setLoading(false)
       }
-    };
+    }
 
-    fetchHome();
-  }, []);
+    fetchHome()
 
-  // ===== Auto–slide (8s) =====
+    return () => {
+      mounted = false
+    }
+  }, [language, sanityLanguage, isEnglish])
+
+  // ===== Auto-slide =====
   useEffect(() => {
-    if (heroSlides.length <= 1) return;
+    if (heroSlides.length <= 1) return
 
     const timer = window.setTimeout(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 8000);
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
+    }, 8000)
 
-    return () => window.clearTimeout(timer);
-  }, [heroSlides.length, currentSlide]);
+    return () => window.clearTimeout(timer)
+  }, [heroSlides.length, currentSlide])
 
-  const current = useMemo(() => heroSlides[currentSlide], [heroSlides, currentSlide]);
+  const current = useMemo(() => heroSlides[currentSlide], [heroSlides, currentSlide])
+
+  if (loading) {
+    return (
+      <div className="w-full bg-white min-h-screen flex items-center justify-center">
+        <p className="text-gray-700">{isEnglish ? 'Loading...' : 'Cargando...'}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full">
@@ -328,13 +401,16 @@ const Home: React.FC = () => {
               className="absolute inset-0 w-full h-full"
             >
               {!current.ctaText && current.heroLink ? (
-                <Link to={current.heroLink} className="absolute inset-0 z-20" aria-label="Ir al enlace del hero" />
+                <Link
+                  to={getInternalLink(current.heroLink)}
+                  className="absolute inset-0 z-20"
+                  aria-label={isEnglish ? 'Go to hero link' : 'Ir al enlace del hero'}
+                />
               ) : null}
 
               <div className="w-full h-full relative">
                 {current.imgs?.desktop?.src || current.imgs?.mobile?.src ? (
                   <picture className="block w-full h-full">
-                    {/* Desktop */}
                     {current.imgs?.desktop?.src ? (
                       <source
                         media="(min-width: 768px)"
@@ -343,7 +419,6 @@ const Home: React.FC = () => {
                       />
                     ) : null}
 
-                    {/* Mobile (fallback) */}
                     <img
                       src={current.imgs?.mobile?.src || current.imgs?.desktop?.src || ''}
                       srcSet={current.imgs?.mobile?.srcSet || current.imgs?.mobile?.src || undefined}
@@ -357,7 +432,7 @@ const Home: React.FC = () => {
                   </picture>
                 ) : (
                   <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white font-nexa text-2xl">
-                    HERO SIN IMAGEN
+                    {isEnglish ? 'HERO WITHOUT IMAGE' : 'HERO SIN IMAGEN'}
                   </div>
                 )}
 
@@ -369,8 +444,8 @@ const Home: React.FC = () => {
                   current.align === 'left'
                     ? 'items-start text-left'
                     : current.align === 'right'
-                    ? 'items-end text-right'
-                    : 'items-center text-center'
+                      ? 'items-end text-right'
+                      : 'items-center text-center'
                 }`}
               >
                 <motion.div
@@ -386,20 +461,20 @@ const Home: React.FC = () => {
                     align={current.align || 'center'}
                   />
 
-                  {current.subtitle && (
+                  {current.subtitle ? (
                     <h3 className="font-nexa text-mitica-yellow text-xl md:text-3xl mb-8 tracking-widest shadow-black drop-shadow-md">
                       {current.subtitle}
                     </h3>
-                  )}
+                  ) : null}
 
-                  {current.ctaText && (
+                  {current.ctaText ? (
                     <Link
-                      to={current.ctaLink || '/'}
+                      to={getInternalLink(current.ctaLink || '/')}
                       className="relative z-30 bg-mitica-yellow text-black font-nexa uppercase px-10 py-4 rounded-full hover:bg-white hover:scale-105 transition-all shadow-lg text-lg inline-block"
                     >
                       {current.ctaText}
                     </Link>
-                  )}
+                  ) : null}
                 </motion.div>
               </div>
             </motion.div>
@@ -411,7 +486,7 @@ const Home: React.FC = () => {
             <button
               onClick={prevSlide}
               className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-40 text-white hover:text-mitica-yellow transition-transform duration-200 hover:scale-110 drop-shadow-lg"
-              aria-label="Slide anterior"
+              aria-label={isEnglish ? 'Previous slide' : 'Slide anterior'}
             >
               <ChevronLeft className="w-7 h-7 md:w-9 md:h-9" />
             </button>
@@ -419,7 +494,7 @@ const Home: React.FC = () => {
             <button
               onClick={nextSlide}
               className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-40 text-white hover:text-mitica-yellow transition-transform duration-200 hover:scale-110 drop-shadow-lg"
-              aria-label="Siguiente slide"
+              aria-label={isEnglish ? 'Next slide' : 'Siguiente slide'}
             >
               <ChevronRight className="w-7 h-7 md:w-9 md:h-9" />
             </button>
@@ -435,7 +510,7 @@ const Home: React.FC = () => {
                 className={`h-2 rounded-full transition-all duration-500 ${
                   idx === currentSlide ? 'bg-mitica-yellow w-12' : 'bg-white/50 w-2'
                 }`}
-                aria-label={`Ir al slide ${idx + 1}`}
+                aria-label={isEnglish ? `Go to slide ${idx + 1}` : `Ir al slide ${idx + 1}`}
               />
             ))}
           </div>
@@ -475,7 +550,7 @@ const Home: React.FC = () => {
               ) : (
                 <Title
                   variant={TitleVariant.REGULAR}
-                  text={introSection.titleText || 'MOMENTOS CON SABOR LEGENDARIO'}
+                  text={introSection.titleText || (isEnglish ? 'LEGENDARY FLAVOR MOMENTS' : 'MOMENTOS CON SABOR LEGENDARIO')}
                   className="text-4xl md:text-6xl mb-6 leading-none md:text-left"
                   align="center"
                 />
@@ -490,7 +565,7 @@ const Home: React.FC = () => {
         <section className="pt-10 pb-16 bg-white">
           <div className="container mx-auto px-6 space-y-16">
             {legendSections.map((section) => {
-              const imageOnRight = section.imagePosition === 'right';
+              const imageOnRight = section.imagePosition === 'right'
 
               return (
                 <div
@@ -510,6 +585,7 @@ const Home: React.FC = () => {
                           imageOnRight ? 'translate-x-4 translate-y-4' : '-translate-x-4 -translate-y-4'
                         }`}
                       />
+
                       {section.imageUrl ? (
                         <img
                           src={section.imageUrl}
@@ -531,23 +607,26 @@ const Home: React.FC = () => {
                   >
                     <div className="w-full max-w-3xl mx-auto">
                       <h3 className="font-rethink-bold text-3xl mb-4 uppercase text-left">
-                        {section.title || 'SÉ PARTE DE LA LEYENDA'}
+                        {section.title || (isEnglish ? 'BE PART OF THE LEGEND' : 'SÉ PARTE DE LA LEYENDA')}
                       </h3>
 
-                      <BodyText text={section.text} className="text-lg text-gray-600 mb-6 text-justify" />
+                      <BodyText
+                        text={section.text}
+                        className="text-lg text-gray-600 mb-6 text-justify"
+                      />
 
-                      {section.buttonText && (
+                      {section.buttonText ? (
                         <Link
-                          to={section.buttonLink}
+                          to={getInternalLink(section.buttonLink)}
                           className="inline-block bg-mitica-yellow text-black font-nexa px-8 py-3 rounded-md text-sm hover:bg-black hover:text-white transition-colors uppercase"
                         >
                           {section.buttonText}
                         </Link>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         </section>
@@ -566,7 +645,11 @@ const Home: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {promos.map((promo) => (
-                <Link to={`/blog/${promo.slug}`} key={promo.id} className="group block h-full">
+                <Link
+                  to={localizedPath(`/blog/${promo.slug}`)}
+                  key={promo.id}
+                  className="group block h-full"
+                >
                   <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
                     <div className="h-64 overflow-hidden">
                       {promo.imageUrl ? (
@@ -583,7 +666,9 @@ const Home: React.FC = () => {
                     </div>
 
                     <div className="p-8 text-left flex flex-col flex-1">
-                      <h3 className="font-rethink-bold text-lg mb-2">{promo.title || 'Promoción'}</h3>
+                      <h3 className="font-rethink-bold text-lg mb-2">
+                        {promo.title || (isEnglish ? 'Promotion' : 'Promoción')}
+                      </h3>
 
                       <p className="font-rethink text-gray-500 text-sm mb-4 text-justify line-clamp-3 min-h-[3.75rem] overflow-hidden">
                         {promo.desc}
@@ -599,16 +684,16 @@ const Home: React.FC = () => {
             </div>
 
             <Link
-              to="/blog?category=Promociones"
+              to={localizedPath('/blog?category=Promociones')}
               className="inline-block bg-black text-white text-sm font-nexa px-10 py-4 rounded uppercase hover:bg-mitica-yellow hover:text-black transition-colors"
             >
-              Ver Más
+              {isEnglish ? 'See More' : 'Ver Más'}
             </Link>
           </div>
         </section>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default Home;
+export default Home

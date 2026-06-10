@@ -3,12 +3,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Title, TitleVariant } from '../components/Typography'
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-
-// ✅ Sanity
 import { client } from '../sanity/client'
 import { imgUrl } from '../sanity/image'
+import { getSanitySingletonId, useSiteLanguage } from '../i18n'
 
-const FAQ_QUERY = `*[_type == "faqPage" && _id == "faqPage"][0]{
+const FAQ_QUERY = `
+*[
+  _id == $documentId
+  && !(_id in path("drafts.**"))
+][0]{
+  _id,
   hero{
     mediaType,
     desktopImage,
@@ -39,12 +43,24 @@ const FAQ_QUERY = `*[_type == "faqPage" && _id == "faqPage"][0]{
     }
   },
   showFooterBanner
-}`
+}
+`
 
-type FAQItem = { question?: string; answer?: string; order?: number }
-type FAQCategory = { title?: string; order?: number; icon?: any; faqs?: FAQItem[] }
+type FAQItem = {
+  question?: string
+  answer?: string
+  order?: number
+}
+
+type FAQCategory = {
+  title?: string
+  order?: number
+  icon?: any
+  faqs?: FAQItem[]
+}
 
 type FAQPageData = {
+  _id?: string
   hero?: {
     mediaType?: 'image' | 'video'
     desktopImage?: any
@@ -67,14 +83,16 @@ type FAQPageData = {
   showFooterBanner?: boolean
 }
 
-const normalize = (s: string) =>
-  (s || '')
+const normalize = (text: string) =>
+  (text || '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
 
 const FAQ = () => {
+  const { language, isEnglish } = useSiteLanguage()
+
   const [data, setData] = useState<FAQPageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -82,38 +100,74 @@ const FAQ = () => {
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState<number | null>(null)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
 
-  // ✅ Search
   const [searchTerm, setSearchTerm] = useState('')
   const searchValue = normalize(searchTerm)
 
-  // ✅ Scroll target: inicio del área gris
   const graySectionRef = useRef<HTMLElement | null>(null)
+
+  const labels = {
+    fallbackHero: isEnglish ? 'FREQUENTLY ASKED QUESTIONS' : 'PREGUNTAS FRECUENTES',
+    topTitle: isEnglish ? 'HOW CAN WE HELP YOU?' : '¿CÓMO PODEMOS AYUDARTE?',
+    searchPlaceholder: isEnglish ? 'Search for questions...' : 'Buscar preguntas...',
+    clearSearch: isEnglish ? 'Clear search' : 'Limpiar búsqueda',
+    noSearchResults: isEnglish
+      ? 'No questions were found for that search.'
+      : 'No se encontraron preguntas con esa búsqueda.',
+    filteringBy: isEnglish ? 'Filtering by:' : 'Filtrando por:',
+    close: isEnglish ? 'Close' : 'Cerrar',
+    noFaqs: isEnglish ? 'There are no questions in this category' : 'No hay preguntas en esta categoría',
+    withFilter: isEnglish ? ' with that filter.' : ' con ese filtro.',
+    withoutFilter: '.',
+    loadErrorTitle: isEnglish ? 'FAQ could not be loaded' : 'No se pudo cargar FAQ',
+    loadErrorText: isEnglish
+      ? 'The FAQ document does not exist in Sanity.'
+      : 'No existe el documento FAQ en Sanity.',
+  }
 
   useEffect(() => {
     let mounted = true
-    setLoading(true)
-    setFetchError(null)
 
-    client
-      .fetch(FAQ_QUERY)
-      .then((res) => {
+    const fetchFAQ = async () => {
+      try {
+        setLoading(true)
+        setFetchError(null)
+
+        const documentId = getSanitySingletonId('faqPage', language)
+
+        const result = await client.fetch<FAQPageData | null>(FAQ_QUERY, {
+          documentId,
+        })
+
+        console.log('FAQ QUERY PARAMS:', {
+          language,
+          documentId,
+        })
+
+        console.log('FAQ QUERY RESULT:', result)
+
         if (!mounted) return
-        setData(res || null)
-      })
-      .catch((err: any) => {
+
+        setData(result || null)
+        setSelectedCategoryIndex(null)
+        setOpenFaqIndex(null)
+        setSearchTerm('')
+      } catch (err: any) {
         if (!mounted) return
+
         setData(null)
-        setFetchError(err?.message || 'Error cargando FAQ desde Sanity.')
-      })
-      .finally(() => {
+        setFetchError(err?.message || (isEnglish ? 'Error loading FAQ from Sanity.' : 'Error cargando FAQ desde Sanity.'))
+      } finally {
         if (!mounted) return
         setLoading(false)
-      })
+      }
+    }
+
+    fetchFAQ()
 
     return () => {
       mounted = false
     }
-  }, [])
+  }, [language, isEnglish])
 
   const hero = data?.hero
 
@@ -140,7 +194,6 @@ const FAQ = () => {
   const heroDesktopVideoUrl = hero?.videoFile?.asset?.url || ''
   const heroMobileVideoUrl = hero?.mobileVideoFile?.asset?.url || ''
 
-  // ✅ HERO IMGS (ahora con tu helper central)
   const heroDesktopDefault = hero?.desktopImage
     ? imgUrl(hero.desktopImage, { w: 2200, fit: 'crop', q: 80 })
     : ''
@@ -171,33 +224,36 @@ const FAQ = () => {
     !!heroDesktopVideoUrl || !!heroMobileVideoUrl || !!heroDesktopDefault || !!heroMobileDefault
 
   const categoriesRaw = data?.categories?.length ? data.categories : []
+
   const categories = [...categoriesRaw]
     .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999))
-    .map((cat) => ({
-      ...cat,
-      faqs: [...(cat.faqs || [])].sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999)),
+    .map((category) => ({
+      ...category,
+      faqs: [...(category.faqs || [])].sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999)),
     }))
 
   const selectedCategory = selectedCategoryIndex !== null ? categories[selectedCategoryIndex] : null
 
   const selectedFaqsBase = selectedCategory?.faqs || []
+
   const selectedFaqs = useMemo(() => {
     if (!searchValue) return selectedFaqsBase
-    return selectedFaqsBase.filter((f) => {
-      const q = normalize(f.question || '')
-      const a = normalize(f.answer || '')
-      return q.includes(searchValue) || a.includes(searchValue)
+
+    return selectedFaqsBase.filter((faq) => {
+      const question = normalize(faq.question || '')
+      const answer = normalize(faq.answer || '')
+      return question.includes(searchValue) || answer.includes(searchValue)
     })
   }, [selectedFaqsBase, searchValue])
 
-  const topTitle = (data?.topTitle || '¿CÓMO PODEMOS AYUDARTE?').trim()
+  const topTitle = (data?.topTitle || labels.topTitle).trim()
   const showTopDivider = data?.showTopDivider ?? true
 
   const getHeaderOffset = () => {
     try {
       const header = document.querySelector('header') as HTMLElement | null
-      const h = header?.offsetHeight || 0
-      return Math.min(Math.max(h, 0), 200)
+      const height = header?.offsetHeight || 0
+      return Math.min(Math.max(height, 0), 200)
     } catch {
       return 0
     }
@@ -206,11 +262,13 @@ const FAQ = () => {
   const scrollToGrayStart = () => {
     setTimeout(() => {
       try {
-        const el = graySectionRef.current
-        if (!el) return
-        const y = el.getBoundingClientRect().top + window.scrollY
+        const element = graySectionRef.current
+        if (!element) return
+
+        const y = element.getBoundingClientRect().top + window.scrollY
         const headerOffset = getHeaderOffset() || 96
         const extraMargin = 12
+
         window.scrollTo({
           top: Math.max(y - headerOffset - extraMargin, 0),
           behavior: 'smooth',
@@ -219,8 +277,8 @@ const FAQ = () => {
     }, 0)
   }
 
-  const handleCategoryClick = (idx: number) => {
-    setSelectedCategoryIndex(idx)
+  const handleCategoryClick = (index: number) => {
+    setSelectedCategoryIndex(index)
     setOpenFaqIndex(null)
     scrollToGrayStart()
   }
@@ -232,6 +290,7 @@ const FAQ = () => {
 
   const searchResults = useMemo(() => {
     if (!searchValue) return []
+
     const results: Array<{
       catIndex: number
       faqIndex: number
@@ -239,17 +298,20 @@ const FAQ = () => {
       question: string
     }> = []
 
-    categories.forEach((cat, catIndex) => {
-      const catTitle = cat.title || ''
-      ;(cat.faqs || []).forEach((faq, faqIndex) => {
-        const q = faq.question || ''
-        const a = faq.answer || ''
+    categories.forEach((category, catIndex) => {
+      const categoryTitle = category.title || ''
+
+      ;(category.faqs || []).forEach((faq, faqIndex) => {
+        const question = faq.question || ''
+        const answer = faq.answer || ''
+
         const match =
-          normalize(q).includes(searchValue) ||
-          normalize(a).includes(searchValue) ||
-          normalize(catTitle).includes(searchValue)
+          normalize(question).includes(searchValue) ||
+          normalize(answer).includes(searchValue) ||
+          normalize(categoryTitle).includes(searchValue)
+
         if (match) {
-          results.push({ catIndex, faqIndex, categoryTitle: catTitle, question: q })
+          results.push({ catIndex, faqIndex, categoryTitle, question })
         }
       })
     })
@@ -260,6 +322,7 @@ const FAQ = () => {
   const onPickSearchResult = (catIndex: number, faqIndex: number) => {
     setSelectedCategoryIndex(catIndex)
     setOpenFaqIndex(faqIndex)
+    setSearchTerm('')
     scrollToGrayStart()
   }
 
@@ -270,10 +333,11 @@ const FAQ = () => {
       <div className="w-full min-h-screen bg-white flex items-center justify-center px-6">
         <div className="max-w-xl text-center">
           <h1 className="font-nexa text-2xl md:text-3xl uppercase text-black mb-4">
-            No se pudo cargar FAQ
+            {labels.loadErrorTitle}
           </h1>
+
           <p className="font-rethink text-gray-600">
-            {fetchError ? fetchError : 'No existe el documento FAQ en Sanity con _id = "faqPage".'}
+            {fetchError ? fetchError : labels.loadErrorText}
           </p>
         </div>
       </div>
@@ -282,7 +346,6 @@ const FAQ = () => {
 
   return (
     <div className="w-full min-h-screen bg-white">
-      {/* ✅ HERO */}
       {hasHeroMedia ? (
         <div className="relative h-screen w-full bg-mitica-black overflow-hidden">
           {hero?.mediaType === 'video' && (heroDesktopVideoUrl || heroMobileVideoUrl) ? (
@@ -367,7 +430,7 @@ const FAQ = () => {
             <div className="w-full max-w-[1050px] mx-auto">
               <Title
                 variant={TitleVariant.REGULAR}
-                text="PREGUNTAS FRECUENTES"
+                text={labels.fallbackHero}
                 className="whitespace-pre-line text-4xl md:text-7xl text-white text-center"
                 align="center"
               />
@@ -376,7 +439,6 @@ const FAQ = () => {
         </div>
       )}
 
-      {/* ✅ TÍTULO + RAYA + BUSCADOR + CATEGORÍAS */}
       <section className="pt-16 pb-12 px-6 text-center">
         {topTitle ? (
           <h2 className="font-nexa text-3xl md:text-5xl uppercase text-black tracking-tight">
@@ -386,29 +448,29 @@ const FAQ = () => {
 
         {showTopDivider ? <div className="max-w-4xl mx-auto h-px bg-gray-200 mt-10 mb-12" /> : null}
 
-        {/* ✅ Search bar */}
         <div className="max-w-3xl mx-auto px-2">
           <div className="relative">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" />
+
             <input
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search for questions..."
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={labels.searchPlaceholder}
               className="w-full h-14 md:h-16 rounded-full border border-gray-200 bg-white pl-14 pr-12 font-rethink text-base md:text-lg text-black placeholder:text-gray-400 shadow-[0_6px_24px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-mitica-yellow"
             />
+
             {searchTerm.trim() ? (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
                 className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-black transition-colors"
-                aria-label="Limpiar búsqueda"
+                aria-label={labels.clearSearch}
               >
                 <X />
               </button>
             ) : null}
           </div>
 
-          {/* ✅ Results dropdown */}
           <AnimatePresence>
             {searchValue ? (
               <motion.div
@@ -420,23 +482,26 @@ const FAQ = () => {
                 <div className="bg-white border border-gray-100 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden">
                   {searchResults.length ? (
                     <div className="divide-y divide-gray-100">
-                      {searchResults.map((r, i) => (
+                      {searchResults.map((result, index) => (
                         <button
-                          key={`${r.catIndex}-${r.faqIndex}-${i}`}
+                          key={`${result.catIndex}-${result.faqIndex}-${index}`}
                           type="button"
-                          onClick={() => onPickSearchResult(r.catIndex, r.faqIndex)}
+                          onClick={() => onPickSearchResult(result.catIndex, result.faqIndex)}
                           className="w-full px-5 py-4 text-left hover:bg-gray-50 transition-colors"
                         >
                           <div className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                            {r.categoryTitle}
+                            {result.categoryTitle}
                           </div>
-                          <div className="mt-1 font-rethink font-bold text-black">{r.question}</div>
+
+                          <div className="mt-1 font-rethink font-bold text-black">
+                            {result.question}
+                          </div>
                         </button>
                       ))}
                     </div>
                   ) : (
                     <div className="px-5 py-6 font-rethink text-gray-400 text-center">
-                      No se encontraron preguntas con esa búsqueda.
+                      {labels.noSearchResults}
                     </div>
                   )}
                 </div>
@@ -446,16 +511,16 @@ const FAQ = () => {
         </div>
 
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-y-12 gap-x-8 px-2 mt-14">
-          {categories.map((cat, idx) => {
-            const isSelected = selectedCategoryIndex === idx
-            const iconUrl = cat.icon ? imgUrl(cat.icon, { w: 520, fit: 'max', q: 90 }) : ''
+          {categories.map((category, index) => {
+            const isSelected = selectedCategoryIndex === index
+            const iconUrl = category.icon ? imgUrl(category.icon, { w: 520, fit: 'max', q: 90 }) : ''
 
             return (
               <motion.button
-                key={idx}
+                key={index}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => handleCategoryClick(idx)}
+                onClick={() => handleCategoryClick(index)}
                 className="flex flex-col items-center group cursor-pointer"
                 type="button"
               >
@@ -469,7 +534,7 @@ const FAQ = () => {
                   {iconUrl ? (
                     <img
                       src={iconUrl}
-                      alt={cat.title || 'Icon'}
+                      alt={category.title || 'Icon'}
                       className="w-full h-full object-contain"
                       loading="lazy"
                       decoding="async"
@@ -478,7 +543,7 @@ const FAQ = () => {
                 </div>
 
                 <span className="font-bold text-sm md:text-base uppercase tracking-tight text-center max-w-[140px] text-black">
-                  {cat.title || ''}
+                  {category.title || ''}
                 </span>
               </motion.button>
             )
@@ -486,7 +551,6 @@ const FAQ = () => {
         </div>
       </section>
 
-      {/* ✅ PREGUNTAS (área gris) */}
       <AnimatePresence mode="wait">
         {selectedCategory ? (
           <motion.section
@@ -504,9 +568,11 @@ const FAQ = () => {
                     <h2 className="font-nexa text-xl md:text-2xl uppercase tracking-wide text-black truncate">
                       {selectedCategory.title || ''}
                     </h2>
+
                     {searchValue ? (
                       <p className="mt-1 font-rethink text-sm text-gray-400">
-                        Filtrando por: <span className="font-bold text-black">{searchTerm}</span>
+                        {labels.filteringBy}{' '}
+                        <span className="font-bold text-black">{searchTerm}</span>
                       </p>
                     ) : null}
                   </div>
@@ -517,7 +583,7 @@ const FAQ = () => {
                     className="ml-4 inline-flex items-center gap-2 text-sm font-bold uppercase text-gray-400 hover:text-black transition-colors"
                   >
                     <X className="shrink-0" />
-                    <span className="hidden sm:inline">Cerrar</span>
+                    <span className="hidden sm:inline">{labels.close}</span>
                   </button>
                 </div>
 
@@ -526,6 +592,7 @@ const FAQ = () => {
                     {selectedFaqs.length > 0 ? (
                       selectedFaqs.map((faq, index) => {
                         const isOpen = openFaqIndex === index
+
                         return (
                           <div
                             key={index}
@@ -539,6 +606,7 @@ const FAQ = () => {
                               <span className="font-rethink font-bold text-base md:text-lg pr-8 text-black leading-snug">
                                 {faq.question || ''}
                               </span>
+
                               {isOpen ? (
                                 <ChevronUp className="text-mitica-yellow shrink-0" />
                               ) : (
@@ -565,7 +633,8 @@ const FAQ = () => {
                       })
                     ) : (
                       <div className="text-center py-12 text-gray-400 font-rethink">
-                        No hay preguntas en esta categoría{searchValue ? ' con ese filtro.' : '.'}
+                        {labels.noFaqs}
+                        {searchValue ? labels.withFilter : labels.withoutFilter}
                       </div>
                     )}
                   </div>

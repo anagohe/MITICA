@@ -1,12 +1,29 @@
 // studio-mitica/schemaTypes/products.ts
 import { defineType, defineField } from 'sanity'
 
+const languageField = () =>
+  defineField({
+    name: 'language',
+    title: 'Idioma',
+    type: 'string',
+    options: {
+      list: [
+        { title: 'Español', value: 'es' },
+        { title: 'English', value: 'en' },
+      ],
+      layout: 'radio',
+    },
+    initialValue: 'es',
+  })
+
 // --- MENU ICON (nuevo) ---
 export const menuIcon = defineType({
   name: 'menuIcon',
   title: 'Alérgenos del Menú',
   type: 'document',
   fields: [
+    languageField(),
+
     defineField({
       name: 'title',
       title: 'Texto debajo del ícono',
@@ -43,6 +60,8 @@ export const menuItem = defineType({
   title: 'Platillo del Menú',
   type: 'document',
   fields: [
+    languageField(),
+
     defineField({ name: 'name', type: 'string', title: 'Nombre' }),
     defineField({ name: 'description', type: 'text', title: 'Descripción' }),
     defineField({ name: 'image', type: 'image', title: 'Imagen' }),

@@ -35,3 +35,6 @@ studio-mitica/backup-*.tgz
 
 # Reportes de análisis
 reporte-enero.md
+
+# Sanity local backups
+studio-mitica/backups/

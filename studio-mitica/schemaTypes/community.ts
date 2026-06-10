@@ -1,12 +1,29 @@
 // studio-mitica/schemaTypes/community.ts
 import { defineType, defineField } from 'sanity'
 
+const languageField = () =>
+  defineField({
+    name: 'language',
+    title: 'Idioma',
+    type: 'string',
+    options: {
+      list: [
+        { title: 'Español', value: 'es' },
+        { title: 'English', value: 'en' },
+      ],
+      layout: 'radio',
+    },
+    initialValue: 'es',
+  })
+
 // --- POST ---
 export const post = defineType({
   name: 'post',
   title: 'Artículos de Blog',
   type: 'document',
   fields: [
+    languageField(),
+
     defineField({ name: 'title', type: 'string', title: 'Título' }),
     defineField({ name: 'slug', type: 'slug', options: { source: 'title' } }),
     defineField({ name: 'mainImage', type: 'image', title: 'Imagen principal' }),
@@ -35,7 +52,7 @@ export const post = defineType({
       of: [{ type: 'image' }],
     }),
   ],
-});
+})
 
 // --- BLOG PAGE ---
 export const blogPage = defineType({
@@ -46,7 +63,7 @@ export const blogPage = defineType({
     defineField({ name: 'hero', type: 'hero' }),
     defineField({ name: 'showFooterBanner', type: 'boolean', initialValue: true }),
   ],
-});
+})
 
 // ===============================
 // ✅ Formularios FIJOS (mismos campos en ambos)
@@ -105,7 +122,7 @@ export const fixedEventForm = defineType({
       initialValue: '¿Cuéntanos más de tu evento?',
     }),
   ],
-});
+})
 
 // ✅ Patrocinios con EXACTAMENTE los mismos campos
 export const fixedSponsorForm = defineType({
@@ -162,7 +179,7 @@ export const fixedSponsorForm = defineType({
       initialValue: '¿Cuéntanos más de tu evento?',
     }),
   ],
-});
+})
 
 // --- EVENTS PAGE ---
 export const eventsPage = defineType({
@@ -209,7 +226,7 @@ export const eventsPage = defineType({
 
     defineField({ name: 'showFooterBanner', type: 'boolean', initialValue: true }),
   ],
-});
+})
 
 // ===============================
 // ✅ NUEVO: Formulario Bolsa de Trabajo (Editable)
@@ -285,7 +302,7 @@ export const careersPage = defineType({
     { name: 'heroSection', title: 'Hero', options: { collapsible: true, collapsed: false } },
     { name: 'contentSection', title: 'Contenido (izquierda)', options: { collapsible: true, collapsed: false } },
     { name: 'ctaSection', title: 'CTA (no editable en front)', options: { collapsible: true, collapsed: true } },
-    { name: 'formSection', title: 'Formulario (Editable)', options: { collapsible: true, collapsed: false } }, // ✅ nuevo
+    { name: 'formSection', title: 'Formulario (Editable)', options: { collapsible: true, collapsed: false } },
     { name: 'imageSection', title: 'Imagen (derecha)', options: { collapsible: true, collapsed: false } },
     { name: 'footerSection', title: 'Footer', options: { collapsible: true, collapsed: true } },
   ],
@@ -330,7 +347,7 @@ export const careersPage = defineType({
       readOnly: true,
     }),
 
-    // ✅ nuevo: config del formulario
+    // ✅ config del formulario
     defineField({
       name: 'leadForm',
       title: 'Formulario Bolsa de trabajo',
@@ -355,7 +372,7 @@ export const careersPage = defineType({
   ],
   preview: {
     prepare() {
-      return { title: 'Bolsa de trabajo' };
+      return { title: 'Bolsa de trabajo' }
     },
   },
-});
+})

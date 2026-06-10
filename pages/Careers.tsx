@@ -1,17 +1,21 @@
 // src/pages/Careers.tsx
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Title, TitleVariant, BodyText } from '../components/Typography'
 import { Modal, ContactForm } from '../components/Modals'
-
-// ✅ Sanity
 import { client } from '../sanity/client'
 import { urlFor } from '../sanity/image'
+import { getSanitySingletonId, useSiteLanguage } from '../i18n'
 
 function getFileUrl(file: any): string | undefined {
   return file?.asset?.url || file?.url || undefined
 }
 
-const CAREERS_QUERY = `*[_type == "careersPage"][0]{
+const CAREERS_QUERY = `
+*[
+  _id == $documentId
+  && !(_id in path("drafts.**"))
+][0]{
+  _id,
   hero{
     mediaType,
     desktopImage,
@@ -21,15 +25,12 @@ const CAREERS_QUERY = `*[_type == "careersPage"][0]{
     title,
     subtitle,
 
-    // ✅ mismo hero que Menu/About
     titleVariant,
     titleColor,
     subtitleColor,
 
-    // ✅ legacy
     textColor,
 
-    // ✅ overlay opcional
     overlayEnabled,
     overlayOpacity
   },
@@ -38,7 +39,6 @@ const CAREERS_QUERY = `*[_type == "careersPage"][0]{
   image,
   showFooterBanner,
 
-  // ✅ Formulario editable (Bolsa de trabajo)
   leadForm{
     modalTitle,
     introText,
@@ -72,9 +72,11 @@ const CAREERS_QUERY = `*[_type == "careersPage"][0]{
     recipientEmail,
     emailSubject
   }
-}`
+}
+`
 
 type CareersData = {
+  _id?: string
   hero?: {
     mediaType?: 'image' | 'video'
     desktopImage?: any
@@ -91,51 +93,74 @@ type CareersData = {
     textColor?: string
 
     overlayEnabled?: boolean
-    overlayOpacity?: number // 0-80
+    overlayOpacity?: number
   }
   title?: string
   description?: string
   image?: any
   showFooterBanner?: boolean
-
   leadForm?: any
 }
 
-// ===== helpers imagen (evita originales + responsive real) =====
 function imgCrop(source: any, w: number, h: number, q = 80) {
   return urlFor(source).width(w).height(h).fit('crop').quality(q).url()
 }
+
 function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 80) {
   return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ')
 }
-function imgMax(source: any, w: number, q = 80) {
-  return urlFor(source).width(w).fit('max').quality(q).url()
-}
 
 const Careers = () => {
+  const { language, isEnglish } = useSiteLanguage()
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [data, setData] = useState<CareersData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
-    client
-      .fetch(CAREERS_QUERY)
-      .then((res) => {
+
+    const fetchCareers = async () => {
+      try {
+        setLoading(true)
+
+        const documentId = getSanitySingletonId('careersPage', language)
+
+        const result = await client.fetch<CareersData | null>(CAREERS_QUERY, {
+          documentId,
+        })
+
+        console.log('CAREERS QUERY PARAMS:', {
+          language,
+          documentId,
+        })
+
+        console.log('CAREERS QUERY RESULT:', result)
+
         if (!mounted) return
-        setData(res || null)
-      })
-      .catch(() => {
+
+        setData(result)
+      } catch (error) {
+        console.error('Error fetching careersPage from Sanity', error)
+
         if (!mounted) return
+
         setData(null)
-      })
+      } finally {
+        if (!mounted) return
+        setLoading(false)
+      }
+    }
+
+    fetchCareers()
+
     return () => {
       mounted = false
     }
-  }, [])
+  }, [language])
 
   const hero = data?.hero
 
-  // ===== HERO (mismo que Menu/About) =====
   const overlayEnabled = hero?.overlayEnabled ?? true
   const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40
   const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100
@@ -145,9 +170,9 @@ const Careers = () => {
   const desktopVideoUrl = getFileUrl(hero?.videoFile)
   const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile)
 
-  // ✅ Hero imgs optimizadas + picture (descarga solo 1)
   const desktopHero = useMemo(() => {
     if (!hero?.desktopImage) return null
+
     return {
       src: imgCrop(hero.desktopImage, 1600, 900, 80),
       srcSet: srcSetCrop(
@@ -177,12 +202,13 @@ const Careers = () => {
         ),
       }
     }
-    // fallback: si no hay mobile, usa desktop optimizado
+
     if (desktopHero) return { src: desktopHero.src, srcSet: desktopHero.srcSet }
+
     return null
   }, [hero?.mobileImage, desktopHero])
 
-  const heroTitle = hero?.title || 'BOLSA DE TRABAJO'
+  const heroTitle = hero?.title || (isEnglish ? 'CAREERS' : 'BOLSA DE TRABAJO')
   const heroSubtitle = (hero?.subtitle || '').trim()
 
   const heroTitleColorClass = hero?.titleColor || hero?.textColor || 'text-white'
@@ -191,22 +217,26 @@ const Careers = () => {
   const heroTitleVariant =
     hero?.titleVariant === 'textured' ? TitleVariant.TEXTURED : TitleVariant.REGULAR
 
-  // ===== CONTENIDO (igual que tu código) =====
-  const leftTitle = data?.title || '¡ÚNETE AL EQUIPO MÍTICA!'
+  const leftTitle = data?.title || (isEnglish ? 'JOIN THE MÍTICA TEAM!' : '¡ÚNETE AL EQUIPO MÍTICA!')
+
   const leftDescription =
     data?.description ||
-    'En MÍTICA, buscamos talento para formar parte de nuestra leyenda. Si lo tuyo es el servicio al cliente, te destacas por tu rapidez y precisión, y amas interactuar con la gente, ¡Te necesitamos en nuestro equipo! Únete a nuestra plantilla de trabajo enviando tu CV y datos de contacto.'
+    (isEnglish
+      ? 'At MÍTICA, we are looking for talent to become part of our legend. If you enjoy customer service, work with energy and love interacting with people, we want you on our team.'
+      : 'En MÍTICA, buscamos talento para formar parte de nuestra leyenda. Si lo tuyo es el servicio al cliente, te destacas por tu rapidez y precisión, y amas interactuar con la gente, ¡Te necesitamos en nuestro equipo! Únete a nuestra plantilla de trabajo enviando tu CV y datos de contacto.')
 
-  // ✅ imagen derecha optimizada (sin pasar de 1200, suficiente para ese layout)
   const rightImage = data?.image ? imgCrop(data.image, 1200, 900, 80) : ''
 
-  // ✅ form config
   const formConfig = data?.leadForm
-  const modalTitle = formConfig?.modalTitle || 'ÚNETE AL EQUIPO'
+  const modalTitle = formConfig?.modalTitle || (isEnglish ? 'JOIN THE TEAM' : 'ÚNETE AL EQUIPO')
+
+  if (loading) {
+    return <div className="w-full min-h-screen bg-black" />
+  }
 
   return (
     <div className="w-full">
-      {/* ✅ HERO (mismo que Menu/About) */}
+      {/* HERO */}
       <div className="relative h-screen w-full bg-black overflow-hidden">
         {hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl) ? (
           <>
@@ -219,6 +249,7 @@ const Careers = () => {
               preload="metadata"
               src={desktopVideoUrl || mobileVideoUrl}
             />
+
             <video
               className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
               autoPlay
@@ -232,7 +263,11 @@ const Careers = () => {
         ) : desktopHero || mobileHero ? (
           <picture className="block w-full h-full">
             {desktopHero ? (
-              <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
+              <source
+                media="(min-width: 768px)"
+                srcSet={desktopHero.srcSet || desktopHero.src}
+                sizes="100vw"
+              />
             ) : null}
 
             <img
@@ -240,7 +275,7 @@ const Careers = () => {
               srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
               sizes="100vw"
               className={`w-full h-full object-cover ${mediaOpacityClass}`}
-              alt="Careers Hero"
+              alt={isEnglish ? 'Careers Hero' : 'Bolsa de trabajo Hero'}
               loading="eager"
               fetchPriority="high"
               decoding="async"
@@ -249,7 +284,10 @@ const Careers = () => {
         ) : null}
 
         {overlayEnabled && (
-          <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+          />
         )}
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
@@ -265,33 +303,43 @@ const Careers = () => {
           ) : null}
 
           {heroSubtitle ? (
-            <p className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${heroSubtitleColorClass}`}>
+            <p
+              className={`font-rethink text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${heroSubtitleColorClass}`}
+            >
               {heroSubtitle}
             </p>
           ) : null}
         </div>
       </div>
 
-      {/* Content */}
+      {/* CONTENT */}
       <div className="container mx-auto px-6 py-20 flex flex-col md:flex-row gap-16 items-center">
         <div className="flex-1 order-2 md:order-1">
           <div className="pl-6 border-l-4 border-mitica-yellow">
             <h4 className="font-nexa text-2xl text-mitica-yellow mb-4">{leftTitle}</h4>
 
-            <BodyText text={leftDescription} className="text-gray-600 text-sm leading-relaxed text-justify" />
+            <BodyText
+              text={leftDescription}
+              className="text-gray-600 text-sm leading-relaxed text-justify"
+            />
           </div>
 
-          {/* ❌ CTA NO EDITABLE: se queda igual */}
           <div className="mt-12 text-center md:text-left">
-            <h4 className="font-nexa text-lg mb-4 uppercase">¿TE INTERESA TRABAJAR CON NOSOTROS?</h4>
+            <h4 className="font-nexa text-lg mb-4 uppercase">
+              {isEnglish ? 'INTERESTED IN WORKING WITH US?' : '¿TE INTERESA TRABAJAR CON NOSOTROS?'}
+            </h4>
+
             <p className="text-xs text-gray-500 mb-6 font-rethink">
-              Llena nuestro formulario y nos pondremos en contacto contigo lo antes posible.
+              {isEnglish
+                ? 'Fill out our form and we will contact you as soon as possible.'
+                : 'Llena nuestro formulario y nos pondremos en contacto contigo lo antes posible.'}
             </p>
+
             <button
               onClick={() => setIsModalOpen(true)}
               className="bg-mitica-yellow text-black px-10 py-4 rounded font-nexa uppercase hover:bg-black hover:text-white transition-colors shadow-lg"
             >
-              ENVÍA TU SOLICITUD
+              {isEnglish ? 'SEND YOUR APPLICATION' : 'ENVÍA TU SOLICITUD'}
             </button>
           </div>
         </div>
@@ -301,7 +349,7 @@ const Careers = () => {
             <img
               src={rightImage}
               className="rounded-lg shadow-2xl border-8 border-white"
-              alt="Careers"
+              alt={isEnglish ? 'Careers' : 'Bolsa de trabajo'}
               loading="lazy"
               decoding="async"
             />

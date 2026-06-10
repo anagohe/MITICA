@@ -17,15 +17,16 @@
     "sanity"
   ],
   "dependencies": {
+    "@sanity/client": "^7.22.1",
     "react": "^19.2.2",
     "react-dom": "^19.2.2",
-    "sanity": "^5.15.0",
+    "sanity": "^5.31.1",
     "styled-components": "^6.3.11"
   },
   "devDependencies": {
     "@sanity/eslint-config-studio": "^5.0.2",
     "@sanity/export": "^6.0.5",
-    "@sanity/vision": "^5.15.0",
+    "@sanity/vision": "^5.31.1",
     "@types/react": "^19.0.0",
     "eslint": "^9.28.0",
     "prettier": "^3.5.0",

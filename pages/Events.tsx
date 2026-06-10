@@ -1,82 +1,86 @@
 // src/pages/Events.tsx
-import React, { useEffect, useState, useMemo } from 'react';
-import { Title, TitleVariant } from '../components/Typography';
-import { Modal, ContactForm } from '../components/Modals';
-
-// ✅ Sanity
-import { client } from '../sanity/client';
-import { urlFor } from '../sanity/image';
+import React, { useEffect, useMemo, useState } from 'react'
+import { Title, TitleVariant } from '../components/Typography'
+import { Modal, ContactForm } from '../components/Modals'
+import { client } from '../sanity/client'
+import { urlFor } from '../sanity/image'
+import { getSanitySingletonId, useSiteLanguage } from '../i18n'
+import { PortableText } from '@portabletext/react'
 
 type HeroType = {
-  mediaType?: 'image' | 'video';
-  desktopImage?: any;
-  mobileImage?: any;
-  videoFile?: { asset?: { url?: string }; url?: string };
-  mobileVideoFile?: { asset?: { url?: string }; url?: string };
+  mediaType?: 'image' | 'video'
+  desktopImage?: any
+  mobileImage?: any
+  videoFile?: { asset?: { url?: string }; url?: string }
+  mobileVideoFile?: { asset?: { url?: string }; url?: string }
 
-  title?: string;
-  subtitle?: string;
-  textColor?: string;
+  title?: string
+  subtitle?: string
+  textColor?: string
+  titleVariant?: 'regular' | 'textured'
+  titleColor?: string
+  subtitleColor?: string
 
-  overlayEnabled?: boolean;
-  overlayOpacity?: number;
-};
+  overlayEnabled?: boolean
+  overlayOpacity?: number
+}
 
 type SponsorshipsType = {
-  title?: string;
-  text?: any;
-  images?: any[];
-  backgroundType?: 'color' | 'image';
-  backgroundImage?: any;
-};
+  title?: string
+  text?: any
+  images?: any[]
+  backgroundType?: 'color' | 'image'
+  backgroundImage?: any
+}
 
 type FixedEventForm = {
-  modalTitle?: string;
-
-  recipientEmail?: string;
-  introText?: string;
-  requiredNote?: string;
-  submitText?: string;
-
-  fullNameLabel?: string;
-  phoneLabel?: string;
-  emailLabel?: string;
-  eventDateLabel?: string;
-  eventPlaceLabel?: string;
-  peopleCountLabel?: string;
-  detailsLabel?: string;
-};
+  modalTitle?: string
+  recipientEmail?: string
+  introText?: string
+  requiredNote?: string
+  submitText?: string
+  fullNameLabel?: string
+  phoneLabel?: string
+  emailLabel?: string
+  eventDateLabel?: string
+  eventPlaceLabel?: string
+  peopleCountLabel?: string
+  detailsLabel?: string
+}
 
 type FixedSponsorForm = {
-  modalTitle?: string;
-
-  recipientEmail?: string;
-  introText?: string;
-  requiredNote?: string;
-  submitText?: string;
-
-  fullNameLabel?: string;
-  phoneLabel?: string;
-  emailLabel?: string;
-  eventDateLabel?: string;
-  eventPlaceLabel?: string;
-  peopleCountLabel?: string;
-  detailsLabel?: string;
-};
+  modalTitle?: string
+  recipientEmail?: string
+  introText?: string
+  requiredNote?: string
+  submitText?: string
+  fullNameLabel?: string
+  phoneLabel?: string
+  emailLabel?: string
+  eventDateLabel?: string
+  eventPlaceLabel?: string
+  peopleCountLabel?: string
+  detailsLabel?: string
+}
 
 type EventsPageDoc = {
-  hero?: HeroType;
-  gallery?: any[];
-  sponsorships?: SponsorshipsType;
+  _id?: string
+  hero?: HeroType
+  gallery?: any[]
+  sponsorships?: SponsorshipsType
 
   forms?: {
-    event?: FixedEventForm;
-    sponsor?: FixedSponsorForm;
-  };
-};
+    event?: FixedEventForm
+    sponsor?: FixedSponsorForm
+  }
+}
 
 const EVENTS_PAGE_QUERY = `
-*[_type == "eventsPage"][0]{
+*[
+  _id == $documentId
+  && !(_id in path("drafts.**"))
+][0]{
+  _id,
   hero{
     mediaType,
     desktopImage,
@@ -86,6 +90,9 @@ const EVENTS_PAGE_QUERY = `
     title,
     subtitle,
     textColor,
+    titleVariant,
+    titleColor,
+    subtitleColor,
     overlayEnabled,
     overlayOpacity
   },
@@ -128,108 +135,173 @@ const EVENTS_PAGE_QUERY = `
     }
   }
 }
-`;
+`
 
 function getFileUrl(file: any): string | undefined {
-  return file?.asset?.url || file?.url || undefined;
+  return file?.asset?.url || file?.url || undefined
 }
 
-// ===== Imagen helpers (evita originales + reduce duplicación) =====
 function imgCrop(source: any, w: number, h: number, q = 75) {
-  return urlFor(source).width(w).height(h).fit('crop').quality(q).url();
+  return urlFor(source).width(w).height(h).fit('crop').quality(q).url()
 }
+
 function srcSetCrop(source: any, pairs: Array<[number, number]>, q = 75) {
-  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ');
+  return pairs.map(([w, h]) => `${imgCrop(source, w, h, q)} ${w}w`).join(', ')
 }
 
 const Events = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formType, setFormType] = useState<'event' | 'sponsor'>('event');
-  const [page, setPage] = useState<EventsPageDoc | null>(null);
+  const { language, isEnglish } = useSiteLanguage()
 
-  const FONT_TITLE_MAIN = 'var(--font-title-main)';
-  const FONT_BODY = 'var(--font-body)';
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [formType, setFormType] = useState<'event' | 'sponsor'>('event')
+  const [page, setPage] = useState<EventsPageDoc | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const FONT_TITLE_MAIN = 'var(--font-title-main)'
+  const FONT_BODY = 'var(--font-body)'
 
   const openModal = (type: 'event' | 'sponsor') => {
-    setFormType(type);
-    setIsModalOpen(true);
-  };
+    setFormType(type)
+    setIsModalOpen(true)
+  }
 
   useEffect(() => {
-    client
-      .fetch<EventsPageDoc | null>(EVENTS_PAGE_QUERY)
-      .then((res) => setPage(res))
-      .catch((err) => console.error('Error fetching eventsPage from Sanity', err));
-  }, []);
+    let mounted = true
 
-  const hero = page?.hero;
+    const fetchEvents = async () => {
+      try {
+        setLoading(true)
+
+        const documentId = getSanitySingletonId('eventsPage', language)
+
+        const result = await client.fetch<EventsPageDoc | null>(EVENTS_PAGE_QUERY, {
+          documentId,
+        })
+
+        console.log('EVENTS QUERY PARAMS:', {
+          language,
+          documentId,
+        })
+
+        console.log('EVENTS QUERY RESULT:', result)
+
+        if (!mounted) return
+
+        setPage(result)
+      } catch (error) {
+        console.error('Error fetching eventsPage from Sanity', error)
+
+        if (!mounted) return
+
+        setPage(null)
+      } finally {
+        if (!mounted) return
+        setLoading(false)
+      }
+    }
+
+    fetchEvents()
+
+    return () => {
+      mounted = false
+    }
+  }, [language])
+
+  const hero = page?.hero
 
   const eventImages = useMemo(() => {
-    const imgs = Array.isArray(page?.gallery) ? page!.gallery! : [];
-    return imgs.filter(Boolean);
-  }, [page]);
+    const images = Array.isArray(page?.gallery) ? page!.gallery! : []
+    return images.filter(Boolean)
+  }, [page])
 
   const sponsorImages = useMemo(() => {
-    const imgs = Array.isArray(page?.sponsorships?.images) ? page!.sponsorships!.images! : [];
-    return imgs.filter(Boolean);
-  }, [page]);
+    const images = Array.isArray(page?.sponsorships?.images) ? page!.sponsorships!.images! : []
+    return images.filter(Boolean)
+  }, [page])
 
   const loopEventImages = useMemo(() => {
-    if (eventImages.length === 0) return [];
-    return [...eventImages, ...eventImages, ...eventImages];
-  }, [eventImages]);
+    if (eventImages.length === 0) return []
+    return [...eventImages, ...eventImages, ...eventImages]
+  }, [eventImages])
 
-  const overlayEnabled = hero?.overlayEnabled ?? true;
-  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40;
-  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100;
+  const overlayEnabled = hero?.overlayEnabled ?? true
+  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100
 
-  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100';
+  const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100'
 
-  const desktopVideoUrl = getFileUrl(hero?.videoFile);
-  const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile);
+  const desktopVideoUrl = getFileUrl(hero?.videoFile)
+  const mobileVideoUrl = getFileUrl(hero?.mobileVideoFile)
 
-  // ✅ Hero imágenes optimizadas + picture (evita descargar hidden)
-  const desktopHero =
-    hero?.desktopImage
-      ? {
-          src: imgCrop(hero.desktopImage, 1600, 900, 75),
-          srcSet: srcSetCrop(
-            hero.desktopImage,
-            [
-              [960, 540],
-              [1280, 720],
-              [1600, 900],
-            ],
-            75
-          ),
-        }
-      : null;
+  const desktopHero = hero?.desktopImage
+    ? {
+        src: imgCrop(hero.desktopImage, 1600, 900, 75),
+        srcSet: srcSetCrop(
+          hero.desktopImage,
+          [
+            [960, 540],
+            [1280, 720],
+            [1600, 900],
+          ],
+          75
+        ),
+      }
+    : null
 
-  const mobileHero =
-    hero?.mobileImage
-      ? {
-          src: imgCrop(hero.mobileImage, 900, 1200, 75),
-          srcSet: srcSetCrop(
-            hero.mobileImage,
-            [
-              [480, 640],
-              [720, 960],
-              [900, 1200],
-            ],
-            75
-          ),
-        }
-      : desktopHero
+  const mobileHero = hero?.mobileImage
+    ? {
+        src: imgCrop(hero.mobileImage, 900, 1200, 75),
+        srcSet: srcSetCrop(
+          hero.mobileImage,
+          [
+            [480, 640],
+            [720, 960],
+            [900, 1200],
+          ],
+          75
+        ),
+      }
+    : desktopHero
       ? { src: desktopHero.src, srcSet: desktopHero.srcSet }
-      : null;
+      : null
 
-  const eventFormConfig = page?.forms?.event;
-  const sponsorFormConfig = page?.forms?.sponsor;
+  const eventFormConfig = page?.forms?.event
+  const sponsorFormConfig = page?.forms?.sponsor
 
   const modalTitle =
     formType === 'event'
-      ? eventFormConfig?.modalTitle || 'TE INTERESA COTIZAR?'
-      : sponsorFormConfig?.modalTitle || 'PATROCINIOS';
+      ? eventFormConfig?.modalTitle || (isEnglish ? 'WANT TO GET A QUOTE?' : '¿TE INTERESA COTIZAR?')
+      : sponsorFormConfig?.modalTitle || (isEnglish ? 'SPONSORSHIPS' : 'PATROCINIOS')
+
+  const sponsorTitle = page?.sponsorships?.title || (isEnglish ? 'SPONSORSHIPS' : 'PATROCINIOS')
+
+  const portableDark = useMemo(
+    () => ({
+      block: {
+        normal: ({ children }: any) => (
+          <p className="text-white/90 text-sm md:text-base leading-relaxed">
+            {children}
+          </p>
+        ),
+      },
+      marks: {
+        strong: ({ children }: any) => (
+          <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>
+            {children}
+          </strong>
+        ),
+        textColor: ({ children, value }: any) => (
+          <span style={{ color: value?.color || 'inherit' }}>{children}</span>
+        ),
+      },
+      hardBreak: () => <br />,
+    }),
+    []
+  )
+
+  if (loading) {
+    return <div className="w-full min-h-screen bg-black" />
+  }
 
   return (
     <div className="w-full bg-white">
@@ -248,7 +320,7 @@ const Events = () => {
         }
       `}</style>
 
-      {/* ================= HERO ================= */}
+      {/* HERO */}
       <section className="mb-0">
         <div className="relative h-screen w-full bg-black overflow-hidden">
           {hero?.mediaType === 'video' && (desktopVideoUrl || mobileVideoUrl) ? (
@@ -262,6 +334,7 @@ const Events = () => {
                 preload="metadata"
                 src={desktopVideoUrl || mobileVideoUrl}
               />
+
               <video
                 className={`block md:hidden w-full h-full object-cover ${mediaOpacityClass}`}
                 autoPlay
@@ -275,14 +348,19 @@ const Events = () => {
           ) : desktopHero || mobileHero ? (
             <picture className="block w-full h-full">
               {desktopHero ? (
-                <source media="(min-width: 768px)" srcSet={desktopHero.srcSet || desktopHero.src} sizes="100vw" />
+                <source
+                  media="(min-width: 768px)"
+                  srcSet={desktopHero.srcSet || desktopHero.src}
+                  sizes="100vw"
+                />
               ) : null}
+
               <img
                 src={mobileHero?.src || desktopHero?.src || ''}
                 srcSet={mobileHero?.srcSet || mobileHero?.src || undefined}
                 sizes="100vw"
                 className={`w-full h-full object-cover ${mediaOpacityClass}`}
-                alt={hero?.title || 'Eventos Hero'}
+                alt={hero?.title || (isEnglish ? 'Events Hero' : 'Eventos Hero')}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
@@ -291,16 +369,21 @@ const Events = () => {
           ) : null}
 
           {overlayEnabled && (
-            <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }} />
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+            />
           )}
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
             {hero?.title ? (
               <div className="w-full max-w-[1050px] mx-auto">
                 <Title
-                  variant={TitleVariant.TEXTURED}
+                  variant={hero?.titleVariant === 'regular' ? TitleVariant.REGULAR : TitleVariant.TEXTURED}
                   text={hero.title}
-                  className={`whitespace-pre-line text-4xl md:text-7xl ${hero?.textColor || 'text-white'} mb-7 md:mb-9`}
+                  className={`whitespace-pre-line text-4xl md:text-7xl ${
+                    hero?.titleColor || hero?.textColor || 'text-white'
+                  } mb-7 md:mb-9`}
                   align="center"
                 />
               </div>
@@ -308,7 +391,9 @@ const Events = () => {
 
             {hero?.subtitle ? (
               <p
-                className="text-white text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug"
+                className={`text-xl md:text-2xl lg:text-3xl max-w-2xl text-center opacity-90 leading-relaxed md:leading-snug ${
+                  hero?.subtitleColor || hero?.textColor || 'text-white'
+                }`}
                 style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
               >
                 {hero.subtitle}
@@ -318,26 +403,41 @@ const Events = () => {
         </div>
       </section>
 
-      {/* ================= EVENTOS ================= */}
+      {/* EVENTOS */}
       <section className="py-20 overflow-hidden">
         <div className="container mx-auto max-w-5xl text-center px-4 mb-12">
-          <Title variant={TitleVariant.REGULAR} text="EVENTOS" className="text-6xl md:text-7xl mb-12" align="center" />
+          <Title
+            variant={TitleVariant.REGULAR}
+            text={isEnglish ? 'EVENTS' : 'EVENTOS'}
+            className="text-6xl md:text-7xl mb-12"
+            align="center"
+          />
 
           <div className="mb-10">
             <p
               className="text-sm md:text-base tracking-widest text-black uppercase mb-6"
               style={{ fontFamily: FONT_BODY, fontWeight: 800 }}
             >
-              ¡CONVIERTE TU CELEBRACIÓN EN UN <span className="text-[#F6BA27]">#MOMENTOLEGENDARIO</span> CON MÍTICA!
+              {isEnglish ? (
+                <>
+                  TURN YOUR CELEBRATION INTO A{' '}
+                  <span className="text-[#F6BA27]">#LEGENDARYMOMENT</span> WITH MÍTICA!
+                </>
+              ) : (
+                <>
+                  ¡CONVIERTE TU CELEBRACIÓN EN UN{' '}
+                  <span className="text-[#F6BA27]">#MOMENTOLEGENDARIO</span> CON MÍTICA!
+                </>
+              )}
             </p>
 
             <p
               className="text-gray-700 text-sm md:text-base leading-relaxed max-w-4xl mx-auto"
               style={{ fontFamily: FONT_BODY, fontWeight: 500 }}
             >
-              Llevamos la experiencia y el sabor de nuestras hamburguesas a tu evento con nuestro servicio de Foodtruck,
-              disponible en Mérida y San Luis Potosí. Nos encargamos de todo para que tú y tus invitados disfruten de nuestro
-              menú.
+              {isEnglish
+                ? 'We bring the experience and flavor of our burgers to your event with our foodtruck service. We take care of everything so you and your guests can enjoy our menu.'
+                : 'Llevamos la experiencia y el sabor de nuestras hamburguesas a tu evento con nuestro servicio de Foodtruck, disponible en Mérida y San Luis Potosí. Nos encargamos de todo para que tú y tus invitados disfruten de nuestro menú.'}
             </p>
           </div>
         </div>
@@ -363,7 +463,7 @@ const Events = () => {
                     )}
                     sizes="(min-width: 768px) 320px, 220px"
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                    alt={`Evento ${index + 1}`}
+                    alt={isEnglish ? `Event ${index + 1}` : `Evento ${index + 1}`}
                     loading="lazy"
                     decoding="async"
                   />
@@ -375,11 +475,20 @@ const Events = () => {
 
         <div className="container mx-auto max-w-5xl text-center px-4">
           <div className="mb-8">
-            <h3 className="text-3xl md:text-4xl mb-4 tracking-tight" style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}>
-              ¿TE INTERESA COTIZAR?
+            <h3
+              className="text-3xl md:text-4xl mb-4 tracking-tight"
+              style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
+            >
+              {isEnglish ? 'WANT TO GET A QUOTE?' : '¿TE INTERESA COTIZAR?'}
             </h3>
-            <p className="text-sm md:text-base text-gray-800 max-w-2xl mx-auto" style={{ fontFamily: FONT_BODY, fontWeight: 600 }}>
-              Llena nuestro formulario y nos pondremos en contacto contigo.
+
+            <p
+              className="text-sm md:text-base text-gray-800 max-w-2xl mx-auto"
+              style={{ fontFamily: FONT_BODY, fontWeight: 600 }}
+            >
+              {isEnglish
+                ? 'Fill out our form and we will contact you.'
+                : 'Llena nuestro formulario y nos pondremos en contacto contigo.'}
             </p>
           </div>
 
@@ -388,12 +497,12 @@ const Events = () => {
             className="bg-[#1a1a1a] text-[#F6BA27] px-12 py-4 rounded-none text-xl uppercase hover:bg-[#F6BA27] hover:text-black transition-all duration-300 transform hover:scale-105 active:scale-95"
             style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
           >
-            Envía tu Solicitud
+            {isEnglish ? 'Send Request' : 'Envía tu Solicitud'}
           </button>
         </div>
       </section>
 
-      {/* ================= PATROCINIOS ================= */}
+      {/* PATROCINIOS */}
       <section className="bg-mitica-black py-24 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
@@ -402,7 +511,7 @@ const Events = () => {
           <div className="flex justify-between items-center mb-10 gap-6">
             <Title
               variant={TitleVariant.TEXTURED}
-              text="PATROCINIOS"
+              text={sponsorTitle}
               color="text-[#F6BA27]"
               className="text-6xl md:text-7xl"
               align="left"
@@ -418,24 +527,48 @@ const Events = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-8 mb-12 text-white/90">
-            <div className="space-y-6 text-sm md:text-base leading-relaxed max-w-3xl" style={{ fontFamily: FONT_BODY, fontWeight: 400 }}>
-              <p>
-                En{' '}
-                <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>MÍTICA</strong> nos encanta ser
-                parte de historias emocionantes. Si estás organizando un evento, tienes un equipo deportivo, lideras una
-                iniciativa comunitaria o buscas un partner para cualquier proyecto que comparta nuestro espíritu #Legendario,
-                ¡Queremos saber de ti!
-              </p>
-              <p>Déjanos tus datos de contacto y cuéntanos más sobre tu proyecto en el formulario.</p>
+          <div
+            className="grid grid-cols-1 gap-8 mb-12 text-white/90"
+            style={{ fontFamily: FONT_BODY, fontWeight: 400 }}
+          >
+            <div className="space-y-6 text-sm md:text-base leading-relaxed max-w-3xl">
+              {page?.sponsorships?.text ? (
+                <PortableText value={page.sponsorships.text} components={portableDark as any} />
+              ) : isEnglish ? (
+                <>
+                  <p>
+                    At{' '}
+                    <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>
+                      MÍTICA
+                    </strong>{' '}
+                    we love being part of exciting stories. Tell us about your project and how we can
+                    join you.
+                  </p>
+                  <p>Leave us your contact information through the form.</p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    En{' '}
+                    <strong style={{ color: '#F6BA27', fontFamily: FONT_BODY, fontWeight: 800 }}>
+                      MÍTICA
+                    </strong>{' '}
+                    nos encanta ser parte de historias emocionantes. Si estás organizando un evento,
+                    tienes un equipo deportivo, lideras una iniciativa comunitaria o buscas un partner
+                    para cualquier proyecto que comparta nuestro espíritu #Legendario, ¡Queremos saber
+                    de ti!
+                  </p>
+                  <p>Déjanos tus datos de contacto y cuéntanos más sobre tu proyecto en el formulario.</p>
+                </>
+              )}
             </div>
           </div>
 
           {sponsorImages.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 md:gap-8 mb-16">
-              {sponsorImages.slice(0, 2).map((img: any, idx: number) => (
+              {sponsorImages.slice(0, 2).map((img: any, index: number) => (
                 <div
-                  key={`${img?._key ?? 'sponsor'}-${idx}`}
+                  key={`${img?._key ?? 'sponsor'}-${index}`}
                   className="overflow-hidden shadow-2xl border border-white/10 group aspect-square md:aspect-[4/3]"
                 >
                   <img
@@ -451,7 +584,7 @@ const Events = () => {
                     )}
                     sizes="(min-width: 768px) 50vw, 100vw"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    alt={`Sponsorship ${idx + 1}`}
+                    alt={`Sponsorship ${index + 1}`}
                     loading="lazy"
                     decoding="async"
                   />
@@ -466,18 +599,20 @@ const Events = () => {
               className="bg-[#F6BA27] text-black px-12 py-4 rounded-none text-xl uppercase hover:bg-white transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-[#F6BA27]/20"
               style={{ fontFamily: FONT_TITLE_MAIN, fontWeight: 700 }}
             >
-              Envía tu Solicitud
+              {isEnglish ? 'Send Request' : 'Envía tu Solicitud'}
             </button>
           </div>
         </div>
       </section>
 
-      {/* ================= MODAL ================= */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle}>
-        <ContactForm type={formType === 'event' ? 'event' : 'sponsor'} config={formType === 'event' ? eventFormConfig : sponsorFormConfig} />
+        <ContactForm
+          type={formType === 'event' ? 'event' : 'sponsor'}
+          config={formType === 'event' ? eventFormConfig : sponsorFormConfig}
+        />
       </Modal>
     </div>
-  );
-};
+  )
+}
 
-export default Events;
+export default Events
