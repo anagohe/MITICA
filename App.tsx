@@ -8,7 +8,10 @@ import {
   useLocation,
   Navigate,
 } from 'react-router-dom'
+
 import { Layout } from './components/Layout'
+import { removeLanguagePrefix } from './i18n'
+
 import Home from './pages/Home'
 import About from './pages/About'
 import Ingredients from './pages/Ingredients'
@@ -37,18 +40,31 @@ const ScrollManager = () => {
         const element = document.getElementById(elementId)
 
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          })
           return
         }
 
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'auto',
+        })
       }, 120)
     } else {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'auto',
+      })
     }
 
     return () => {
-      if (timeoutId) window.clearTimeout(timeoutId)
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+      }
     }
   }, [pathname, hash])
 
@@ -64,15 +80,14 @@ const AppLayout = () => {
   )
 }
 
-const LegacyRedirect = () => {
+const LegacyLanguageRedirect = () => {
   const location = useLocation()
 
-  return (
-    <Navigate
-      to={`/es${location.pathname === '/' ? '' : location.pathname}${location.search}${location.hash}`}
-      replace
-    />
-  )
+  const destination = `${removeLanguagePrefix(
+    location.pathname
+  )}${location.search}${location.hash}`
+
+  return <Navigate to={destination} replace />
 }
 
 const siteRoutes = (
@@ -99,17 +114,17 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/es" replace />} />
-
-        <Route path="/es" element={<AppLayout />}>
+        {/* Rutas limpias: /, /menu, /about, etc. */}
+        <Route path="/" element={<AppLayout />}>
           {siteRoutes}
         </Route>
 
-        <Route path="/en" element={<AppLayout />}>
-          {siteRoutes}
-        </Route>
+        {/* Redirige URLs antiguas como /es/menu o /en/menu a /menu */}
+        <Route path="/es/*" element={<LegacyLanguageRedirect />} />
+        <Route path="/en/*" element={<LegacyLanguageRedirect />} />
 
-        <Route path="*" element={<LegacyRedirect />} />
+        {/* Cualquier ruta inexistente regresa al inicio */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   )
