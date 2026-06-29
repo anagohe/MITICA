@@ -1,5 +1,6 @@
 // studio-mitica/schemaTypes/home.ts
-import { defineType, defineField } from 'sanity';
+
+import { defineType, defineField } from 'sanity'
 
 const homePage = defineType({
   name: 'homePage',
@@ -10,7 +11,7 @@ const homePage = defineType({
       name: 'heroSlides',
       title: 'Slides del Hero (Slider Principal)',
       description:
-        'Cada slide usa imágenes Desktop + Mobile (responsivo), títulos y botón. Si no hay botón, puedes configurar un link para todo el hero.',
+        'Cada slide puede usar imagen o video. Ambos tienen versión Desktop + Mobile para que sean responsivos.',
       type: 'array',
       of: [
         defineField({
@@ -24,22 +25,68 @@ const homePage = defineType({
               type: 'object',
               fields: [
                 defineField({
+                  name: 'mediaType',
+                  title: 'Tipo de contenido',
+                  type: 'string',
+                  initialValue: 'image',
+                  options: {
+                    list: [
+                      { title: 'Imagen', value: 'image' },
+                      { title: 'Video', value: 'video' },
+                    ],
+                    layout: 'radio',
+                  },
+                  validation: (Rule) => Rule.required(),
+                }),
+
+                defineField({
                   name: 'desktopImage',
-                  title: 'Imagen Desktop',
+                  title: 'Imagen Desktop / Poster Desktop',
                   type: 'image',
+                  description:
+                    'Si el slide es de imagen, esta será la imagen principal en escritorio. Si el slide es de video, se usará como poster/fallback mientras carga el video.',
                   options: { hotspot: true },
                 }),
+
                 defineField({
                   name: 'mobileImage',
-                  title: 'Imagen Mobile (Responsiva)',
+                  title: 'Imagen Mobile / Poster Mobile',
                   type: 'image',
+                  description:
+                    'Si el slide es de imagen, esta será la imagen principal en celular. Si el slide es de video, se usará como poster/fallback mientras carga el video.',
                   options: { hotspot: true },
                 }),
+
+                defineField({
+                  name: 'desktopVideo',
+                  title: 'Video Desktop',
+                  type: 'file',
+                  description:
+                    'Video para escritorio. Recomendado: MP4 o WebM optimizado para web.',
+                  options: {
+                    accept: 'video/mp4,video/webm,video/quicktime',
+                  },
+                  hidden: ({ parent }) => parent?.mediaType !== 'video',
+                }),
+
+                defineField({
+                  name: 'mobileVideo',
+                  title: 'Video Mobile',
+                  type: 'file',
+                  description:
+                    'Video vertical o adaptado para celular. Recomendado: MP4 o WebM optimizado para web.',
+                  options: {
+                    accept: 'video/mp4,video/webm,video/quicktime',
+                  },
+                  hidden: ({ parent }) => parent?.mediaType !== 'video',
+                }),
+
                 defineField({
                   name: 'title',
                   title: 'Título',
                   type: 'string',
                 }),
+
                 defineField({
                   name: 'subtitle',
                   title: 'Subtítulo',
@@ -54,6 +101,7 @@ const homePage = defineType({
               type: 'string',
               description: 'Si dejas vacío, el slide puede usar el "Link del hero completo".',
             }),
+
             defineField({
               name: 'ctaLink',
               title: 'Enlace del botón',
@@ -61,12 +109,13 @@ const homePage = defineType({
               description: 'Ej. /menu, /franchise, URL completa, etc.',
               hidden: ({ parent }) => !parent?.ctaText,
             }),
+
             defineField({
               name: 'heroLink',
               title: 'Link del hero completo (sin botón)',
               type: 'string',
               description:
-                'Si no hay botón, al tocar/clic en cualquier parte del hero redirige a este link (ej. /menu o URL completa).',
+                'Si no hay botón, al tocar/clic en cualquier parte del hero redirige a este link. Ej. /menu o URL completa.',
               hidden: ({ parent }) => !!parent?.ctaText,
             }),
 
@@ -89,12 +138,15 @@ const homePage = defineType({
             select: {
               title: 'hero.title',
               subtitle: 'hero.subtitle',
+              mediaType: 'hero.mediaType',
             },
-            prepare({ title, subtitle }) {
+            prepare({ title, subtitle, mediaType }) {
+              const typeLabel = mediaType === 'video' ? 'Video' : 'Imagen'
+
               return {
                 title: title || 'Slide del Hero',
-                subtitle: subtitle || 'Configura título, imágenes y botón/link',
-              };
+                subtitle: subtitle || `${typeLabel} · Configura contenido, texto y botón/link`,
+              }
             },
           },
         }),
@@ -158,22 +210,26 @@ const homePage = defineType({
           fields: [
             defineField({ name: 'title', title: 'Título', type: 'string' }),
             defineField({ name: 'text', title: 'Texto', type: 'text' }),
+
             defineField({
               name: 'image',
               title: 'Imagen',
               type: 'image',
               options: { hotspot: true },
             }),
+
             defineField({
               name: 'buttonText',
               title: 'Texto del botón',
               type: 'string',
             }),
+
             defineField({
               name: 'buttonLink',
               title: 'Enlace del botón',
               type: 'string',
             }),
+
             defineField({
               name: 'imagePosition',
               title: 'Posición de la imagen',
@@ -191,14 +247,13 @@ const homePage = defineType({
           preview: {
             select: { title: 'title' },
             prepare({ title }) {
-              return { title: title || 'Apartado de Segunda sección' };
+              return { title: title || 'Apartado de Segunda sección' }
             },
           },
         }),
       ],
     }),
 
-    // ✅ NUEVO: Título editable de la sección Promociones
     defineField({
       name: 'promotionsTitle',
       title: 'Título de Promociones',
@@ -206,7 +261,6 @@ const homePage = defineType({
       initialValue: 'PROMOCIONES',
     }),
 
-    // ✅ Promociones conectadas al Blog (solo posts con categoría "Promociones")
     defineField({
       name: 'promotionsPosts',
       title: 'Promociones (desde Blog)',
@@ -233,9 +287,9 @@ const homePage = defineType({
       return {
         title: 'Página de Inicio',
         subtitle: 'Home del sitio',
-      };
+      }
     },
   },
-});
+})
 
-export default homePage;
+export default homePage

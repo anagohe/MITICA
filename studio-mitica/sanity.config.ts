@@ -1,8 +1,9 @@
-import {defineConfig} from 'sanity'
-import {structureTool} from 'sanity/structure'
-import {visionTool} from '@sanity/vision'
-import {schemaTypes} from './schemaTypes'
-import {deskStructure} from './deskStructure'
+// studio-mitica/sanity.config.ts
+import { defineConfig } from 'sanity'
+import { structureTool } from 'sanity/structure'
+import { visionTool } from '@sanity/vision'
+import { schemaTypes } from './schemaTypes'
+import { deskStructure } from './deskStructure'
 
 export default defineConfig({
   name: 'mitica-studio',
@@ -12,7 +13,9 @@ export default defineConfig({
   dataset: 'production',
 
   plugins: [
-    structureTool({structure: deskStructure}),
+    structureTool({
+      structure: deskStructure,
+    }),
     visionTool(),
   ],
 

@@ -1,4 +1,5 @@
 // src/pages/Home.tsx
+
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Title, TitleVariant, BodyText } from '../components/Typography'
@@ -10,6 +11,15 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getSanitySingletonId, useSiteLanguage } from '../i18n'
 
 // ========= Tipos de Sanity =========
+
+type HeroMediaType = 'image' | 'video'
+
+type SanityFileAsset = {
+  asset?: {
+    url?: string
+  }
+}
+
 type HeroSlideSanity = {
   _key: string
   ctaText?: string
@@ -17,8 +27,11 @@ type HeroSlideSanity = {
   heroLink?: string
   align?: 'left' | 'center' | 'right'
   hero?: {
+    mediaType?: HeroMediaType
     desktopImage?: any
     mobileImage?: any
+    desktopVideo?: SanityFileAsset
+    mobileVideo?: SanityFileAsset
     title?: string
     subtitle?: string
     [key: string]: any
@@ -63,6 +76,7 @@ type HomePageSanity = {
 }
 
 // ========= Tipos locales =========
+
 type IntroSection = {
   titleType: 'text' | 'image'
   titleText: string
@@ -93,12 +107,20 @@ type SlideImg = {
   mobile: { src: string; srcSet: string }
 }
 
+type SlideVideo = {
+  desktopUrl: string
+  mobileUrl: string
+}
+
 type SlideMapped = HeroSlide & {
+  mediaType: HeroMediaType
   heroLink?: string
   imgs?: SlideImg
+  video?: SlideVideo
 }
 
 // ========= GROQ =========
+
 const HOME_QUERY = `
 *[
   _id == $documentId
@@ -112,8 +134,19 @@ const HOME_QUERY = `
     heroLink,
     align,
     hero{
+      mediaType,
       desktopImage,
       mobileImage,
+      desktopVideo{
+        asset->{
+          url
+        }
+      },
+      mobileVideo{
+        asset->{
+          url
+        }
+      },
       title,
       subtitle
     }
@@ -168,6 +201,7 @@ const HOME_QUERY = `
 `
 
 // ========= Helpers de imagen =========
+
 function imgCrop(source: any, w: number, h: number, q = 75) {
   return urlFor(source).width(w).height(h).fit('crop').quality(q).url()
 }
@@ -185,6 +219,56 @@ const isExternalUrl = (url?: string) => {
   return /^https?:\/\//i.test(url) || url.startsWith('mailto:') || url.startsWith('tel:')
 }
 
+const getVideoMimeType = (url?: string) => {
+  const cleanUrl = (url || '').split('?')[0].toLowerCase()
+
+  if (cleanUrl.endsWith('.webm')) return 'video/webm'
+  if (cleanUrl.endsWith('.mov')) return 'video/quicktime'
+
+  return 'video/mp4'
+}
+
+type HeroFallbackImageProps = {
+  current: SlideMapped
+  isEnglish: boolean
+  className?: string
+}
+
+const HeroFallbackImage: React.FC<HeroFallbackImageProps> = ({ current, isEnglish, className = '' }) => {
+  if (current.imgs?.desktop?.src || current.imgs?.mobile?.src) {
+    return (
+      <picture className={`w-full h-full ${className}`}>
+        {current.imgs?.desktop?.src ? (
+          <source
+            media="(min-width: 768px)"
+            srcSet={current.imgs.desktop.srcSet || current.imgs.desktop.src}
+            sizes="100vw"
+          />
+        ) : null}
+
+        <img
+          src={current.imgs?.mobile?.src || current.imgs?.desktop?.src || ''}
+          srcSet={current.imgs?.mobile?.srcSet || current.imgs?.mobile?.src || undefined}
+          sizes="100vw"
+          alt={current.title || 'Hero'}
+          className="w-full h-full object-cover"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+        />
+      </picture>
+    )
+  }
+
+  return (
+    <div
+      className={`w-full h-full bg-gray-800 flex items-center justify-center text-white font-nexa text-2xl ${className}`}
+    >
+      {isEnglish ? 'HERO WITHOUT IMAGE OR VIDEO' : 'HERO SIN IMAGEN O VIDEO'}
+    </div>
+  )
+}
+
 const Home: React.FC = () => {
   const { language, sanityLanguage, localizedPath, isEnglish } = useSiteLanguage()
 
@@ -195,6 +279,20 @@ const Home: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [promotionsTitle, setPromotionsTitle] = useState(isEnglish ? 'PROMOTIONS' : 'PROMOCIONES')
   const [loading, setLoading] = useState(true)
+
+  // Guarda qué videos fallaron para mostrar imagen fallback solo en ese caso
+  const [videoErrors, setVideoErrors] = useState<Record<string, boolean>>({})
+
+  const getVideoErrorKey = (slideId: number, device: 'desktop' | 'mobile') => {
+    return `${slideId}-${device}`
+  }
+
+  const markVideoAsFailed = (slideId: number, device: 'desktop' | 'mobile') => {
+    setVideoErrors((prev) => ({
+      ...prev,
+      [getVideoErrorKey(slideId, device)]: true,
+    }))
+  }
 
   const getInternalLink = (path?: string) => {
     const cleanPath = path?.trim() || '/'
@@ -213,12 +311,14 @@ const Home: React.FC = () => {
   }
 
   // ===== Fetch desde Sanity =====
+
   useEffect(() => {
     let mounted = true
 
     const fetchHome = async () => {
       try {
         setLoading(true)
+        setVideoErrors({})
 
         const documentId = getSanitySingletonId('homePage', language)
 
@@ -241,10 +341,10 @@ const Home: React.FC = () => {
           data?.heroSlides?.map((slide, index) => {
             const heroData = slide.hero || {}
 
-            const hasDesktop = !!heroData.desktopImage
-            const hasMobile = !!heroData.mobileImage
+            const hasDesktopImage = !!heroData.desktopImage
+            const hasMobileImage = !!heroData.mobileImage
 
-            const desktop = hasDesktop
+            const desktop = hasDesktopImage
               ? {
                   src: imgCrop(heroData.desktopImage, 1600, 900, 75),
                   srcSet: srcSetCrop(
@@ -259,7 +359,7 @@ const Home: React.FC = () => {
                 }
               : { src: '', srcSet: '' }
 
-            const mobile = hasMobile
+            const mobile = hasMobileImage
               ? {
                   src: imgCrop(heroData.mobileImage, 900, 1200, 75),
                   srcSet: srcSetCrop(
@@ -272,7 +372,7 @@ const Home: React.FC = () => {
                     75
                   ),
                 }
-              : hasDesktop
+              : hasDesktopImage
                 ? {
                     src: desktop.src,
                     srcSet: desktop.srcSet,
@@ -281,9 +381,28 @@ const Home: React.FC = () => {
 
             const imgs: SlideImg | undefined = desktop.src || mobile.src ? { desktop, mobile } : undefined
 
+            const desktopVideoUrl = heroData.desktopVideo?.asset?.url || ''
+            const mobileVideoUrl = heroData.mobileVideo?.asset?.url || ''
+
+            const hasVideo = !!desktopVideoUrl || !!mobileVideoUrl
+
+            const requestedMediaType: HeroMediaType =
+              heroData.mediaType || (hasVideo ? 'video' : 'image')
+
+            const video: SlideVideo | undefined = hasVideo
+              ? {
+                  desktopUrl: desktopVideoUrl || mobileVideoUrl,
+                  mobileUrl: mobileVideoUrl || desktopVideoUrl,
+                }
+              : undefined
+
+            const finalMediaType: HeroMediaType =
+              requestedMediaType === 'video' && video ? 'video' : 'image'
+
             return {
               id: index + 1,
               type: 'image',
+              mediaType: finalMediaType,
               srcDesktop: desktop.src,
               srcMobile: mobile.src,
               title: heroData.title ?? '',
@@ -293,6 +412,7 @@ const Home: React.FC = () => {
               align: slide.align ?? 'center',
               heroLink: (slide.heroLink || '').trim(),
               imgs,
+              video,
             }
           }) ?? []
 
@@ -366,6 +486,7 @@ const Home: React.FC = () => {
   }, [language, sanityLanguage, isEnglish])
 
   // ===== Auto-slide =====
+
   useEffect(() => {
     if (heroSlides.length <= 1) return
 
@@ -378,6 +499,33 @@ const Home: React.FC = () => {
 
   const current = useMemo(() => heroSlides[currentSlide], [heroSlides, currentSlide])
 
+  // ===== Preload del video actual =====
+  // Esto ayuda a que el navegador empiece a pedir el video lo antes posible.
+  useEffect(() => {
+    if (!current || current.mediaType !== 'video' || !current.video) return
+    if (typeof document === 'undefined') return
+
+    const links: HTMLLinkElement[] = []
+    const urls = [current.video.desktopUrl, current.video.mobileUrl].filter(Boolean)
+
+    urls.forEach((url) => {
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'video'
+      link.href = url
+      document.head.appendChild(link)
+      links.push(link)
+    })
+
+    return () => {
+      links.forEach((link) => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link)
+        }
+      })
+    }
+  }, [current?.id, current?.mediaType, current?.video?.desktopUrl, current?.video?.mobileUrl])
+
   if (loading) {
     return (
       <div className="w-full bg-white min-h-screen flex items-center justify-center">
@@ -385,6 +533,14 @@ const Home: React.FC = () => {
       </div>
     )
   }
+
+  const desktopVideoFailed = current
+    ? videoErrors[getVideoErrorKey(current.id, 'desktop')]
+    : false
+
+  const mobileVideoFailed = current
+    ? videoErrors[getVideoErrorKey(current.id, 'mobile')]
+    : false
 
   return (
     <div className="w-full">
@@ -409,30 +565,83 @@ const Home: React.FC = () => {
               ) : null}
 
               <div className="w-full h-full relative">
-                {current.imgs?.desktop?.src || current.imgs?.mobile?.src ? (
-                  <picture className="block w-full h-full">
-                    {current.imgs?.desktop?.src ? (
-                      <source
-                        media="(min-width: 768px)"
-                        srcSet={current.imgs.desktop.srcSet || current.imgs.desktop.src}
-                        sizes="100vw"
-                      />
-                    ) : null}
+                {current.mediaType === 'video' && current.video ? (
+                  <>
+                    {!desktopVideoFailed ? (
+                      <video
+                        key={`desktop-video-${current.id}-${current.video.desktopUrl}`}
+                        className="hidden md:block w-full h-full object-cover"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        onError={() => markVideoAsFailed(current.id, 'desktop')}
+                        onLoadedData={(event) => {
+                          const video = event.currentTarget
+                          const playPromise = video.play()
 
-                    <img
-                      src={current.imgs?.mobile?.src || current.imgs?.desktop?.src || ''}
-                      srcSet={current.imgs?.mobile?.srcSet || current.imgs?.mobile?.src || undefined}
-                      sizes="100vw"
-                      alt={current.title || 'Hero'}
-                      className="w-full h-full object-cover"
-                      loading="eager"
-                      fetchPriority="high"
-                      decoding="async"
-                    />
-                  </picture>
+                          if (playPromise) {
+                            playPromise.catch(() => {
+                              markVideoAsFailed(current.id, 'desktop')
+                            })
+                          }
+                        }}
+                      >
+                        <source
+                          src={current.video.desktopUrl}
+                          type={getVideoMimeType(current.video.desktopUrl)}
+                          onError={() => markVideoAsFailed(current.id, 'desktop')}
+                        />
+                      </video>
+                    ) : (
+                      <HeroFallbackImage
+                        current={current}
+                        isEnglish={isEnglish}
+                        className="hidden md:block"
+                      />
+                    )}
+
+                    {!mobileVideoFailed ? (
+                      <video
+                        key={`mobile-video-${current.id}-${current.video.mobileUrl}`}
+                        className="block md:hidden w-full h-full object-cover"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        onError={() => markVideoAsFailed(current.id, 'mobile')}
+                        onLoadedData={(event) => {
+                          const video = event.currentTarget
+                          const playPromise = video.play()
+
+                          if (playPromise) {
+                            playPromise.catch(() => {
+                              markVideoAsFailed(current.id, 'mobile')
+                            })
+                          }
+                        }}
+                      >
+                        <source
+                          src={current.video.mobileUrl}
+                          type={getVideoMimeType(current.video.mobileUrl)}
+                          onError={() => markVideoAsFailed(current.id, 'mobile')}
+                        />
+                      </video>
+                    ) : (
+                      <HeroFallbackImage
+                        current={current}
+                        isEnglish={isEnglish}
+                        className="block md:hidden"
+                      />
+                    )}
+                  </>
+                ) : current.imgs?.desktop?.src || current.imgs?.mobile?.src ? (
+                  <HeroFallbackImage current={current} isEnglish={isEnglish} />
                 ) : (
                   <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white font-nexa text-2xl">
-                    {isEnglish ? 'HERO WITHOUT IMAGE' : 'HERO SIN IMAGEN'}
+                    {isEnglish ? 'HERO WITHOUT IMAGE OR VIDEO' : 'HERO SIN IMAGEN O VIDEO'}
                   </div>
                 )}
 
@@ -550,7 +759,10 @@ const Home: React.FC = () => {
               ) : (
                 <Title
                   variant={TitleVariant.REGULAR}
-                  text={introSection.titleText || (isEnglish ? 'LEGENDARY FLAVOR MOMENTS' : 'MOMENTOS CON SABOR LEGENDARIO')}
+                  text={
+                    introSection.titleText ||
+                    (isEnglish ? 'LEGENDARY FLAVOR MOMENTS' : 'MOMENTOS CON SABOR LEGENDARIO')
+                  }
                   className="text-4xl md:text-6xl mb-6 leading-none md:text-left"
                   align="center"
                 />
@@ -610,10 +822,7 @@ const Home: React.FC = () => {
                         {section.title || (isEnglish ? 'BE PART OF THE LEGEND' : 'SÉ PARTE DE LA LEYENDA')}
                       </h3>
 
-                      <BodyText
-                        text={section.text}
-                        className="text-lg text-gray-600 mb-6 text-justify"
-                      />
+                      <BodyText text={section.text} className="text-lg text-gray-600 mb-6 text-justify" />
 
                       {section.buttonText ? (
                         <Link
@@ -645,11 +854,7 @@ const Home: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {promos.map((promo) => (
-                <Link
-                  to={localizedPath(`/blog/${promo.slug}`)}
-                  key={promo.id}
-                  className="group block h-full"
-                >
+                <Link to={localizedPath(`/blog/${promo.slug}`)} key={promo.id} className="group block h-full">
                   <div className="bg-gray-50 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
                     <div className="h-64 overflow-hidden">
                       {promo.imageUrl ? (

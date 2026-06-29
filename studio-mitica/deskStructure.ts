@@ -1,4 +1,4 @@
-// sanity/deskStructure.ts
+// studio-mitica/deskStructure.ts
 import type { StructureBuilder } from 'sanity/structure'
 
 const singletonTypes = [
@@ -8,6 +8,7 @@ const singletonTypes = [
   'ingredientsPage',
   'blogPage',
   'eventsPage',
+  'terrazaMiticaPage',
   'careersPage',
   'deliveryPage',
   'locationsPage',
@@ -89,6 +90,7 @@ const miticaES = (S: StructureBuilder) =>
                   singletonItem(S, 'Blog', 'blogPage', 'blogPage'),
                   collectionItem(S, 'Artículos del Blog', 'post', 'es'),
                   singletonItem(S, 'Eventos y Patrocinios', 'eventsPage', 'eventsPage'),
+                  singletonItem(S, 'Terraza MÍTICA', 'terrazaMiticaPage', 'terrazaMiticaPage'),
                   singletonItem(S, 'Bolsa de trabajo', 'careersPage', 'careersPage'),
                 ])
             ),
@@ -144,6 +146,7 @@ const miticaUS = (S: StructureBuilder) =>
                   singletonItem(S, 'Blog', 'blogPage', 'blogPage-us'),
                   collectionItem(S, 'Blog Articles', 'post', 'en'),
                   singletonItem(S, 'Events & Sponsorships', 'eventsPage', 'eventsPage-us'),
+                  singletonItem(S, 'MÍTICA Terrace', 'terrazaMiticaPage', 'terrazaMiticaPage-us'),
                   singletonItem(S, 'Careers', 'careersPage', 'careersPage-us'),
                 ])
             ),
