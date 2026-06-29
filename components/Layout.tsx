@@ -1,5 +1,5 @@
 // components/Layout.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
@@ -49,8 +49,9 @@ const Navbar = () => {
 
   const circleOpacity = useTransform(p, [0, 1], [1, 0], { clamp: true })
   const circleScale = useTransform(p, [0, 1], [1, 0.94], { clamp: true })
-  const circleY = useTransform(scrollY, (v) => {
-    const yClamped = Math.max(0, Math.min(v ?? 0, SWITCH_AT))
+
+  const circleY = useTransform(scrollY, (value) => {
+    const yClamped = Math.max(0, Math.min(value ?? 0, SWITCH_AT))
     return OPTICAL_DOWN - yClamped + 4
   })
 
@@ -79,10 +80,10 @@ const Navbar = () => {
   }
 
   const handleLanguageSwitch = () => {
-    navigate(switchTo(language === 'es' ? 'en' : 'es'))
-    setIsOpen(false)
-    setOpenMobileSub(null)
-    setActiveDropdown(null)
+    const targetLanguage = language === 'es' ? 'en' : 'es'
+
+    // miticaburgers.com ↔ mitica.us
+    window.location.assign(switchTo(targetLanguage))
   }
 
   const navLinks: NavItem[] = isEnglish
@@ -108,6 +109,7 @@ const Navbar = () => {
           dropdown: [
             { name: 'Blog', path: '/blog' },
             { name: 'Events & Sponsorships', path: '/events' },
+            { name: 'MÍTICA Terrace', path: '/terraza-mitica' },
             { name: 'Careers', path: '/careers' },
           ],
         },
@@ -136,6 +138,7 @@ const Navbar = () => {
           dropdown: [
             { name: 'Blog', path: '/blog' },
             { name: 'Eventos y Patrocinios', path: '/events' },
+            { name: 'Terraza MÍTICA', path: '/terraza-mitica' },
             { name: 'Bolsa de Trabajo', path: '/careers' },
           ],
         },
@@ -231,7 +234,7 @@ const Navbar = () => {
                 >
                   {link.dropdown ? (
                     <button className="flex items-center gap-1 whitespace-nowrap text-white font-nexa font-bold text-sm hover:text-mitica-yellow uppercase transition-colors tracking-wide">
-                      {displayName}{' '}
+                      {displayName}
                       <ChevronDown
                         size={14}
                         className={`transition-transform ${
@@ -360,7 +363,7 @@ const Navbar = () => {
 
             <nav className="px-6">
               {navLinks.map((link) => {
-                const hasSub = !!link.dropdown
+                const hasSub = Boolean(link.dropdown)
                 const isOpenSub = hasSub && openMobileSub === link.name
 
                 return (
@@ -370,19 +373,20 @@ const Navbar = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setOpenMobileSub((prev) => (prev === link.name ? null : link.name))
+                            setOpenMobileSub((previous) =>
+                              previous === link.name ? null : link.name
+                            )
                           }}
-                          className={`w-full flex items-center justify-between py-6 text-left uppercase font-nexa font-extrabold tracking-wide transition-colors
-                            ${
-                              isOpenSub
-                                ? 'text-mitica-yellow'
-                                : 'text-white hover:text-mitica-yellow'
-                            }
-                          `}
+                          className={`w-full flex items-center justify-between py-6 text-left uppercase font-nexa font-extrabold tracking-wide transition-colors ${
+                            isOpenSub
+                              ? 'text-mitica-yellow'
+                              : 'text-white hover:text-mitica-yellow'
+                          }`}
                           aria-expanded={isOpenSub}
                           aria-controls={`sub-${link.name}`}
                         >
                           <span className="text-xl leading-none">{link.name}</span>
+
                           <ChevronDown
                             size={24}
                             className={`transition-transform ${isOpenSub ? 'rotate-180' : ''}`}
@@ -392,7 +396,9 @@ const Navbar = () => {
                         <div
                           id={`sub-${link.name}`}
                           className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-200 ${
-                            isOpenSub ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                            isOpenSub
+                              ? 'grid-rows-[1fr] opacity-100'
+                              : 'grid-rows-[0fr] opacity-0'
                           }`}
                         >
                           <div className="min-h-0 pb-5">
@@ -558,19 +564,19 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
               </div>
 
               <div className="order-2 md:order-3 w-full flex items-center justify-center gap-3 mt-14 md:mt-0 md:flex-col md:gap-4 lg:flex-row lg:gap-3">
-                {storeBadges.map((b) => (
+                {storeBadges.map((badge) => (
                   <a
-                    key={b.label}
-                    href={b.href}
+                    key={badge.label}
+                    href={badge.href}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex"
                   >
                     <img
-                      src={b.img}
-                      alt={b.label}
-                      width={b.w}
-                      height={b.h}
+                      src={badge.img}
+                      alt={badge.label}
+                      width={badge.w}
+                      height={badge.h}
                       className="object-contain w-[160px] md:w-[190px] lg:w-[160px]"
                       loading="lazy"
                       decoding="async"
@@ -690,24 +696,37 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                   {isEnglish ? 'About Us' : 'Quiénes Somos'}
                 </Link>
               </li>
+
               <li>
                 <Link to={localizedPath('/menu')} className="hover:text-white transition-colors">
                   {isEnglish ? 'Menu' : 'Menú'}
                 </Link>
               </li>
+
               <li>
                 <Link to={localizedPath('/locations')} className="hover:text-white transition-colors">
                   {isEnglish ? 'Locations' : 'Ubicaciones'}
                 </Link>
               </li>
+
               <li>
                 <Link to={localizedPath('/franchise')} className="hover:text-white transition-colors">
                   {isEnglish ? 'Franchising' : 'Franquicias'}
                 </Link>
               </li>
+
               <li>
                 <Link to={localizedPath('/blog')} className="hover:text-white transition-colors">
                   Blog
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to={localizedPath('/terraza-mitica')}
+                  className="hover:text-white transition-colors"
+                >
+                  {isEnglish ? 'MÍTICA Terrace' : 'Terraza MÍTICA'}
                 </Link>
               </li>
             </ul>
@@ -722,11 +741,13 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                   {isEnglish ? 'Events' : 'Eventos'}
                 </Link>
               </li>
+
               <li>
                 <Link to={localizedPath('/delivery')} className="hover:text-white transition-colors">
                   Delivery
                 </Link>
               </li>
+
               <li>
                 <Link to={localizedPath('/faq')} className="hover:text-white transition-colors">
                   FAQS
@@ -796,11 +817,15 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
   )
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, showFooterBanner = true }) => {
+export const Layout: React.FC<LayoutProps> = ({
+  children,
+  showFooterBanner = true,
+}) => {
   const location = useLocation()
   const pathWithoutLanguage = removeLanguagePrefix(location.pathname)
 
-  const shouldShowFooterBanner = showFooterBanner && pathWithoutLanguage !== '/delivery'
+  const shouldShowFooterBanner =
+    showFooterBanner && pathWithoutLanguage !== '/delivery'
 
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">

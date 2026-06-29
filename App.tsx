@@ -17,6 +17,7 @@ import Delivery from './pages/Delivery'
 import Blog from './pages/Blog'
 import BlogPost from './pages/BlogPost'
 import Events from './pages/Events'
+import TerrazaMitica from './pages/TerrazaMitica'
 import Careers from './pages/Careers'
 import Locations from './pages/Locations'
 import Franchise from './pages/Franchise'
@@ -84,6 +85,7 @@ const siteRoutes = (
     <Route path="blog" element={<Blog />} />
     <Route path="blog/:id" element={<BlogPost />} />
     <Route path="events" element={<Events />} />
+    <Route path="terraza-mitica" element={<TerrazaMitica />} />
     <Route path="careers" element={<Careers />} />
     <Route path="locations" element={<Locations />} />
     <Route path="franchise" element={<Franchise />} />
