@@ -2,7 +2,7 @@
 import { useLocation } from 'react-router-dom'
 
 export type SiteLanguage = 'es' | 'en'
-export type SanityLanguage = 'es' | 'us'
+export type SanityLanguage = 'es' | 'en'
 
 export const DEFAULT_LANGUAGE: SiteLanguage = 'es'
 
@@ -174,7 +174,7 @@ export const getLocalizedDocumentId = (
 export const getSanityLanguage = (
   language: SiteLanguage = getSiteLanguage()
 ): SanityLanguage => {
-  return language === 'en' ? 'us' : 'es'
+  return language === 'en' ? 'en' : 'es'
 }
 
 export const useSiteLanguage = () => {

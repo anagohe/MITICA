@@ -27,7 +27,7 @@ const isEnglish = isEnglishSite()
  * es = español
  * us = inglés
  */
-const sanityLanguage = isEnglish ? 'us' : 'es'
+const sanityLanguage = isEnglish ? 'en' : 'es'
 
 /**
  * Español:

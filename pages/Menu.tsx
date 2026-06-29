@@ -11,15 +11,12 @@ type HeroType = {
   mobileImage?: any
   videoFile?: any
   mobileVideoFile?: any
-
   title?: string
   subtitle?: string
   textColor?: string
-
   titleVariant?: 'regular' | 'textured'
   titleColor?: string
   subtitleColor?: string
-
   overlayEnabled?: boolean
   overlayOpacity?: number
 }
@@ -29,6 +26,7 @@ type MenuIcon = {
   title?: string
   iconImage?: any
   image?: any
+  language?: 'es' | 'en'
 }
 
 type MenuItem = {
@@ -74,17 +72,13 @@ const MENU_PAGE_QUERY = `
       title,
       subtitle,
       textColor,
-
       titleVariant,
       titleColor,
       subtitleColor,
-
       overlayEnabled,
       overlayOpacity,
-
       desktopImage,
       mobileImage,
-
       videoFile{
         asset->{ url }
       },
@@ -150,12 +144,14 @@ function getFileUrl(file: any): string | undefined {
 }
 
 const Menu: React.FC = () => {
-  const { language, sanityLanguage, isEnglish } = useSiteLanguage()
+  const { language, isEnglish } = useSiteLanguage()
 
   const [data, setData] = useState<MenuQueryResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [activeCategory, setActiveCategory] = useState<string>('')
+  const [activeCategory, setActiveCategory] = useState('')
+
+  const contentLanguage: 'es' | 'en' = isEnglish ? 'en' : 'es'
 
   useEffect(() => {
     let mounted = true
@@ -169,12 +165,12 @@ const Menu: React.FC = () => {
 
         const res = await client.fetch<MenuQueryResult>(MENU_PAGE_QUERY, {
           documentId,
-          language: sanityLanguage,
+          language: contentLanguage,
         })
 
         console.log('MENU QUERY PARAMS:', {
           language,
-          sanityLanguage,
+          contentLanguage,
           documentId,
         })
 
@@ -194,8 +190,9 @@ const Menu: React.FC = () => {
         setFetchError(error?.message || 'Error cargando menú desde Sanity.')
         setData(null)
       } finally {
-        if (!mounted) return
-        setLoading(false)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -204,40 +201,44 @@ const Menu: React.FC = () => {
     return () => {
       mounted = false
     }
-  }, [language, sanityLanguage])
+  }, [language, contentLanguage])
 
   const page = data?.page || null
   const legacyItems = data?.items || []
 
+  /*
+    menuPage y menuPage-us ya contienen las referencias correctas
+    a los productos de cada idioma.
+
+    Por eso no filtramos los productos de menuSections por language:
+    las secciones son la fuente principal del menú y ya vienen
+    conectadas al contenido correcto.
+  */
   const sections = useMemo(() => {
-    const rawSections = Array.isArray(page?.menuSections) ? page.menuSections : []
+    const rawSections = Array.isArray(page?.menuSections)
+      ? page.menuSections
+      : []
 
-    return rawSections.map((section) => {
-      const sectionItems = Array.isArray(section?.items) ? section.items : []
+    return rawSections.map((section) => ({
+      ...section,
+      items: Array.isArray(section?.items)
+        ? section.items.filter((item) => Boolean(item?._id))
+        : [],
+    }))
+  }, [page?.menuSections])
 
-      return {
-        ...section,
-        items: sectionItems.filter((item) => {
-          if (!item?._id) return false
-
-          // Si viene con idioma, respetamos el idioma actual.
-          if (item.language) return item.language === sanityLanguage
-
-          // Si no tiene idioma, solo lo dejamos pasar en español.
-          return sanityLanguage === 'es'
-        }),
-      }
-    })
-  }, [page?.menuSections, sanityLanguage])
-
-  const hasSections = sections.some((section) => Array.isArray(section.items) && section.items.length > 0)
+  const hasSections = sections.some(
+    (section) => Array.isArray(section.items) && section.items.length > 0
+  )
 
   const items = useMemo<MenuItem[]>(() => {
     if (!hasSections) return legacyItems
 
     return sections.flatMap((section) => {
       const category = (section?.title || '').trim()
-      const sectionItems = Array.isArray(section?.items) ? section.items : []
+      const sectionItems = Array.isArray(section?.items)
+        ? section.items
+        : []
 
       return sectionItems.map((item) => ({
         ...item,
@@ -249,7 +250,10 @@ const Menu: React.FC = () => {
   const categories = useMemo(() => {
     if (hasSections) {
       const ordered = sections
-        .filter((section) => Array.isArray(section.items) && section.items.length > 0)
+        .filter(
+          (section) =>
+            Array.isArray(section.items) && section.items.length > 0
+        )
         .map((section) => (section?.title || '').trim())
         .filter(Boolean)
 
@@ -262,8 +266,13 @@ const Menu: React.FC = () => {
       })
     }
 
-    const sanityCatsRaw = Array.isArray(page?.menuCategories) ? page.menuCategories : []
-    const sanityCats = sanityCatsRaw.map((category) => (category || '').trim()).filter(Boolean)
+    const sanityCatsRaw = Array.isArray(page?.menuCategories)
+      ? page.menuCategories
+      : []
+
+    const sanityCats = sanityCatsRaw
+      .map((category) => (category || '').trim())
+      .filter(Boolean)
 
     if (sanityCats.length > 0) {
       const seen = new Set<string>()
@@ -275,14 +284,17 @@ const Menu: React.FC = () => {
       })
     }
 
-    const set = new Set<string>()
+    const categorySet = new Set<string>()
 
     legacyItems.forEach((item) => {
       const category = (item.category || '').trim()
-      if (category) set.add(category)
+
+      if (category) {
+        categorySet.add(category)
+      }
     })
 
-    return Array.from(set)
+    return Array.from(categorySet)
   }, [hasSections, sections, page?.menuCategories, legacyItems])
 
   useEffect(() => {
@@ -300,7 +312,9 @@ const Menu: React.FC = () => {
   const filteredItems = useMemo(() => {
     if (!activeCategory) return items
 
-    return items.filter((item) => (item.category || '').trim() === activeCategory)
+    return items.filter(
+      (item) => (item.category || '').trim() === activeCategory
+    )
   }, [items, activeCategory])
 
   const leftItems = useMemo(
@@ -328,8 +342,11 @@ const Menu: React.FC = () => {
       <div className="w-full bg-white min-h-screen flex items-center justify-center px-6 text-center">
         <div>
           <p className="text-red-600 font-bold mb-2">
-            {isEnglish ? 'The menu could not be loaded from Sanity.' : 'No se pudo cargar el menú desde Sanity.'}
+            {isEnglish
+              ? 'The menu could not be loaded from Sanity.'
+              : 'No se pudo cargar el menú desde Sanity.'}
           </p>
+
           <p className="text-sm text-gray-500">{fetchError}</p>
         </div>
       </div>
@@ -345,9 +362,10 @@ const Menu: React.FC = () => {
               ? 'No menu document was found for English.'
               : 'No se encontró el documento del menú en español.'}
           </p>
+
           <p className="text-sm text-gray-500">
             {isEnglish
-              ? 'Check that the document menuPage-us exists and is published in Sanity.'
+              ? 'Check that menuPage-us exists and is published in Sanity.'
               : 'Revisa que el documento menuPage exista y esté publicado en Sanity.'}
           </p>
         </div>
@@ -358,9 +376,10 @@ const Menu: React.FC = () => {
   const hero = page.hero
 
   const overlayEnabled = hero?.overlayEnabled ?? true
-  const overlayOpacity = typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40
-  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100
+  const overlayOpacity =
+    typeof hero?.overlayOpacity === 'number' ? hero.overlayOpacity : 40
 
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 80) / 100
   const mediaOpacityClass = overlayEnabled ? 'opacity-60' : 'opacity-100'
 
   const desktopVideoUrl = getFileUrl(hero?.videoFile)
@@ -387,7 +406,10 @@ const Menu: React.FC = () => {
         ].join(', '),
       }
     : desktopHero
-      ? { src: desktopHero.src, srcSet: desktopHero.srcSet }
+      ? {
+          src: desktopHero.src,
+          srcSet: desktopHero.srcSet,
+        }
       : null
 
   const cardSrc = (img: any) => imgCrop(img, 1200, 860, 75)
@@ -404,14 +426,14 @@ const Menu: React.FC = () => {
   const heroTitleVariant =
     hero?.titleVariant === 'regular'
       ? TitleVariant.REGULAR
-      : hero?.titleVariant === 'textured'
-        ? TitleVariant.TEXTURED
-        : TitleVariant.TEXTURED
+      : TitleVariant.TEXTURED
 
   const heroTitleColor = hero?.titleColor || hero?.textColor || 'text-white'
-  const heroSubtitleColor = hero?.subtitleColor || hero?.textColor || 'text-white'
+  const heroSubtitleColor =
+    hero?.subtitleColor || hero?.textColor || 'text-white'
 
   const pageTitle = isEnglish ? 'MENU' : 'MENÚ'
+
   const emptyCategoryText = isEnglish
     ? 'There are no products in this category.'
     : 'No hay productos en esta categoría.'
@@ -465,12 +487,14 @@ const Menu: React.FC = () => {
           </picture>
         ) : null}
 
-        {overlayEnabled && (
+        {overlayEnabled ? (
           <div
             className="absolute inset-0"
-            style={{ backgroundColor: `rgba(0,0,0,${overlayAlpha})` }}
+            style={{
+              backgroundColor: `rgba(0,0,0,${overlayAlpha})`,
+            }}
           />
-        )}
+        ) : null}
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 sm:px-12 md:px-20 lg:px-28">
           {hero?.title ? (
@@ -533,7 +557,6 @@ const Menu: React.FC = () => {
             </div>
           ) : (
             <div className="max-w-6xl mx-auto pt-12 pb-12">
-              {/* MOBILE */}
               <div className="grid grid-cols-1 gap-y-8 md:hidden">
                 {filteredItems.map((item) => (
                   <MenuCard
@@ -547,7 +570,6 @@ const Menu: React.FC = () => {
                 ))}
               </div>
 
-              {/* DESKTOP */}
               <div className="hidden md:grid md:grid-cols-2 gap-x-6">
                 <div className="flex flex-col gap-y-8">
                   {leftItems.map((item) => (
@@ -638,7 +660,8 @@ const MenuCard: React.FC<MenuCardProps> = ({
           </p>
         ) : null}
 
-        {(Array.isArray(item.icons) && item.icons.length > 0) || item.kcalText ? (
+        {(Array.isArray(item.icons) && item.icons.length > 0) ||
+        item.kcalText ? (
           <div className="mt-6 flex items-end justify-between gap-4">
             <div className="flex flex-wrap gap-2">
               {(item.icons || []).map((icon) => {
@@ -649,7 +672,7 @@ const MenuCard: React.FC<MenuCardProps> = ({
                     {iconImg ? (
                       <img
                         src={iconSrc(iconImg)}
-                        alt={icon.title || 'Icono'}
+                        alt={icon.title || 'Icon'}
                         className="w-full h-full object-contain"
                         loading="lazy"
                         decoding="async"
