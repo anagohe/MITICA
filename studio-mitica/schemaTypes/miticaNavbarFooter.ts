@@ -1,271 +1,162 @@
-import { defineType, defineField } from 'sanity'
+import { defineField, defineType } from 'sanity'
+
+const visibilityToggle = (
+  name: string,
+  title: string,
+  description?: string
+) =>
+  defineField({
+    name,
+    title,
+    type: 'boolean',
+    description,
+    initialValue: true,
+  })
 
 const miticaNavbarFooter = defineType({
   name: 'navbarFooter',
   title: 'Navbar & Footer',
   type: 'document',
+
   fields: [
-    // =========================
-    // NAVBAR
-    // =========================
     defineField({
-      name: 'navbar',
-      title: 'Navbar',
+      name: 'sectionVisibility',
+      title: 'Mostrar u ocultar secciones del navbar',
+      description:
+        'Esta configuración solo controla los links del navbar. MÍTICA ES y MÍTICA US se guardan por separado.',
       type: 'object',
+      options: {
+        collapsible: true,
+        collapsed: false,
+      },
       fields: [
         defineField({
-          name: 'logos',
-          title: 'Logos',
+          name: 'products',
+          title: 'Nuestros Productos / Our Products',
           type: 'object',
+          options: {
+            collapsible: true,
+            collapsed: false,
+          },
           fields: [
-            defineField({
-              name: 'circleLogo',
-              title: 'Logo circular (icono)',
-              type: 'image',
-              options: { hotspot: true },
-            }),
-            defineField({
-              name: 'wideLogo',
-              title: 'Logo ancho (desktop)',
-              type: 'image',
-              options: { hotspot: true },
-            }),
-            defineField({
-              name: 'mobileLogo',
-              title: 'Logo móvil',
-              type: 'image',
-              options: { hotspot: true },
-            }),
+            visibilityToggle(
+              'enabled',
+              'Mostrar sección principal',
+              'Oculta todo el dropdown de Productos.'
+            ),
+            visibilityToggle(
+              'ingredients',
+              'Mostrar Ingredientes / Ingredients'
+            ),
+            visibilityToggle('menu', 'Mostrar Menú / Menu'),
+            visibilityToggle('delivery', 'Mostrar Delivery'),
           ],
         }),
 
         defineField({
-          name: 'cta',
-          title: 'Botón CTA',
+          name: 'about',
+          title: 'Nosotros / About Us',
           type: 'object',
+          options: {
+            collapsible: true,
+            collapsed: false,
+          },
           fields: [
-            defineField({ name: 'text', title: 'Texto', type: 'string', initialValue: 'ORDENA AHORA' }),
-            defineField({ name: 'link', title: 'Link', type: 'string', initialValue: 'https://wa.me/529979790642' }),
+            visibilityToggle(
+              'enabled',
+              'Mostrar sección principal',
+              'Oculta todo el dropdown de Nosotros.'
+            ),
+            visibilityToggle(
+              'whoWeAre',
+              'Mostrar ¿Quiénes Somos? / Who We Are'
+            ),
+            visibilityToggle(
+              'visionMission',
+              'Mostrar Visión y Misión / Vision & Mission'
+            ),
+            visibilityToggle(
+              'manifesto',
+              'Mostrar Manifiesto MÍTICA / MÍTICA Manifesto'
+            ),
           ],
         }),
 
         defineField({
-          name: 'navLinks',
-          title: 'Links del Navbar (se mezclan con defaults por key)',
-          type: 'array',
-          of: [
-            defineField({
-              name: 'navItem',
-              title: 'Item',
-              type: 'object',
-              fields: [
-                defineField({
-                  name: 'key',
-                  title: 'Key (ID interno, NO cambiar)',
-                  type: 'string',
-                  validation: (Rule) => Rule.required(),
-                }),
-                defineField({ name: 'enabled', title: 'Habilitado', type: 'boolean', initialValue: true }),
-                defineField({ name: 'name', title: 'Nombre', type: 'string' }),
-                defineField({
-                  name: 'path',
-                  title: 'Path (si NO tiene dropdown)',
-                  type: 'string',
-                  hidden: ({ parent }) => !!parent?.dropdown?.length,
-                }),
-                defineField({
-                  name: 'dropdown',
-                  title: 'Dropdown (opcional)',
-                  type: 'array',
-                  of: [
-                    defineField({
-                      name: 'dropdownItem',
-                      title: 'Sub-item',
-                      type: 'object',
-                      fields: [
-                        defineField({
-                          name: 'key',
-                          title: 'Key (ID interno, NO cambiar)',
-                          type: 'string',
-                          validation: (Rule) => Rule.required(),
-                        }),
-                        defineField({ name: 'enabled', title: 'Habilitado', type: 'boolean', initialValue: true }),
-                        defineField({ name: 'name', title: 'Nombre', type: 'string' }),
-                        defineField({ name: 'path', title: 'Path', type: 'string' }),
-                      ],
-                      preview: {
-                        select: { title: 'name', subtitle: 'path' },
-                        prepare({ title, subtitle }) {
-                          return { title: title || 'Dropdown item', subtitle }
-                        },
-                      },
-                    }),
-                  ],
-                }),
-              ],
-              preview: {
-                select: { title: 'name', subtitle: 'key' },
-                prepare({ title, subtitle }) {
-                  return { title: title || 'Nav item', subtitle: `key: ${subtitle || ''}` }
-                },
-              },
-            }),
-          ],
-        }),
-      ],
-    }),
-
-    // =========================
-    // FOOTER
-    // =========================
-    defineField({
-      name: 'footer',
-      title: 'Footer',
-      type: 'object',
-      fields: [
-        defineField({
-          name: 'banner',
-          title: 'Banner superior (TU ANTOJO TIENE APP)',
+          name: 'community',
+          title: 'Comunidad / Community',
           type: 'object',
+          options: {
+            collapsible: true,
+            collapsed: false,
+          },
           fields: [
-            defineField({ name: 'enabled', title: 'Mostrar banner', type: 'boolean', initialValue: true }),
-            defineField({ name: 'leftImage', title: 'Imagen izquierda', type: 'image', options: { hotspot: true } }),
-            defineField({ name: 'titleTop', title: 'Texto superior', type: 'string', initialValue: 'TU ANTOJO' }),
-            defineField({ name: 'titleBottom', title: 'Texto inferior', type: 'string', initialValue: 'TIENE APP' }),
-            defineField({
-              name: 'storeBadges',
-              title: 'Badges (se mezclan con defaults por key)',
-              type: 'array',
-              of: [
-                defineField({
-                  name: 'badge',
-                  title: 'Badge',
-                  type: 'object',
-                  fields: [
-                    defineField({
-                      name: 'key',
-                      title: 'Key (ID interno, NO cambiar)',
-                      type: 'string',
-                      validation: (Rule) => Rule.required(),
-                    }),
-                    defineField({ name: 'enabled', title: 'Habilitado', type: 'boolean', initialValue: true }),
-                    defineField({ name: 'label', title: 'Label', type: 'string' }),
-                    defineField({ name: 'href', title: 'Link', type: 'url' }),
-                    defineField({ name: 'image', title: 'Imagen', type: 'image', options: { hotspot: true } }),
-                    defineField({ name: 'width', title: 'Width', type: 'number', initialValue: 160 }),
-                    defineField({ name: 'height', title: 'Height', type: 'number', initialValue: 50 }),
-                  ],
-                }),
-              ],
-            }),
+            visibilityToggle(
+              'enabled',
+              'Mostrar sección principal',
+              'Oculta todo el dropdown de Comunidad.'
+            ),
+            visibilityToggle('blog', 'Mostrar Blog'),
+            visibilityToggle(
+              'events',
+              'Mostrar Eventos y Patrocinios / Events & Sponsorships'
+            ),
+            visibilityToggle(
+              'terrazaMitica',
+              'Mostrar Terraza MÍTICA / MÍTICA Terrace'
+            ),
+            visibilityToggle(
+              'careers',
+              'Mostrar Bolsa de Trabajo / Careers'
+            ),
           ],
         }),
 
-        defineField({ name: 'logo', title: 'Logo del footer', type: 'image', options: { hotspot: true } }),
+        visibilityToggle(
+          'locationsEnabled',
+          'Mostrar Ubicaciones / Locations'
+        ),
 
-        defineField({
-          name: 'social',
-          title: 'Redes sociales',
-          type: 'array',
-          of: [
-            defineField({
-              name: 'socialItem',
-              title: 'Red',
-              type: 'object',
-              fields: [
-                defineField({
-                  name: 'type',
-                  title: 'Tipo',
-                  type: 'string',
-                  options: {
-                    list: [
-                      { title: 'Instagram', value: 'instagram' },
-                      { title: 'Facebook', value: 'facebook' },
-                      { title: 'TikTok', value: 'tiktok' },
-                    ],
-                  },
-                }),
-                defineField({ name: 'url', title: 'URL', type: 'url' }),
-              ],
-            }),
-          ],
-        }),
-
-        defineField({
-          name: 'footerColumns',
-          title: 'Columnas de links (se mezclan con defaults por key)',
-          type: 'array',
-          of: [
-            defineField({
-              name: 'footerColumn',
-              title: 'Columna',
-              type: 'object',
-              fields: [
-                defineField({
-                  name: 'key',
-                  title: 'Key (ID interno, NO cambiar)',
-                  type: 'string',
-                  validation: (Rule) => Rule.required(),
-                }),
-                defineField({ name: 'enabled', title: 'Habilitado', type: 'boolean', initialValue: true }),
-                defineField({ name: 'title', title: 'Título', type: 'string' }),
-                defineField({
-                  name: 'links',
-                  title: 'Links (se mezclan con defaults por key)',
-                  type: 'array',
-                  of: [
-                    defineField({
-                      name: 'footerLink',
-                      title: 'Link',
-                      type: 'object',
-                      fields: [
-                        defineField({
-                          name: 'key',
-                          title: 'Key (ID interno, NO cambiar)',
-                          type: 'string',
-                          validation: (Rule) => Rule.required(),
-                        }),
-                        defineField({ name: 'enabled', title: 'Habilitado', type: 'boolean', initialValue: true }),
-                        defineField({ name: 'label', title: 'Texto', type: 'string' }),
-                        defineField({ name: 'path', title: 'Path/URL', type: 'string' }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-
-        defineField({
-          name: 'legalLinks',
-          title: 'Links legales (se mezclan con defaults por key)',
-          type: 'array',
-          of: [
-            defineField({
-              name: 'legalLink',
-              title: 'Link',
-              type: 'object',
-              fields: [
-                defineField({
-                  name: 'key',
-                  title: 'Key (ID interno, NO cambiar)',
-                  type: 'string',
-                  validation: (Rule) => Rule.required(),
-                }),
-                defineField({ name: 'enabled', title: 'Habilitado', type: 'boolean', initialValue: true }),
-                defineField({ name: 'label', title: 'Texto', type: 'string' }),
-                defineField({ name: 'path', title: 'Path/URL', type: 'string' }),
-              ],
-            }),
-          ],
-        }),
+        visibilityToggle(
+          'franchisingEnabled',
+          'Mostrar Franquicias / Franchising'
+        ),
       ],
     }),
   ],
+
+  initialValue: {
+    sectionVisibility: {
+      products: {
+        enabled: true,
+        ingredients: true,
+        menu: true,
+        delivery: true,
+      },
+      about: {
+        enabled: true,
+        whoWeAre: true,
+        visionMission: true,
+        manifesto: true,
+      },
+      community: {
+        enabled: true,
+        blog: true,
+        events: true,
+        terrazaMitica: true,
+        careers: true,
+      },
+      locationsEnabled: true,
+      franchisingEnabled: true,
+    },
+  },
+
   preview: {
     prepare() {
-      return { title: 'Navbar & Footer', subtitle: 'Configuración del header y footer' }
+      return {
+        title: 'Navbar & Footer',
+        subtitle: 'Visibilidad de links del navbar',
+      }
     },
   },
 })

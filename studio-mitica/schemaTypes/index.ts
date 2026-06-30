@@ -9,9 +9,8 @@ import * as general from './general'
 import * as locationsPage from './locationsPage'
 import * as terrazaMitica from './terrazaMitica'
 
-// Tomamos todos los exports de cada archivo y los metemos en un solo array.
-// Cualquier cosa que exportes en esos archivos (pages, objetos, etc.) se
-// registrará como schema en el Studio.
+// navbarFooter ya viene incluido desde general.ts con:
+// export { default as navbarFooter } from './miticaNavbarFooter'
 export const schemaTypes = [
   ...Object.values(objects),
   ...Object.values(home),
