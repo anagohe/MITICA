@@ -12,7 +12,11 @@ import {
   FaGooglePlay,
 } from 'react-icons/fa6'
 
-import { removeLanguagePrefix, useSiteLanguage } from '../i18n'
+import {
+  getSanitySingletonId,
+  removeLanguagePrefix,
+  useSiteLanguage,
+} from '../i18n'
 import { client } from '../sanity/client'
 
 interface LayoutProps {
@@ -56,8 +60,20 @@ type NavbarSectionVisibility = {
   franchisingEnabled?: boolean
 }
 
+type FooterContent = {
+  socialTitle?: string
+  instagramUrl?: string
+  facebookUrl?: string
+  tiktokUrl?: string
+  xUrl?: string
+  appTitle?: string
+  appStoreUrl?: string
+  googlePlayUrl?: string
+}
+
 type NavbarFooterSettings = {
   sectionVisibility?: NavbarSectionVisibility
+  footerContent?: FooterContent | null
 }
 
 const DEFAULT_NAVBAR_VISIBILITY: NavbarSectionVisibility = {
@@ -89,110 +105,92 @@ const NAVBAR_SECTION_VISIBILITY_QUERY = `
   "sectionVisibility": coalesce(
     sectionVisibility,
     navbar.sectionVisibility
-  )
+  ),
+  footerContent
 }
 `
 
 const isSectionEnabled = (value?: boolean) => value !== false
 
-const Navbar = () => {
+type FooterBannerSettings = {
+  showFooterBanner?: boolean
+}
+
+const FOOTER_BANNER_QUERY = `
+*[
+  _id == $documentId
+  && !(_id in path("drafts.**"))
+][0]{
+  showFooterBanner
+}
+`
+
+const FOOTER_BANNER_PAGE_BY_PATH: Record<string, string> = {
+  '/': 'homePage',
+  '/about': 'aboutPage',
+  '/ingredients': 'ingredientsPage',
+  '/menu': 'menuPage',
+  '/delivery': 'deliveryPage',
+  '/blog': 'blogPage',
+  '/events': 'eventsPage',
+  '/terraza-mitica': 'terrazaMiticaPage',
+  '/careers': 'careersPage',
+  '/locations': 'locationsPage',
+  '/franchise': 'franchisePage',
+  '/faq': 'faqPage',
+}
+
+const getFooterBannerPageId = (pathname: string) => {
+  const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/+$/, '')
+
+  if (cleanPath.startsWith('/blog/')) {
+    return 'blogPage'
+  }
+
+  return FOOTER_BANNER_PAGE_BY_PATH[cleanPath]
+}
+
+type NavbarProps = {
+  sectionVisibility: NavbarSectionVisibility
+}
+
+const Navbar = ({ sectionVisibility }: NavbarProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [openMobileSub, setOpenMobileSub] = useState<string | null>(null)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
-
-  const [sectionVisibility, setSectionVisibility] =
-    useState<NavbarSectionVisibility>(DEFAULT_NAVBAR_VISIBILITY)
 
   const location = useLocation()
   const navigate = useNavigate()
 
   const { language, isEnglish, localizedPath, switchTo } = useSiteLanguage()
 
-  const navbarDocumentId = isEnglish
-    ? 'navbarFooter-us'
-    : 'navbarFooter'
-
   const SWITCH_AT = 120
   const OPTICAL_DOWN = 26
 
   const { scrollY } = useScroll()
 
-  const p = useTransform(
-    scrollY,
-    [0, SWITCH_AT],
-    [0, 1],
-    { clamp: true }
-  )
+  const p = useTransform(scrollY, [0, SWITCH_AT], [0, 1], {
+    clamp: true,
+  })
 
-  const circleOpacity = useTransform(
-    p,
-    [0, 1],
-    [1, 0],
-    { clamp: true }
-  )
+  const circleOpacity = useTransform(p, [0, 1], [1, 0], {
+    clamp: true,
+  })
 
-  const circleScale = useTransform(
-    p,
-    [0, 1],
-    [1, 0.94],
-    { clamp: true }
-  )
+  const circleScale = useTransform(p, [0, 1], [1, 0.94], {
+    clamp: true,
+  })
 
   const circleY = useTransform(scrollY, (value) => {
     const yClamped = Math.max(0, Math.min(value ?? 0, SWITCH_AT))
-
     return OPTICAL_DOWN - yClamped + 4
   })
 
   const wideOpacity = p
 
-  const wideY = useTransform(
-    p,
-    [0, 1],
-    [10, 0],
-    { clamp: true }
-  )
-
-  useEffect(() => {
-    let isMounted = true
-
-    const loadNavbarVisibility = async () => {
-      try {
-        const data = await client
-          .withConfig({
-            useCdn: false,
-            perspective: 'published',
-          })
-          .fetch<NavbarFooterSettings | null>(
-            NAVBAR_SECTION_VISIBILITY_QUERY,
-            {
-              documentId: navbarDocumentId,
-            }
-          )
-
-        if (!isMounted) return
-
-        setSectionVisibility(
-          data?.sectionVisibility || DEFAULT_NAVBAR_VISIBILITY
-        )
-      } catch (error) {
-        console.error(
-          'Error loading navbar visibility settings:',
-          error
-        )
-
-        if (isMounted) {
-          setSectionVisibility(DEFAULT_NAVBAR_VISIBILITY)
-        }
-      }
-    }
-
-    loadNavbarVisibility()
-
-    return () => {
-      isMounted = false
-    }
-  }, [navbarDocumentId])
+  const wideY = useTransform(p, [0, 1], [10, 0], {
+    clamp: true,
+  })
 
   useEffect(() => {
     setActiveDropdown(null)
@@ -217,7 +215,6 @@ const Navbar = () => {
 
   const handleLanguageSwitch = () => {
     const targetLanguage = language === 'es' ? 'en' : 'es'
-
     window.location.assign(switchTo(targetLanguage))
   }
 
@@ -330,9 +327,7 @@ const Navbar = () => {
       isSectionEnabled(sectionVisibility.products?.enabled) &&
       productsDropdown.length > 0
         ? {
-            name: isEnglish
-              ? 'Our Products'
-              : 'Nuestros Productos',
+            name: isEnglish ? 'Our Products' : 'Nuestros Productos',
             dropdown: productsDropdown,
           }
         : null,
@@ -419,10 +414,7 @@ const Navbar = () => {
                     src="/images/brand/logo.png"
                     alt="MÍTICA"
                     className="w-auto object-contain"
-                    style={{
-                      height: 26,
-                      width: 'auto',
-                    }}
+                    style={{ height: 26, width: 'auto' }}
                     loading="lazy"
                     decoding="async"
                   />
@@ -435,10 +427,7 @@ const Navbar = () => {
         </div>
 
         <div className="-ml-2 flex items-center xl:hidden">
-          <Link
-            to={localizedPath('/')}
-            className="z-50 flex items-center"
-          >
+          <Link to={localizedPath('/')} className="z-50 flex items-center">
             <img
               src="/images/brand/logo.png"
               alt="MÍTICA"
@@ -473,9 +462,7 @@ const Navbar = () => {
                       <ChevronDown
                         size={14}
                         className={`transition-transform ${
-                          activeDropdown === link.name
-                            ? 'rotate-180'
-                            : ''
+                          activeDropdown === link.name ? 'rotate-180' : ''
                         }`}
                       />
                     </button>
@@ -489,28 +476,25 @@ const Navbar = () => {
                   )}
 
                   <AnimatePresence>
-                    {link.dropdown &&
-                      activeDropdown === link.name && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          transition={{ duration: 0.2 }}
-                          className="absolute left-0 top-full mt-2 w-56 overflow-hidden rounded-b-lg border-t-4 border-mitica-yellow bg-mitica-black shadow-2xl"
-                        >
-                          {link.dropdown.map((subItem) => (
-                            <button
-                              key={subItem.name}
-                              onClick={() =>
-                                handleNavClick(subItem.path)
-                              }
-                              className="block w-full border-b border-gray-800 px-6 py-3 text-left font-rethink text-sm font-bold text-white transition-colors last:border-0 hover:bg-mitica-darkGray hover:text-mitica-yellow"
-                            >
-                              {subItem.name}
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
+                    {link.dropdown && activeDropdown === link.name && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute left-0 top-full mt-2 w-56 overflow-hidden rounded-b-lg border-t-4 border-mitica-yellow bg-mitica-black shadow-2xl"
+                      >
+                        {link.dropdown.map((subItem) => (
+                          <button
+                            key={subItem.name}
+                            onClick={() => handleNavClick(subItem.path)}
+                            className="block w-full border-b border-gray-800 px-6 py-3 text-left font-rethink text-sm font-bold text-white transition-colors last:border-0 hover:bg-mitica-darkGray hover:text-mitica-yellow"
+                          >
+                            {subItem.name}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
                   </AnimatePresence>
                 </div>
               )
@@ -532,11 +516,7 @@ const Navbar = () => {
             type="button"
             onClick={handleLanguageSwitch}
             className="rounded-full border border-white/30 px-3 py-2 font-nexa text-xs uppercase text-white transition-colors hover:border-mitica-yellow hover:text-mitica-yellow"
-            aria-label={
-              isEnglish
-                ? 'Cambiar a español'
-                : 'Switch to English'
-            }
+            aria-label={isEnglish ? 'Cambiar a español' : 'Switch to English'}
           >
             {isEnglish ? 'ES' : 'EN'}
           </button>
@@ -547,11 +527,7 @@ const Navbar = () => {
             type="button"
             onClick={handleLanguageSwitch}
             className="rounded-full border border-white/30 px-3 py-2 font-nexa text-xs uppercase text-white transition-colors hover:border-mitica-yellow hover:text-mitica-yellow"
-            aria-label={
-              isEnglish
-                ? 'Cambiar a español'
-                : 'Switch to English'
-            }
+            aria-label={isEnglish ? 'Cambiar a español' : 'Switch to English'}
           >
             {isEnglish ? 'ES' : 'EN'}
           </button>
@@ -607,11 +583,7 @@ const Navbar = () => {
                   setIsOpen(false)
                   setOpenMobileSub(null)
                 }}
-                aria-label={
-                  isEnglish
-                    ? 'Close menu'
-                    : 'Cerrar menú'
-                }
+                aria-label={isEnglish ? 'Close menu' : 'Cerrar menú'}
               >
                 <X size={34} />
               </button>
@@ -634,9 +606,7 @@ const Navbar = () => {
                           type="button"
                           onClick={() => {
                             setOpenMobileSub((previous) =>
-                              previous === link.name
-                                ? null
-                                : link.name
+                              previous === link.name ? null : link.name
                             )
                           }}
                           className={`flex w-full items-center justify-between py-6 text-left font-nexa font-extrabold uppercase tracking-wide transition-colors ${
@@ -671,9 +641,7 @@ const Navbar = () => {
                             {link.dropdown!.map((subItem) => (
                               <button
                                 key={subItem.name}
-                                onClick={() =>
-                                  handleNavClick(subItem.path)
-                                }
+                                onClick={() => handleNavClick(subItem.path)}
                                 className="w-full py-4 pl-1 text-left font-rethink text-lg font-semibold text-white transition-colors hover:text-mitica-yellow"
                               >
                                 {subItem.name}
@@ -684,9 +652,7 @@ const Navbar = () => {
                       </>
                     ) : (
                       <button
-                        onClick={() =>
-                          handleNavClick(link.path || '/')
-                        }
+                        onClick={() => handleNavClick(link.path || '/')}
                         className="w-full py-6 text-left font-nexa font-extrabold uppercase tracking-wide text-white transition-colors hover:text-mitica-yellow"
                       >
                         <span className="text-xl leading-none">
@@ -717,11 +683,7 @@ const Navbar = () => {
                 type="button"
                 onClick={handleLanguageSwitch}
                 className="block w-full rounded border border-white/30 py-4 text-center font-nexa text-xl uppercase text-white transition-colors hover:border-mitica-yellow hover:text-mitica-yellow"
-                aria-label={
-                  isEnglish
-                    ? 'Cambiar a español'
-                    : 'Switch to English'
-                }
+                aria-label={isEnglish ? 'Cambiar a español' : 'Switch to English'}
               >
                 {isEnglish ? 'Cambiar a ES' : 'Switch to EN'}
               </button>
@@ -733,8 +695,121 @@ const Navbar = () => {
   )
 }
 
-const Footer = ({ showBanner }: { showBanner: boolean }) => {
+type FooterProps = {
+  showBanner: boolean
+  sectionVisibility: NavbarSectionVisibility
+  footerContent: FooterContent | null
+}
+
+const Footer = ({
+  showBanner,
+  sectionVisibility,
+  footerContent,
+}: FooterProps) => {
   const { isEnglish, localizedPath } = useSiteLanguage()
+
+  const defaultFooterContent: Required<FooterContent> = {
+    socialTitle: isEnglish ? 'FOLLOW US' : 'SÍGUENOS EN REDES',
+    instagramUrl: 'https://www.instagram.com/miticaburgers/',
+    facebookUrl: 'https://www.facebook.com/miticaburgers',
+    tiktokUrl: 'https://www.tiktok.com/@miticaburgers?lang=es-419',
+    xUrl: 'https://x.com/MiticaBurgers',
+    appTitle: isEnglish ? 'DOWNLOAD OUR APP' : 'DESCARGA NUESTRA APP',
+    appStoreUrl:
+      'https://apps.apple.com/mx/app/mitica-burger/id1591940572',
+    googlePlayUrl:
+      'https://play.google.com/store/apps/details?id=creaworlds.mitica&hl=es_MX',
+  }
+
+  /*
+    Solo usa valores predeterminados para documentos antiguos donde
+    footerContent todavía no existe.
+
+    Una vez que el bloque existe en Sanity, los campos vacíos se respetan
+    para ocultar títulos, redes sociales o botones de descarga.
+  */
+  const getFooterValue = (
+    value: string | undefined,
+    fallback: string
+  ) => {
+    if (!footerContent) {
+      return fallback.trim()
+    }
+
+    return (value || '').trim()
+  }
+
+  const socialTitle = getFooterValue(
+    footerContent?.socialTitle,
+    defaultFooterContent.socialTitle
+  )
+
+  const instagramUrl = getFooterValue(
+    footerContent?.instagramUrl,
+    defaultFooterContent.instagramUrl
+  )
+
+  const facebookUrl = getFooterValue(
+    footerContent?.facebookUrl,
+    defaultFooterContent.facebookUrl
+  )
+
+  const tiktokUrl = getFooterValue(
+    footerContent?.tiktokUrl,
+    defaultFooterContent.tiktokUrl
+  )
+
+  const xUrl = getFooterValue(
+    footerContent?.xUrl,
+    defaultFooterContent.xUrl
+  )
+
+  const appTitle = getFooterValue(
+    footerContent?.appTitle,
+    defaultFooterContent.appTitle
+  )
+
+  const appStoreUrl = getFooterValue(
+    footerContent?.appStoreUrl,
+    defaultFooterContent.appStoreUrl
+  )
+
+  const googlePlayUrl = getFooterValue(
+    footerContent?.googlePlayUrl,
+    defaultFooterContent.googlePlayUrl
+  )
+
+  const showAboutLink =
+    isSectionEnabled(sectionVisibility.about?.enabled) &&
+    isSectionEnabled(sectionVisibility.about?.whoWeAre)
+
+  const showMenuLink =
+    isSectionEnabled(sectionVisibility.products?.enabled) &&
+    isSectionEnabled(sectionVisibility.products?.menu)
+
+  const showLocationsLink = isSectionEnabled(
+    sectionVisibility.locationsEnabled
+  )
+
+  const showFranchisingLink = isSectionEnabled(
+    sectionVisibility.franchisingEnabled
+  )
+
+  const showBlogLink =
+    isSectionEnabled(sectionVisibility.community?.enabled) &&
+    isSectionEnabled(sectionVisibility.community?.blog)
+
+  const showTerraceLink =
+    isSectionEnabled(sectionVisibility.community?.enabled) &&
+    isSectionEnabled(sectionVisibility.community?.terrazaMitica)
+
+  const showEventsLink =
+    isSectionEnabled(sectionVisibility.community?.enabled) &&
+    isSectionEnabled(sectionVisibility.community?.events)
+
+  const showDeliveryLink =
+    isSectionEnabled(sectionVisibility.products?.enabled) &&
+    isSectionEnabled(sectionVisibility.products?.delivery)
 
   const storeBadges = [
     {
@@ -884,145 +959,186 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
           </div>
 
           <div>
-            <h4 className="mb-6 font-nexa text-lg text-mitica-yellow">
-              {isEnglish ? 'FOLLOW US' : 'SÍGUENOS EN REDES'}
-            </h4>
+            {socialTitle ? (
+              <h4 className="mb-6 font-nexa text-lg text-mitica-yellow">
+                {socialTitle}
+              </h4>
+            ) : null}
 
-            <div className="mb-8 flex gap-4">
-              <a
-                href="https://www.instagram.com/miticaburgers/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Instagram"
-                title="Instagram"
-                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
-              >
-                <FaInstagram size={20} />
-              </a>
+            {instagramUrl || facebookUrl || tiktokUrl || xUrl ? (
+              <div className="mb-8 flex gap-4">
+                {instagramUrl ? (
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Instagram"
+                    title="Instagram"
+                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
+                  >
+                    <FaInstagram size={20} />
+                  </a>
+                ) : null}
 
-              <a
-                href="https://www.facebook.com/miticaburgers"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Facebook"
-                title="Facebook"
-                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
-              >
-                <FaFacebookF size={20} />
-              </a>
+                {facebookUrl ? (
+                  <a
+                    href={facebookUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Facebook"
+                    title="Facebook"
+                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
+                  >
+                    <FaFacebookF size={20} />
+                  </a>
+                ) : null}
 
-              <a
-                href="https://www.tiktok.com/@miticaburgers?lang=es-419"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="TikTok"
-                title="TikTok"
-                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
-              >
-                <FaTiktok size={20} />
-              </a>
+                {tiktokUrl ? (
+                  <a
+                    href={tiktokUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="TikTok"
+                    title="TikTok"
+                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
+                  >
+                    <FaTiktok size={20} />
+                  </a>
+                ) : null}
 
-              <a
-                href="https://x.com/MiticaBurgers"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="X"
-                title="X"
-                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
-              >
-                <FaXTwitter size={20} />
-              </a>
-            </div>
+                {xUrl ? (
+                  <a
+                    href={xUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="X"
+                    title="X"
+                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-mitica-yellow hover:text-black"
+                  >
+                    <FaXTwitter size={20} />
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
 
-            <h4 className="mb-4 font-nexa text-lg text-mitica-yellow">
-              {isEnglish ? 'DOWNLOAD OUR APP' : 'DESCARGA NUESTRA APP'}
-            </h4>
+            {appTitle ? (
+              <h4 className="mb-4 font-nexa text-lg text-mitica-yellow">
+                {appTitle}
+              </h4>
+            ) : null}
 
-            <div className="flex gap-3">
-              <a
-                href="https://apps.apple.com/mx/app/mitica-burger/id1591940572"
-                target="_blank"
-                rel="noreferrer"
-                className="group flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-white/10 transition-colors hover:border-mitica-yellow hover:bg-mitica-yellow"
-                aria-label="App Store"
-                title="App Store"
-              >
-                <FaApple className="h-5 w-5 text-white transition-colors group-hover:text-black" />
-              </a>
+            {appStoreUrl || googlePlayUrl ? (
+              <div className="flex gap-3">
+                {appStoreUrl ? (
+                  <a
+                    href={appStoreUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-white/10 transition-colors hover:border-mitica-yellow hover:bg-mitica-yellow"
+                    aria-label="App Store"
+                    title="App Store"
+                  >
+                    <FaApple className="h-5 w-5 text-white transition-colors group-hover:text-black" />
+                  </a>
+                ) : null}
 
-              <a
-                href="https://play.google.com/store/apps/details?id=creaworlds.mitica&hl=es_MX"
-                target="_blank"
-                rel="noreferrer"
-                className="group flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-white/10 transition-colors hover:border-mitica-yellow hover:bg-mitica-yellow"
-                aria-label="Google Play"
-                title="Google Play"
-              >
-                <FaGooglePlay className="h-5 w-5 text-white transition-colors group-hover:text-black" />
-              </a>
-            </div>
+                {googlePlayUrl ? (
+                  <a
+                    href={googlePlayUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-white/10 transition-colors hover:border-mitica-yellow hover:bg-mitica-yellow"
+                    aria-label="Google Play"
+                    title="Google Play"
+                  >
+                    <FaGooglePlay className="h-5 w-5 text-white transition-colors group-hover:text-black" />
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div>
-            <h4 className="mb-6 font-nexa text-lg text-mitica-yellow">
-              {isEnglish ? 'MORE INFORMATION' : 'MÁS INFORMACIÓN'}
-            </h4>
+            {(showAboutLink ||
+              showMenuLink ||
+              showLocationsLink ||
+              showFranchisingLink ||
+              showBlogLink ||
+              showTerraceLink) && (
+              <>
+                <h4 className="mb-6 font-nexa text-lg text-mitica-yellow">
+                  {isEnglish ? 'MORE INFORMATION' : 'MÁS INFORMACIÓN'}
+                </h4>
 
-            <ul className="space-y-3 font-rethink text-sm font-bold uppercase text-gray-400">
-              <li>
-                <Link
-                  to={localizedPath('/about')}
-                  className="transition-colors hover:text-white"
-                >
-                  {isEnglish ? 'About Us' : 'Quiénes Somos'}
-                </Link>
-              </li>
+                <ul className="space-y-3 font-rethink text-sm font-bold uppercase text-gray-400">
+                  {showAboutLink && (
+                    <li>
+                      <Link
+                        to={localizedPath('/about')}
+                        className="transition-colors hover:text-white"
+                      >
+                        {isEnglish ? 'About Us' : 'Quiénes Somos'}
+                      </Link>
+                    </li>
+                  )}
 
-              <li>
-                <Link
-                  to={localizedPath('/menu')}
-                  className="transition-colors hover:text-white"
-                >
-                  {isEnglish ? 'Menu' : 'Menú'}
-                </Link>
-              </li>
+                  {showMenuLink && (
+                    <li>
+                      <Link
+                        to={localizedPath('/menu')}
+                        className="transition-colors hover:text-white"
+                      >
+                        {isEnglish ? 'Menu' : 'Menú'}
+                      </Link>
+                    </li>
+                  )}
 
-              <li>
-                <Link
-                  to={localizedPath('/locations')}
-                  className="transition-colors hover:text-white"
-                >
-                  {isEnglish ? 'Locations' : 'Ubicaciones'}
-                </Link>
-              </li>
+                  {showLocationsLink && (
+                    <li>
+                      <Link
+                        to={localizedPath('/locations')}
+                        className="transition-colors hover:text-white"
+                      >
+                        {isEnglish ? 'Locations' : 'Ubicaciones'}
+                      </Link>
+                    </li>
+                  )}
 
-              <li>
-                <Link
-                  to={localizedPath('/franchise')}
-                  className="transition-colors hover:text-white"
-                >
-                  {isEnglish ? 'Franchising' : 'Franquicias'}
-                </Link>
-              </li>
+                  {showFranchisingLink && (
+                    <li>
+                      <Link
+                        to={localizedPath('/franchise')}
+                        className="transition-colors hover:text-white"
+                      >
+                        {isEnglish ? 'Franchising' : 'Franquicias'}
+                      </Link>
+                    </li>
+                  )}
 
-              <li>
-                <Link
-                  to={localizedPath('/blog')}
-                  className="transition-colors hover:text-white"
-                >
-                  Blog
-                </Link>
-              </li>
+                  {showBlogLink && (
+                    <li>
+                      <Link
+                        to={localizedPath('/blog')}
+                        className="transition-colors hover:text-white"
+                      >
+                        Blog
+                      </Link>
+                    </li>
+                  )}
 
-              <li>
-                <Link
-                  to={localizedPath('/terraza-mitica')}
-                  className="transition-colors hover:text-white"
-                >
-                  {isEnglish ? 'MÍTICA Terrace' : 'Terraza MÍTICA'}
-                </Link>
-              </li>
-            </ul>
+                  {showTerraceLink && (
+                    <li>
+                      <Link
+                        to={localizedPath('/terraza-mitica')}
+                        className="transition-colors hover:text-white"
+                      >
+                        {isEnglish ? 'MÍTICA Terrace' : 'Terraza MÍTICA'}
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              </>
+            )}
           </div>
 
           <div>
@@ -1031,23 +1147,27 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
             </h4>
 
             <ul className="space-y-3 font-rethink text-sm font-bold uppercase text-gray-400">
-              <li>
-                <Link
-                  to={localizedPath('/events')}
-                  className="transition-colors hover:text-white"
-                >
-                  {isEnglish ? 'Events' : 'Eventos'}
-                </Link>
-              </li>
+              {showEventsLink && (
+                <li>
+                  <Link
+                    to={localizedPath('/events')}
+                    className="transition-colors hover:text-white"
+                  >
+                    {isEnglish ? 'Events' : 'Eventos'}
+                  </Link>
+                </li>
+              )}
 
-              <li>
-                <Link
-                  to={localizedPath('/delivery')}
-                  className="transition-colors hover:text-white"
-                >
-                  Delivery
-                </Link>
-              </li>
+              {showDeliveryLink && (
+                <li>
+                  <Link
+                    to={localizedPath('/delivery')}
+                    className="transition-colors hover:text-white"
+                  >
+                    Delivery
+                  </Link>
+                </li>
+              )}
 
               <li>
                 <Link
@@ -1073,16 +1193,14 @@ const Footer = ({ showBanner }: { showBanner: boolean }) => {
                 to={localizedPath('/aviso-de-privacidad')}
                 className="hover:text-mitica-yellow"
               >
-                {isEnglish
-                  ? 'Privacy Notice'
-                  : 'Aviso de Privacidad'}
+                {isEnglish ? 'Privacy Notice' : 'Aviso de Privacidad'}
               </Link>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="origin-top scale-y-50 bg-white/10 h-px" />
+      <div className="origin-top h-px scale-y-50 bg-white/10" />
 
       <div className="container mx-auto px-8 py-10 md:py-12">
         <div className="grid grid-cols-2 items-center justify-items-center gap-x-6 gap-y-8 md:grid-cols-3 md:gap-x-8 md:gap-y-10 lg:grid-cols-6 lg:gap-x-10">
@@ -1130,19 +1248,132 @@ export const Layout: React.FC<LayoutProps> = ({
   showFooterBanner = true,
 }) => {
   const location = useLocation()
+  const { language } = useSiteLanguage()
 
   const pathWithoutLanguage = removeLanguagePrefix(location.pathname)
 
+  const [sectionVisibility, setSectionVisibility] =
+    useState<NavbarSectionVisibility>(DEFAULT_NAVBAR_VISIBILITY)
+
+  const [footerContent, setFooterContent] =
+    useState<FooterContent | null>(null)
+
+  const [sanityFooterBannerEnabled, setSanityFooterBannerEnabled] =
+    useState<boolean | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const navbarDocumentId = getSanitySingletonId(
+      'navbarFooter',
+      language
+    )
+
+    const loadNavbarFooterVisibility = async () => {
+      try {
+        const data = await client
+          .withConfig({
+            useCdn: false,
+            perspective: 'published',
+          })
+          .fetch<NavbarFooterSettings | null>(
+            NAVBAR_SECTION_VISIBILITY_QUERY,
+            {
+              documentId: navbarDocumentId,
+            }
+          )
+
+        if (!isMounted) return
+
+        setSectionVisibility(
+          data?.sectionVisibility || DEFAULT_NAVBAR_VISIBILITY
+        )
+
+        setFooterContent(data?.footerContent ?? null)
+      } catch (error) {
+        console.error(
+          'Error loading navbar and footer visibility settings:',
+          error
+        )
+
+        if (isMounted) {
+          setSectionVisibility(DEFAULT_NAVBAR_VISIBILITY)
+          setFooterContent(null)
+        }
+      }
+    }
+
+    loadNavbarFooterVisibility()
+
+    return () => {
+      isMounted = false
+    }
+  }, [language])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const baseDocumentId = getFooterBannerPageId(pathWithoutLanguage)
+
+    if (!baseDocumentId) {
+      setSanityFooterBannerEnabled(null)
+      return
+    }
+
+    const documentId = getSanitySingletonId(baseDocumentId, language)
+
+    const loadFooterBannerSetting = async () => {
+      try {
+        setSanityFooterBannerEnabled(null)
+
+        const data = await client
+          .withConfig({
+            useCdn: false,
+            perspective: 'published',
+          })
+          .fetch<FooterBannerSettings | null>(
+            FOOTER_BANNER_QUERY,
+            { documentId }
+          )
+
+        if (!isMounted) return
+
+        setSanityFooterBannerEnabled(
+          data?.showFooterBanner !== false
+        )
+      } catch (error) {
+        console.error(
+          'Error loading footer banner setting:',
+          error
+        )
+
+        if (isMounted) {
+          setSanityFooterBannerEnabled(true)
+        }
+      }
+    }
+
+    loadFooterBannerSetting()
+
+    return () => {
+      isMounted = false
+    }
+  }, [language, pathWithoutLanguage])
+
   const shouldShowFooterBanner =
-    showFooterBanner && pathWithoutLanguage !== '/delivery'
+    showFooterBanner && sanityFooterBannerEnabled !== false
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans">
-      <Navbar />
+      <Navbar sectionVisibility={sectionVisibility} />
 
       <main className="flex-grow">{children}</main>
 
-      <Footer showBanner={shouldShowFooterBanner} />
+      <Footer
+        showBanner={shouldShowFooterBanner}
+        sectionVisibility={sectionVisibility}
+        footerContent={footerContent}
+      />
     </div>
   )
 }

@@ -260,6 +260,13 @@ const locationsPage = defineType({
         }),
       ],
     }),
+
+    defineField({
+      name: 'showFooterBanner',
+      title: 'Mostrar Banner Amarillo en Footer',
+      type: 'boolean',
+      initialValue: true,
+    }),
   ],
 
   preview: {

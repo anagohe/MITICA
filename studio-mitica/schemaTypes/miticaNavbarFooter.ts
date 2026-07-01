@@ -21,9 +21,9 @@ const miticaNavbarFooter = defineType({
   fields: [
     defineField({
       name: 'sectionVisibility',
-      title: 'Mostrar u ocultar secciones del navbar',
+      title: 'Mostrar u ocultar secciones del navbar y footer',
       description:
-        'Esta configuración solo controla los links del navbar. MÍTICA ES y MÍTICA US se guardan por separado.',
+        'Esta configuración controla los links del navbar y del footer. MÍTICA ES y MÍTICA US se guardan por separado.',
       type: 'object',
       options: {
         collapsible: true,
@@ -42,7 +42,7 @@ const miticaNavbarFooter = defineType({
             visibilityToggle(
               'enabled',
               'Mostrar sección principal',
-              'Oculta todo el dropdown de Productos.'
+              'Oculta Productos en navbar y sus links relacionados en footer.'
             ),
             visibilityToggle(
               'ingredients',
@@ -65,7 +65,7 @@ const miticaNavbarFooter = defineType({
             visibilityToggle(
               'enabled',
               'Mostrar sección principal',
-              'Oculta todo el dropdown de Nosotros.'
+              'Oculta Nosotros en navbar y su link relacionado en footer.'
             ),
             visibilityToggle(
               'whoWeAre',
@@ -94,7 +94,7 @@ const miticaNavbarFooter = defineType({
             visibilityToggle(
               'enabled',
               'Mostrar sección principal',
-              'Oculta todo el dropdown de Comunidad.'
+              'Oculta Comunidad en navbar y sus links relacionados en footer.'
             ),
             visibilityToggle('blog', 'Mostrar Blog'),
             visibilityToggle(
@@ -123,6 +123,62 @@ const miticaNavbarFooter = defineType({
         ),
       ],
     }),
+
+    defineField({
+      name: 'footerContent',
+      title: 'Contenido editable del footer',
+      description:
+        'Configura títulos y enlaces de redes sociales y tiendas del footer inferior. El banner amarillo superior no se edita aquí. Si dejas un título o enlace vacío, ese elemento no aparecerá en el footer.',
+      type: 'object',
+      options: {
+        collapsible: true,
+        collapsed: false,
+      },
+      fields: [
+        defineField({
+          name: 'socialTitle',
+          title: 'Título de redes sociales',
+          type: 'string',
+          initialValue: 'SÍGUENOS EN REDES',
+        }),
+        defineField({
+          name: 'instagramUrl',
+          title: 'Link de Instagram',
+          type: 'url',
+        }),
+        defineField({
+          name: 'facebookUrl',
+          title: 'Link de Facebook',
+          type: 'url',
+        }),
+        defineField({
+          name: 'tiktokUrl',
+          title: 'Link de TikTok',
+          type: 'url',
+        }),
+        defineField({
+          name: 'xUrl',
+          title: 'Link de X (Twitter)',
+          type: 'url',
+        }),
+        defineField({
+          name: 'appTitle',
+          title: 'Título de descarga de app',
+          type: 'string',
+          initialValue: 'DESCARGA NUESTRA APP',
+        }),
+        defineField({
+          name: 'appStoreUrl',
+          title: 'Link de App Store',
+          type: 'url',
+        }),
+        defineField({
+          name: 'googlePlayUrl',
+          title: 'Link de Google Play',
+          type: 'url',
+        }),
+      ],
+    }),
   ],
 
   initialValue: {
@@ -149,13 +205,25 @@ const miticaNavbarFooter = defineType({
       locationsEnabled: true,
       franchisingEnabled: true,
     },
+    footerContent: {
+      socialTitle: 'SÍGUENOS EN REDES',
+      instagramUrl: 'https://www.instagram.com/miticaburgers/',
+      facebookUrl: 'https://www.facebook.com/miticaburgers',
+      tiktokUrl: 'https://www.tiktok.com/@miticaburgers?lang=es-419',
+      xUrl: 'https://x.com/MiticaBurgers',
+      appTitle: 'DESCARGA NUESTRA APP',
+      appStoreUrl:
+        'https://apps.apple.com/mx/app/mitica-burger/id1591940572',
+      googlePlayUrl:
+        'https://play.google.com/store/apps/details?id=creaworlds.mitica&hl=es_MX',
+    },
   },
 
   preview: {
     prepare() {
       return {
         title: 'Navbar & Footer',
-        subtitle: 'Visibilidad de links del navbar',
+        subtitle: 'Visibilidad de links y contenido editable del footer',
       }
     },
   },

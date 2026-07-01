@@ -99,7 +99,8 @@ const homePage = defineType({
               name: 'ctaText',
               title: 'Texto del botón',
               type: 'string',
-              description: 'Si dejas vacío, el slide puede usar el "Link del hero completo".',
+              description:
+                'Si dejas vacío, el slide puede usar el "Link del hero completo".',
             }),
 
             defineField({
@@ -145,7 +146,9 @@ const homePage = defineType({
 
               return {
                 title: title || 'Slide del Hero',
-                subtitle: subtitle || `${typeLabel} · Configura contenido, texto y botón/link`,
+                subtitle:
+                  subtitle ||
+                  `${typeLabel} · Configura contenido, texto y botón/link`,
               }
             },
           },
@@ -208,8 +211,17 @@ const homePage = defineType({
           title: 'Apartado',
           type: 'object',
           fields: [
-            defineField({ name: 'title', title: 'Título', type: 'string' }),
-            defineField({ name: 'text', title: 'Texto', type: 'text' }),
+            defineField({
+              name: 'title',
+              title: 'Título',
+              type: 'string',
+            }),
+
+            defineField({
+              name: 'text',
+              title: 'Texto',
+              type: 'text',
+            }),
 
             defineField({
               name: 'image',
@@ -247,7 +259,9 @@ const homePage = defineType({
           preview: {
             select: { title: 'title' },
             prepare({ title }) {
-              return { title: title || 'Apartado de Segunda sección' }
+              return {
+                title: title || 'Apartado de Segunda sección',
+              }
             },
           },
         }),
@@ -279,6 +293,13 @@ const homePage = defineType({
           },
         }),
       ],
+    }),
+
+    defineField({
+      name: 'showFooterBanner',
+      title: 'Mostrar Banner Amarillo en Footer',
+      type: 'boolean',
+      initialValue: true,
     }),
   ],
 
