@@ -503,14 +503,16 @@ const Navbar = ({ sectionVisibility }: NavbarProps) => {
         </div>
 
         <div className="hidden w-[260px] items-center justify-end gap-3 xl:flex">
-          <a
-            href="https://wa.me/529979790642"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full bg-mitica-yellow px-6 py-2 font-nexa text-sm text-mitica-black shadow-md transition-all hover:scale-105 hover:bg-white"
-          >
-            WhatsApp
-          </a>
+          {!isEnglish && (
+            <a
+              href="https://wa.me/529979790642"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full bg-mitica-yellow px-6 py-2 font-nexa text-sm text-mitica-black shadow-md transition-all hover:scale-105 hover:bg-white"
+            >
+              WhatsApp
+            </a>
+          )}
 
           <button
             type="button"
@@ -666,18 +668,20 @@ const Navbar = ({ sectionVisibility }: NavbarProps) => {
             </nav>
 
             <div className="space-y-4 px-6 py-8">
-              <a
-                href="https://wa.me/529979790642"
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => {
-                  setIsOpen(false)
-                  setOpenMobileSub(null)
-                }}
-                className="block w-full rounded bg-mitica-yellow py-4 text-center font-nexa text-xl uppercase text-black transition-colors hover:bg-white"
-              >
-                WhatsApp
-              </a>
+              {!isEnglish && (
+                <a
+                  href="https://wa.me/529979790642"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => {
+                    setIsOpen(false)
+                    setOpenMobileSub(null)
+                  }}
+                  className="block w-full rounded bg-mitica-yellow py-4 text-center font-nexa text-xl uppercase text-black transition-colors hover:bg-white"
+                >
+                  WhatsApp
+                </a>
+              )}
 
               <button
                 type="button"
